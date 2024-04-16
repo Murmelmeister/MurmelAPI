@@ -17,4 +17,4 @@ To use the MurmelAPI, simply include it as a dependency in your Minecraft server
 Contributions to the MurmelAPI are welcome. Please ensure that your code adheres to the project's coding standards and includes appropriate unit tests.
 
 ## License
-MurmelAPI is open-source software, licensed under [INSERT LICENSE HERE]. Feel free to use, modify, and distribute the code, in accordance with the license terms.
+MurmelAPI is open-source software, licensed under GPL-3.0 license. Feel free to use, modify, and distribute the code, in accordance with the license terms.
