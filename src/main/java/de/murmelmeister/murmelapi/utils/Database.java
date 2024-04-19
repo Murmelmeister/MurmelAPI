@@ -370,6 +370,23 @@ public final class Database {
         return getUniqueIdList(list, value, String.format(sql, objects));
     }
 
+    /**
+     * Obtain the query.
+     *
+     * @param name    The name of the procedure.
+     * @param input   The input of the procedure.
+     * @param query   The query of the procedure.
+     * @param objects The objects of the query.
+     * @return The query.
+     */
+    public static String getProcedureQuery(String name, String input, String query, Object... objects) {
+        return String.format("""
+                CREATE PROCEDURE IF NOT EXISTS %s(%s)
+                BEGIN
+                    %s
+                END;""", name, input, String.format(query, objects));
+    }
+
     public static HikariDataSource getDataSource() {
         return dataSource;
     }

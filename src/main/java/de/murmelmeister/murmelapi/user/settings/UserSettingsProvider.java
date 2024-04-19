@@ -46,21 +46,9 @@ public final class UserSettingsProvider implements UserSettings {
     }
 
     private enum Procedure {
-        PROCEDURE_ID("UserSettings_ID", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS UserSettings_ID(uid INT)
-                BEGIN
-                    SELECT * FROM %s WHERE ID=uid;
-                END;""", TABLE_NAME)),
-        PROCEDURE_INSERT("UserSettings_Insert", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS UserSettings_Insert(uid INT, time BIGINT(255))
-                BEGIN
-                    INSERT INTO %s VALUES (uid, time);
-                END;""", TABLE_NAME)),
-        PROCEDURE_DELETE("UserSettings_Delete", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS UserSettings_Delete(uid INT)
-                BEGIN
-                    DELETE FROM %s WHERE ID=uid;
-                END;""", TABLE_NAME));
+        PROCEDURE_ID("UserSettings_ID", Database.getProcedureQuery("UserSettings_ID", "uid INT", "SELECT * FROM %s WHERE ID=uid;", TABLE_NAME)),
+        PROCEDURE_INSERT("UserSettings_Insert", Database.getProcedureQuery("UserSettings_Insert", "uid INT, time BIGINT(255)", "INSERT INTO %s VALUES (uid, time);", TABLE_NAME)),
+        PROCEDURE_DELETE("UserSettings_Delete", Database.getProcedureQuery("UserSettings_Delete", "uid INT", "DELETE FROM %s WHERE ID=uid;", TABLE_NAME));
         private static final Procedure[] VALUES = values();
 
         private final String name;

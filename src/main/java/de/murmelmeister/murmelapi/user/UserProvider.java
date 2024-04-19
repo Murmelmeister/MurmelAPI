@@ -92,41 +92,13 @@ public final class UserProvider implements User {
     }
 
     private enum Procedure {
-        PROCEDURE_UNIQUE_ID("User_UniqueID", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS User_UniqueID(uid VARCHAR(36))
-                BEGIN
-                    SELECT * FROM %s WHERE UUID=uid;
-                END;""", TABLE_NAME)),
-        PROCEDURE_USERNAME("User_Username", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS User_Username(user VARCHAR(100))
-                BEGIN
-                    SELECT * FROM %s WHERE Username=user;
-                END;""", TABLE_NAME)),
-        PROCEDURE_ID("User_ID", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS User_ID(uid INT)
-                BEGIN
-                    SELECT * FROM %s WHERE ID=uid;
-                END;""", TABLE_NAME)),
-        PROCEDURE_ALL("User_All", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS User_All()
-                BEGIN
-                    SELECT * FROM %s;
-                END;""", TABLE_NAME)),
-        PROCEDURE_INSERT("User_Insert", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS User_Insert(uid VARCHAR(36), user VARCHAR(100))
-                BEGIN
-                    INSERT INTO %s (UUID, Username) VALUES (uid, user);
-                END;""", TABLE_NAME)),
-        PROCEDURE_DELETE("User_Delete", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS User_Delete(uid VARCHAR(36))
-                BEGIN
-                    DELETE FROM %s WHERE UUID=uid;
-                END;""", TABLE_NAME)),
-        PROCEDURE_RENAME("User_Rename", String.format("""
-                CREATE PROCEDURE IF NOT EXISTS User_Rename(uid INT, user VARCHAR(100))
-                BEGIN
-                    UPDATE %s SET Username=user WHERE ID=uid;
-                END;""", TABLE_NAME));
+        PROCEDURE_UNIQUE_ID("User_UniqueID", Database.getProcedureQuery("User_UniqueID", "uid VARCHAR(36)", "SELECT * FROM %s WHERE UUID=uid;", TABLE_NAME)),
+        PROCEDURE_USERNAME("User_Username", Database.getProcedureQuery("User_Username", "user VARCHAR(100)", "SELECT * FROM %s WHERE Username=user;", TABLE_NAME)),
+        PROCEDURE_ID("User_ID", Database.getProcedureQuery("User_ID", "uid INT", "SELECT * FROM %s WHERE ID=uid;", TABLE_NAME)),
+        PROCEDURE_ALL("User_All", Database.getProcedureQuery("User_All", "", "SELECT * FROM %s;", TABLE_NAME)),
+        PROCEDURE_INSERT("User_Insert", Database.getProcedureQuery("User_Insert", "uid VARCHAR(36), user VARCHAR(100)", "INSERT INTO %s (UUID, Username) VALUES (uid, user);", TABLE_NAME)),
+        PROCEDURE_DELETE("User_Delete", Database.getProcedureQuery("User_Delete", "uid VARCHAR(36)", "DELETE FROM %s WHERE UUID=uid;", TABLE_NAME)),
+        PROCEDURE_RENAME("User_Rename", Database.getProcedureQuery("User_Rename", "uid INT, user VARCHAR(100)", "UPDATE %s SET Username=user WHERE ID=uid;", TABLE_NAME));
         private static final Procedure[] VALUES = values();
 
         private final String name;
