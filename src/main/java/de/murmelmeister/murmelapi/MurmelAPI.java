@@ -1,5 +1,9 @@
 package de.murmelmeister.murmelapi;
 
+import de.murmelmeister.murmelapi.group.Group;
+import de.murmelmeister.murmelapi.group.GroupProvider;
+import de.murmelmeister.murmelapi.group.settings.GroupSettings;
+import de.murmelmeister.murmelapi.group.settings.GroupSettingsProvider;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.UserProvider;
 import de.murmelmeister.murmelapi.user.settings.UserSettings;
@@ -24,6 +28,8 @@ public final class MurmelAPI {
 
             User user = MurmelAPI.getUser();
             UserSettings userSettings = MurmelAPI.getUserSettings();
+            Group group = MurmelAPI.getGroup();
+            GroupSettings groupSettings = MurmelAPI.getGroupSettings();
 
             Database.disconnect();
         } catch (IOException e) {
@@ -49,5 +55,25 @@ public final class MurmelAPI {
      */
     public static UserSettings getUserSettings() throws SQLException {
         return new UserSettingsProvider();
+    }
+
+    /**
+     * Get the group provider.
+     *
+     * @return the group provider
+     * @throws SQLException if an error occurs
+     */
+    public static Group getGroup() throws SQLException {
+        return new GroupProvider();
+    }
+
+    /**
+     * Get the group settings provider.
+     *
+     * @return the group settings provider
+     * @throws SQLException if an error occurs
+     */
+    public static GroupSettings getGroupSettings() throws SQLException {
+        return new GroupSettingsProvider();
     }
 }
