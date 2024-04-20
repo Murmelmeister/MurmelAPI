@@ -43,7 +43,7 @@ public sealed interface Group permits GroupProvider {
     void deleteGroup(int id) throws SQLException;
 
     /**
-     * Gets the unique id of a group.
+     * Obtains the unique id of a group.
      *
      * @param name The name of the group.
      * @return The unique id of the group.
@@ -52,7 +52,7 @@ public sealed interface Group permits GroupProvider {
     int getUniqueId(String name) throws SQLException;
 
     /**
-     * Gets the name of a group.
+     * Obtains the name of a group.
      *
      * @param id The id of the group.
      * @return The name of the group.
@@ -79,7 +79,7 @@ public sealed interface Group permits GroupProvider {
     void rename(String oldName, String newName) throws SQLException;
 
     /**
-     * Gets a list of all unique ids of the groups.
+     * Obtains a list of all unique ids of the groups.
      *
      * @return A list of all unique ids of the groups.
      * @throws SQLException If an SQL error occurs.
@@ -87,7 +87,7 @@ public sealed interface Group permits GroupProvider {
     List<Integer> getUniqueIds() throws SQLException;
 
     /**
-     * Gets a list of all names of the groups.
+     * Obtains a list of all names of the groups.
      *
      * @return A list of all names of the groups.
      * @throws SQLException If an SQL error occurs.

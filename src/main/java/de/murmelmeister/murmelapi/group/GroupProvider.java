@@ -17,7 +17,7 @@ public final class GroupProvider implements Group {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY AUTO_INCREMENT, GroupName VARCHAR(100))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (ID INT PRIMARY KEY AUTO_INCREMENT, GroupName VARCHAR(100))", TABLE_NAME);
     }
 
     @Override
@@ -38,12 +38,12 @@ public final class GroupProvider implements Group {
 
     @Override
     public void deleteGroup(int id) throws SQLException {
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), id);
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), checkArgumentSQL(id));
     }
 
     @Override
     public int getUniqueId(String name) throws SQLException {
-        return Database.getInt(-1, "GroupID", "CALL %s('%s')", Procedure.PROCEDURE_NAME.getName(), checkArgumentSQL(name));
+        return Database.getInt(-1, "ID", "CALL %s('%s')", Procedure.PROCEDURE_NAME.getName(), checkArgumentSQL(name));
     }
 
     @Override
@@ -63,7 +63,7 @@ public final class GroupProvider implements Group {
 
     @Override
     public List<Integer> getUniqueIds() throws SQLException {
-        return Database.getIntList(new ArrayList<>(), "GroupID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+        return Database.getIntList(new ArrayList<>(), "ID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override
@@ -72,12 +72,12 @@ public final class GroupProvider implements Group {
     }
 
     private enum Procedure {
-        PROCEDURE_ID("Groups_ID", Database.getProcedureQuery("Groups_ID", "gid INT", "SELECT * FROM %s WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_ID("Groups_ID", Database.getProcedureQuery("Groups_ID", "gid INT", "SELECT * FROM %s WHERE ID=gid;", TABLE_NAME)),
         PROCEDURE_NAME("Groups_Name", Database.getProcedureQuery("Groups_Name", "gName VARCHAR(100)", "SELECT * FROM %s WHERE GroupName=gName;", TABLE_NAME)),
         PROCEDURE_INSERT("Groups_Insert", Database.getProcedureQuery("Groups_Insert", "gName VARCHAR(100)", "INSERT INTO %s (GroupName) VALUES (gName);", TABLE_NAME)),
-        PROCEDURE_DELETE("Groups_Delete", Database.getProcedureQuery("Groups_Delete", "gid INT", "DELETE FROM %s WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_DELETE("Groups_Delete", Database.getProcedureQuery("Groups_Delete", "gid INT", "DELETE FROM %s WHERE ID=gid;", TABLE_NAME)),
         PROCEDURE_ALL("Groups_All", Database.getProcedureQuery("Groups_All", "", "SELECT * FROM %s;", TABLE_NAME)),
-        PROCEDURE_RENAME_BY_ID("Groups_RenameByID", Database.getProcedureQuery("Groups_RenameByID", "gid INT, gName VARCHAR(100)", "UPDATE %s SET GroupName=gName WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_RENAME_BY_ID("Groups_RenameByID", Database.getProcedureQuery("Groups_RenameByID", "gid INT, gName VARCHAR(100)", "UPDATE %s SET GroupName=gName WHERE ID=gid;", TABLE_NAME)),
         PROCEDURE_RENAME_BY_NAME("Groups_RenameByName", Database.getProcedureQuery("Groups_RenameByName", "oldGroup VARCHAR(100), newGroup VARCHAR(100)", "UPDATE %s SET GroupName=newGroup WHERE GroupName=oldGroup;", TABLE_NAME));
         private static final Procedure[] VALUES = values();
 

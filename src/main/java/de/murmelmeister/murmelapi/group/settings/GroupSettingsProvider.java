@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.group.settings;
 
+import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
@@ -17,38 +18,44 @@ public final class GroupSettingsProvider implements GroupSettings {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, FOREIGN KEY (GroupID) REFERENCES Groups(GroupID), CreatorID VARCHAR(36), CreatedTime BIGINT(255))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, FOREIGN KEY (GroupID) REFERENCES Groups(ID), CreatorID INT, FOREIGN KEY (CreatorID) REFERENCES User(ID), CreatedTime BIGINT(255))", TABLE_NAME);
     }
 
     @Override
-    public boolean existsGroup(int id) throws SQLException {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(id));
+    public boolean existsGroup(int groupId) throws SQLException {
+        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
     }
 
     @Override
-    public void createGroup(int id, UUID creator) throws SQLException {
-        if (existsGroup(id)) return;
-        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), id, creator, System.currentTimeMillis());
+    public void createGroup(int groupId, UUID creator) throws SQLException {
+        if (existsGroup(groupId)) return;
+        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), groupId, creator, System.currentTimeMillis());
     }
 
     @Override
-    public void deleteGroup(int id) throws SQLException {
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), checkArgumentSQL(id));
+    public void deleteGroup(int groupId) throws SQLException {
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), checkArgumentSQL(groupId));
     }
 
     @Override
-    public UUID getCreatorId(int id) throws SQLException {
-        return Database.getUniqueId(null, "CreatorID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(id));
+    public int getCreatorId(int groupId) throws SQLException {
+        return Database.getInt(-2, "CreatorID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
     }
 
     @Override
-    public long getCreatedTime(int id) throws SQLException {
-        return Database.getLong(-1, "CreatedTime", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(id));
+    public UUID getCreatorId(User user, int groupId) throws SQLException {
+        var creatorId = getCreatorId(groupId);
+        return user.getUniqueId(creatorId);
     }
 
     @Override
-    public String getCreatedDate(int id) throws SQLException {
-        return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getCreatedTime(checkArgumentSQL(id)));
+    public long getCreatedTime(int groupId) throws SQLException {
+        return Database.getLong(-1, "CreatedTime", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
+    }
+
+    @Override
+    public String getCreatedDate(int groupId) throws SQLException {
+        return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getCreatedTime(groupId));
     }
 
     private enum Procedure {

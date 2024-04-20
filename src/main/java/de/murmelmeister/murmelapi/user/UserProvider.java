@@ -38,7 +38,7 @@ public final class UserProvider implements User {
 
     @Override
     public void deleteUser(UUID uuid) throws SQLException {
-        var id = getId(checkArgumentSQL(uuid));
+        var id = getId(uuid);
         Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), id);
     }
 
@@ -54,19 +54,24 @@ public final class UserProvider implements User {
 
     @Override
     public UUID getUniqueId(String username) throws SQLException {
-        var id = getId(checkArgumentSQL(username));
+        var id = getId(username);
         return Database.getUniqueId(null, "UUID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
     }
 
     @Override
+    public UUID getUniqueId(int id) throws SQLException {
+        return Database.getUniqueId(null, "UUID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(id));
+    }
+
+    @Override
     public String getUsername(UUID uuid) throws SQLException {
-        var id = getId(checkArgumentSQL(uuid));
+        var id = getId(uuid);
         return Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
     }
 
     @Override
     public void rename(UUID uuid, String newName) throws SQLException {
-        var id = getId(checkArgumentSQL(uuid));
+        var id = getId(uuid);
         Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME.getName(), id, newName);
     }
 

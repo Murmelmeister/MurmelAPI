@@ -33,7 +33,7 @@ public sealed interface UserSettings permits UserSettingsProvider {
     void deleteUser(int id) throws SQLException;
 
     /**
-     * Gets the first join time of a user.
+     * Obtains the first join time of a user.
      *
      * @param id The id of the user.
      * @return The first join time of the user.
@@ -42,7 +42,7 @@ public sealed interface UserSettings permits UserSettingsProvider {
     long getFirstJoinTime(int id) throws SQLException;
 
     /**
-     * Gets the first join date of a user.
+     * Obtains the first join date of a user.
      *
      * @param id The id of the user.
      * @return The first join date of the user.

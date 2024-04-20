@@ -45,7 +45,7 @@ public sealed interface User permits UserProvider {
     void deleteUser(UUID uuid) throws SQLException;
 
     /**
-     * Gets the id of a user.
+     * Obtains the id of a user.
      *
      * @param uuid The unique id of the user.
      * @return The id of the user.
@@ -54,7 +54,7 @@ public sealed interface User permits UserProvider {
     int getId(UUID uuid) throws SQLException;
 
     /**
-     * Gets the id of a user.
+     * Obtains the id of a user.
      *
      * @param username The username of the user.
      * @return The id of the user.
@@ -63,7 +63,7 @@ public sealed interface User permits UserProvider {
     int getId(String username) throws SQLException;
 
     /**
-     * Gets the unique id of a user.
+     * Obtains the unique id of a user.
      *
      * @param username The username of the user.
      * @return The unique id of the user.
@@ -72,7 +72,16 @@ public sealed interface User permits UserProvider {
     UUID getUniqueId(String username) throws SQLException;
 
     /**
-     * Gets the username of a user.
+     * Obtains the unique id of a user.
+     *
+     * @param id The id of the user.
+     * @return The unique id of the user.
+     * @throws SQLException If an SQL error occurs.
+     */
+    UUID getUniqueId(int id) throws SQLException;
+
+    /**
+     * Obtains the username of a user.
      *
      * @param uuid The unique id of the user.
      * @return The username of the user.
@@ -90,7 +99,7 @@ public sealed interface User permits UserProvider {
     void rename(UUID uuid, String newName) throws SQLException;
 
     /**
-     * Gets a list of all unique ids.
+     * Obtains a list of all unique ids.
      *
      * @return A list of all unique ids.
      * @throws SQLException If an SQL error occurs.
@@ -98,7 +107,7 @@ public sealed interface User permits UserProvider {
     List<UUID> getUniqueIds() throws SQLException;
 
     /**
-     * Gets a list of all usernames.
+     * Obtains a list of all usernames.
      *
      * @return A list of all usernames.
      * @throws SQLException If an SQL error occurs.
@@ -106,7 +115,7 @@ public sealed interface User permits UserProvider {
     List<String> getUsernames() throws SQLException;
 
     /**
-     * Gets a list of all ids.
+     * Obtains a list of all ids.
      *
      * @return A list of all ids.
      * @throws SQLException If an SQL error occurs.

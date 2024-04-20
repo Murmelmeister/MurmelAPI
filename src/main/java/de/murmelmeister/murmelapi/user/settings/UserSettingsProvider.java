@@ -42,7 +42,7 @@ public final class UserSettingsProvider implements UserSettings {
 
     @Override
     public String getFirstJoinDate(int id) throws SQLException {
-        return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getFirstJoinTime(checkArgumentSQL(id)));
+        return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getFirstJoinTime(id));
     }
 
     private enum Procedure {
