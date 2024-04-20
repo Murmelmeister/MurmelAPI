@@ -36,7 +36,7 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      *
      * @param groupId    The id of the group.
      * @param permission The permission.
-     * @throws SQLException
+     * @throws SQLException If an SQL error occurs.
      */
     void removePermission(int groupId, String permission) throws SQLException;
 
