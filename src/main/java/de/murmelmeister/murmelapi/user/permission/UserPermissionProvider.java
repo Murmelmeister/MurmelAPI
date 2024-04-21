@@ -103,6 +103,16 @@ public final class UserPermissionProvider implements UserPermission {
         return "";
     }
 
+    @Override
+    public void loadExpired(User user) throws SQLException {
+        for (int userId : user.getIds())
+            for (String permission : getPermissions(userId)) {
+                var time = getExpiredTime(userId, permission);
+                if (time == -1) continue;
+                if (time <= System.currentTimeMillis()) removePermission(userId, permission);
+            }
+    }
+
     private enum Procedure {
         PROCEDURE_USER_ID("UserPermission_UserID", Database.getProcedureQuery("UserPermission_UserID", "uid INT", "SELECT * FROM %s WHERE UserID=uid;", TABLE_NAME)),
         PROCEDURE_PERMISSION("UserPermission_Permission", Database.getProcedureQuery("UserPermission_Permission", "uid INT, perm VARCHAR(1000)", "SELECT * FROM %s WHERE UserID=uid AND Permission=perm;", TABLE_NAME)),

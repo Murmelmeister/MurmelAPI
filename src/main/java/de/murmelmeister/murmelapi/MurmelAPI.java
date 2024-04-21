@@ -2,12 +2,18 @@ package de.murmelmeister.murmelapi;
 
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.GroupProvider;
+import de.murmelmeister.murmelapi.group.parent.GroupParent;
+import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
 import de.murmelmeister.murmelapi.group.permission.GroupPermission;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
 import de.murmelmeister.murmelapi.group.settings.GroupSettings;
 import de.murmelmeister.murmelapi.group.settings.GroupSettingsProvider;
+import de.murmelmeister.murmelapi.permission.Permission;
+import de.murmelmeister.murmelapi.permission.PermissionProvider;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.UserProvider;
+import de.murmelmeister.murmelapi.user.parent.UserParent;
+import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
 import de.murmelmeister.murmelapi.user.settings.UserSettings;
@@ -36,6 +42,8 @@ public final class MurmelAPI {
             GroupSettings groupSettings = MurmelAPI.getGroupSettings();
             UserPermission userPermission = MurmelAPI.getUserPermission();
             GroupPermission groupPermission = MurmelAPI.getGroupPermission();
+            UserParent userParent = MurmelAPI.getUserParent();
+            GroupParent groupParent = MurmelAPI.getGroupParent();
 
             Database.disconnect();
         } catch (IOException e) {
@@ -101,5 +109,38 @@ public final class MurmelAPI {
      */
     public static GroupPermission getGroupPermission() throws SQLException {
         return new GroupPermissionProvider();
+    }
+
+    /**
+     * Get the user parent provider.
+     *
+     * @return the user parent provider
+     * @throws SQLException if an error occurs
+     */
+    public static UserParent getUserParent() throws SQLException {
+        return new UserParentProvider();
+    }
+
+    /**
+     * Get the group parent provider.
+     *
+     * @return the group parent provider
+     * @throws SQLException if an error occurs
+     */
+    public static GroupParent getGroupParent() throws SQLException {
+        return new GroupParentProvider();
+    }
+
+    /**
+     * Get the permission provider.
+     *
+     * @param groupParent     The group parent provider.
+     * @param groupPermission The group permission provider.
+     * @param userParent      The user parent provider.
+     * @param userPermission  The user permission provider.
+     * @return the permission provider
+     */
+    public static Permission getPermission(GroupParent groupParent, GroupPermission groupPermission, UserParent userParent, UserPermission userPermission) {
+        return new PermissionProvider(groupParent, groupPermission, userParent, userPermission);
     }
 }

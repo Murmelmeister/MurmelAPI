@@ -1,5 +1,7 @@
 package de.murmelmeister.murmelapi.group.permission;
 
+import de.murmelmeister.murmelapi.group.Group;
+import de.murmelmeister.murmelapi.group.parent.GroupParent;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.Database;
 
@@ -48,6 +50,13 @@ public final class GroupPermissionProvider implements GroupPermission {
     @Override
     public List<String> getPermissions(int groupId) throws SQLException {
         return Database.getStringList(new ArrayList<>(), "Permission", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), checkArgumentSQL(groupId));
+    }
+
+    @Override
+    public List<String> getAllPermissions(GroupParent groupParent, int groupId) throws SQLException {
+        List<String> permissions = new ArrayList<>(getPermissions(groupId));
+        for (int parent : groupParent.getParentIds(groupId)) permissions.addAll(getAllPermissions(groupParent, parent));
+        return permissions;
     }
 
     @Override
@@ -101,6 +110,16 @@ public final class GroupPermissionProvider implements GroupPermission {
         var expired = getExpiredTime(groupId, permission) - (System.currentTimeMillis() + time);
         setExpiredTime(groupId, permission, expired);
         return "";
+    }
+
+    @Override
+    public void loadExpired(Group group) throws SQLException {
+        for (int groupId : group.getUniqueIds())
+            for (String permission : getPermissions(groupId)) {
+                var time = getExpiredTime(groupId, permission);
+                if (time == -1) continue;
+                if (time <= System.currentTimeMillis()) removePermission(groupId, permission);
+            }
     }
 
     private enum Procedure {

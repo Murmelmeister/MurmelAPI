@@ -1,5 +1,7 @@
 package de.murmelmeister.murmelapi.group.permission;
 
+import de.murmelmeister.murmelapi.group.Group;
+import de.murmelmeister.murmelapi.group.parent.GroupParent;
 import de.murmelmeister.murmelapi.user.User;
 
 import java.sql.SQLException;
@@ -57,7 +59,14 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      */
     List<String> getPermissions(int groupId) throws SQLException;
 
-    //List<String> getAllPermissions(GroupParent groupParent, int groupId) throws SQLException;
+    /**
+     * Obtains all permissions of a group.
+     *
+     * @param group The group.
+     * @return A list of all permissions of the group.
+     * @throws SQLException If an SQL error occurs.
+     */
+    List<String> getAllPermissions(GroupParent groupParent, int groupId) throws SQLException;
 
     /**
      * Obtains the creator id of a permission.
@@ -150,5 +159,11 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      */
     String removeExpiredTime(int groupId, String permission, long time) throws SQLException;
 
-    //void loadExpired() throws SQLException;
+    /**
+     * Loads all expired permissions of a group.
+     *
+     * @param group The group.
+     * @throws SQLException If an SQL error occurs.
+     */
+    void loadExpired(Group group) throws SQLException;
 }

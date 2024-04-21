@@ -148,5 +148,11 @@ public sealed interface UserPermission permits UserPermissionProvider {
      */
     String removeExpiredTime(int userId, String permission, long time) throws SQLException;
 
-    //void loadExpired() throws SQLException;
+    /**
+     * Loads all expired permissions of a user.
+     *
+     * @param user The user.
+     * @throws SQLException If an SQL error occurs.
+     */
+    void loadExpired(User user) throws SQLException;
 }
