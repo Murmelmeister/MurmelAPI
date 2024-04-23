@@ -1,7 +1,12 @@
 package de.murmelmeister.murmelapi.group;
 
+import de.murmelmeister.murmelapi.group.parent.GroupParent;
+import de.murmelmeister.murmelapi.group.permission.GroupPermission;
+import de.murmelmeister.murmelapi.group.settings.GroupSettings;
+
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Group interface to manage groups.
@@ -29,10 +34,11 @@ public sealed interface Group permits GroupProvider {
      * Creates a new group and checks if the group already exists.
      * If the group already exists, the method will return without creating a new group.
      *
-     * @param name The name of the group.
+     * @param name      The name of the group.
+     * @param creatorId The creator id of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    void createNewGroup(String name) throws SQLException;
+    void createNewGroup(String name, UUID creatorId) throws SQLException;
 
     /**
      * Deletes a group.
@@ -93,4 +99,32 @@ public sealed interface Group permits GroupProvider {
      * @throws SQLException If an SQL error occurs.
      */
     List<String> getNames() throws SQLException;
+
+    /**
+     * Loads all expired things.
+     *
+     * @throws SQLException If an SQL error occurs.
+     */
+    void loadExpired() throws SQLException;
+
+    /**
+     * Obtains the settings of a group.
+     *
+     * @return The settings of the group.
+     */
+    GroupSettings getSettings();
+
+    /**
+     * Obtains the parent of a group.
+     *
+     * @return The parent of the group.
+     */
+    GroupParent getParent();
+
+    /**
+     * Obtains the permission of a group.
+     *
+     * @return The permission of the group.
+     */
+    GroupPermission getPermission();
 }

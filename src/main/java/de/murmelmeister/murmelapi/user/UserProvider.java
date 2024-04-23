@@ -1,5 +1,11 @@
 package de.murmelmeister.murmelapi.user;
 
+import de.murmelmeister.murmelapi.user.parent.UserParent;
+import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
+import de.murmelmeister.murmelapi.user.permission.UserPermission;
+import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
+import de.murmelmeister.murmelapi.user.settings.UserSettings;
+import de.murmelmeister.murmelapi.user.settings.UserSettingsProvider;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
@@ -11,9 +17,16 @@ import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 public final class UserProvider implements User {
     private static final String TABLE_NAME = "User";
 
+    private final UserSettings settings;
+    private final UserParent parent;
+    private final UserPermission permission;
+
     public UserProvider() throws SQLException {
         this.createTable();
         Procedure.loadAll();
+        this.settings = new UserSettingsProvider();
+        this.parent = new UserParentProvider();
+        this.permission = new UserPermissionProvider();
     }
 
     private void createTable() throws SQLException {
@@ -34,6 +47,8 @@ public final class UserProvider implements User {
     public void createNewUser(UUID uuid, String username) throws SQLException {
         if (existsUser(uuid)) return;
         Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_INSERT.getName(), uuid, username);
+        var id = getId(uuid);
+        settings.createUser(id);
     }
 
     @Override
@@ -94,6 +109,27 @@ public final class UserProvider implements User {
     public void joinUser(UUID uuid, String username) throws SQLException {
         createNewUser(uuid, username);
         if (!getUsername(uuid).equals(username)) rename(uuid, username);
+    }
+
+    @Override
+    public void loadExpired() throws SQLException {
+        parent.loadExpired(this);
+        permission.loadExpired(this);
+    }
+
+    @Override
+    public UserSettings getSettings() {
+        return settings;
+    }
+
+    @Override
+    public UserParent getParent() {
+        return parent;
+    }
+
+    @Override
+    public UserPermission getPermission() {
+        return permission;
     }
 
     private enum Procedure {

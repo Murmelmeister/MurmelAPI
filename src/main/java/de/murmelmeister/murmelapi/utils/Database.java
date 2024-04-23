@@ -19,6 +19,7 @@ public final class Database {
 
     /**
      * Connects to the database using the provided URL, username and password.
+     * Note: It is not checked whether it is really connected!
      *
      * @param url      The JDBC URL for the database.
      * @param user     The username for the database.
@@ -32,6 +33,7 @@ public final class Database {
 
     /**
      * Connects to the database using the provided driver, host, port, database, username, and password.
+     * Note: It is not checked whether it is really connected!
      *
      * @param driver   The JDBC driver for the database.
      * @param hostname The hostname of the database.

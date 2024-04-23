@@ -1,5 +1,9 @@
 package de.murmelmeister.murmelapi.user;
 
+import de.murmelmeister.murmelapi.user.parent.UserParent;
+import de.murmelmeister.murmelapi.user.permission.UserPermission;
+import de.murmelmeister.murmelapi.user.settings.UserSettings;
+
 import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
@@ -132,4 +136,32 @@ public sealed interface User permits UserProvider {
      * @throws SQLException If an SQL error occurs.
      */
     void joinUser(UUID uuid, String username) throws SQLException;
+
+    /**
+     * Load all expired things.
+     *
+     * @throws SQLException If an SQL error occurs.
+     */
+    void loadExpired() throws SQLException;
+
+    /**
+     * Obtains the settings of a user.
+     *
+     * @return The settings of the user.
+     */
+    UserSettings getSettings();
+
+    /**
+     * Obtains the parent of a user.
+     *
+     * @return The parent of the user.
+     */
+    UserParent getParent();
+
+    /**
+     * Obtains the permission of a user.
+     *
+     * @return The permission of the user.
+     */
+    UserPermission getPermission();
 }

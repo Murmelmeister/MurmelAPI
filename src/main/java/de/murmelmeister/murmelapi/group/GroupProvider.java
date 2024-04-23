@@ -1,19 +1,33 @@
 package de.murmelmeister.murmelapi.group;
 
+import de.murmelmeister.murmelapi.group.parent.GroupParent;
+import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
+import de.murmelmeister.murmelapi.group.permission.GroupPermission;
+import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
+import de.murmelmeister.murmelapi.group.settings.GroupSettings;
+import de.murmelmeister.murmelapi.group.settings.GroupSettingsProvider;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
 public final class GroupProvider implements Group {
     private static final String TABLE_NAME = "Groups";
 
+    private final GroupSettings settings;
+    private final GroupParent parent;
+    private final GroupPermission permission;
+
     public GroupProvider() throws SQLException {
         this.createTable();
         Procedure.loadAll();
+        this.settings = new GroupSettingsProvider();
+        this.parent = new GroupParentProvider();
+        this.permission = new GroupPermissionProvider();
     }
 
     private void createTable() throws SQLException {
@@ -31,9 +45,11 @@ public final class GroupProvider implements Group {
     }
 
     @Override
-    public void createNewGroup(String name) throws SQLException {
+    public void createNewGroup(String name, UUID creatorId) throws SQLException {
         if (existsGroup(name)) return;
         Database.update("CALL %s('%s')", Procedure.PROCEDURE_INSERT.getName(), name);
+        var id = getUniqueId(name);
+        settings.createGroup(id, creatorId);
     }
 
     @Override
@@ -69,6 +85,27 @@ public final class GroupProvider implements Group {
     @Override
     public List<String> getNames() throws SQLException {
         return Database.getStringList(new ArrayList<>(), "GroupName", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+    }
+
+    @Override
+    public void loadExpired() throws SQLException {
+        parent.loadExpired(this);
+        permission.loadExpired(this);
+    }
+
+    @Override
+    public GroupSettings getSettings() {
+        return settings;
+    }
+
+    @Override
+    public GroupParent getParent() {
+        return parent;
+    }
+
+    @Override
+    public GroupPermission getPermission() {
+        return permission;
     }
 
     private enum Procedure {

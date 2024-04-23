@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.permission;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Permission interface to manage permissions.
@@ -19,10 +20,10 @@ public sealed interface Permission permits PermissionProvider {
     /**
      * Checks if a user has a permission.
      *
-     * @param userId     The id of the user.
+     * @param uuid       The id of the player.
      * @param permission The permission.
      * @return True if the user has the permission, otherwise false.
      * @throws SQLException If an SQL error occurs.
      */
-    boolean hasPermission(int userId, String permission) throws SQLException;
+    boolean hasPermission(UUID uuid, String permission) throws SQLException;
 }
