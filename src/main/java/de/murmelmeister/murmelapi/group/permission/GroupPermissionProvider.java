@@ -22,9 +22,7 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255), " +
-                        "FOREIGN KEY (GroupID) REFERENCES Groups(ID), " +
-                        "FOREIGN KEY (CreatorID) REFERENCES User(ID))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", TABLE_NAME);
     }
 
     @Override

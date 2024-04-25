@@ -39,8 +39,8 @@ public final class MurmelAPI {
 
     static {
         try {
-            USER = new UserProvider();
             GROUP = new GroupProvider();
+            USER = new UserProvider();
             PERMISSION = new PermissionProvider(GROUP, USER);
         } catch (SQLException e) {
             throw new RuntimeException(e);
