@@ -21,9 +21,10 @@ public final class UserParentProvider implements UserParent {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (UserID INT PRIMARY KEY, FOREIGN KEY (UserID) REFERENCES User(ID), " +
-                        "CreatorID INT, FOREIGN KEY (CreatorID) REFERENCES User(ID), " +
-                        "ParentID INT, FOREIGN KEY (ParentID) REFERENCES Groups(ID), CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (UserID INT PRIMARY KEY, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255), " +
+                        "FOREIGN KEY (UserID) REFERENCES User(ID), " +
+                        "FOREIGN KEY (CreatorID) REFERENCES User(ID), " +
+                        "FOREIGN KEY (ParentID) REFERENCES Groups(ID))", TABLE_NAME);
     }
 
     @Override

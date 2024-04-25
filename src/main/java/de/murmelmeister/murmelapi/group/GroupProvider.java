@@ -11,7 +11,6 @@ import de.murmelmeister.murmelapi.utils.Database;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
@@ -45,7 +44,7 @@ public final class GroupProvider implements Group {
     }
 
     @Override
-    public void createNewGroup(String name, UUID creatorId) throws SQLException {
+    public void createNewGroup(String name, int creatorId) throws SQLException {
         if (existsGroup(name)) return;
         Database.update("CALL %s('%s')", Procedure.PROCEDURE_INSERT.getName(), name);
         var id = getUniqueId(name);
@@ -91,6 +90,13 @@ public final class GroupProvider implements Group {
     public void loadExpired() throws SQLException {
         parent.loadExpired(this);
         permission.loadExpired(this);
+    }
+
+    @Override
+    public int getDefaultGroup() throws SQLException {
+        String group = "default";
+        createNewGroup(group, -1);
+        return getUniqueId(group);
     }
 
     @Override

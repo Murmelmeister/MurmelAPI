@@ -9,6 +9,7 @@ import de.murmelmeister.murmelapi.user.settings.UserSettingsProvider;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,12 +60,12 @@ public final class UserProvider implements User {
 
     @Override
     public int getId(UUID uuid) throws SQLException {
-        return Database.getInt(-1, "ID", "CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), checkArgumentSQL(uuid));
+        return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), checkArgumentSQL(uuid));
     }
 
     @Override
     public int getId(String username) throws SQLException {
-        return Database.getInt(-1, "ID", "CALL %s('%s')", Procedure.PROCEDURE_USERNAME.getName(), checkArgumentSQL(username));
+        return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_USERNAME.getName(), checkArgumentSQL(username));
     }
 
     @Override
@@ -85,6 +86,12 @@ public final class UserProvider implements User {
     }
 
     @Override
+    public String getUsername(int id) throws SQLException {
+        if (id == -1) return "CONSOLE";
+        return Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
+    }
+
+    @Override
     public void rename(UUID uuid, String newName) throws SQLException {
         var id = getId(uuid);
         Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME.getName(), id, newName);
@@ -92,17 +99,17 @@ public final class UserProvider implements User {
 
     @Override
     public List<UUID> getUniqueIds() throws SQLException {
-        return Database.getUniqueIdList(null, "UUID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+        return Database.getUniqueIdList(new ArrayList<>(), "UUID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override
     public List<String> getUsernames() throws SQLException {
-        return Database.getStringList(null, "Username", "CALL %s", Procedure.PROCEDURE_USERNAME.getName());
+        return Database.getStringList(new ArrayList<>(), "Username", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override
     public List<Integer> getIds() throws SQLException {
-        return Database.getIntList(null, "ID", "CALL %s", Procedure.PROCEDURE_ID.getName());
+        return Database.getIntList(new ArrayList<>(), "ID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override

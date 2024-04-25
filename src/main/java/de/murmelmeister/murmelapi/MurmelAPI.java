@@ -18,7 +18,7 @@ import java.util.Properties;
  */
 public final class MurmelAPI {
     @Deprecated
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) {
         try (FileInputStream file = new FileInputStream("./mysql.properties")) { // Test-Server path
             Properties properties = new Properties(System.getProperties());
             properties.load(file);
@@ -33,34 +33,44 @@ public final class MurmelAPI {
         }
     }
 
-    /**
-     * Get the user provider.
-     *
-     * @return the user provider
-     * @throws SQLException if an error occurs
-     */
-    public static User getUser() throws SQLException {
-        return new UserProvider();
+    private static final Group GROUP;
+    private static final User USER;
+    private static final Permission PERMISSION;
+
+    static {
+        try {
+            USER = new UserProvider();
+            GROUP = new GroupProvider();
+            PERMISSION = new PermissionProvider(GROUP, USER);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
      * Get the group provider.
      *
      * @return the group provider
-     * @throws SQLException if an error occurs
      */
-    public static Group getGroup() throws SQLException {
-        return new GroupProvider();
+    public static Group getGroup() {
+        return GROUP;
+    }
+
+    /**
+     * Get the user provider.
+     *
+     * @return the user provider
+     */
+    public static User getUser() {
+        return USER;
     }
 
     /**
      * Get the permission provider.
      *
-     * @param group the group
-     * @param user  the user
      * @return the permission provider
      */
-    public static Permission getPermission(Group group, User user) {
-        return new PermissionProvider(group, user);
+    public static Permission getPermission() {
+        return PERMISSION;
     }
 }

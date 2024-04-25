@@ -38,7 +38,7 @@ public sealed interface Group permits GroupProvider {
      * @param creatorId The creator id of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    void createNewGroup(String name, UUID creatorId) throws SQLException;
+    void createNewGroup(String name, int creatorId) throws SQLException;
 
     /**
      * Deletes a group.
@@ -106,6 +106,13 @@ public sealed interface Group permits GroupProvider {
      * @throws SQLException If an SQL error occurs.
      */
     void loadExpired() throws SQLException;
+
+    /**
+     * Obtains the default group.
+     *
+     * @throws SQLException If an SQL error occurs.
+     */
+    int getDefaultGroup() throws SQLException;
 
     /**
      * Obtains the settings of a group.

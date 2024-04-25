@@ -16,7 +16,7 @@ public final class UserSettingsProvider implements UserSettings {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (ID INT PRIMARY KEY, FOREIGN KEY (ID) REFERENCES User(ID), FirstJoin BIGINT(255))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (ID INT PRIMARY KEY, FirstJoin BIGINT(255), FOREIGN KEY (ID) REFERENCES User(ID))", TABLE_NAME);
     }
 
     @Override

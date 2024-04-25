@@ -94,6 +94,16 @@ public sealed interface User permits UserProvider {
     String getUsername(UUID uuid) throws SQLException;
 
     /**
+     * Obtains the username of a user.
+     * If the id -1 then the method will return "CONSOLE".
+     *
+     * @param id The id of the user.
+     * @return The username of the user.
+     * @throws SQLException If an SQL error occurs.
+     */
+    String getUsername(int id) throws SQLException;
+
+    /**
      * Renames a user.
      *
      * @param uuid    The unique id of the user.

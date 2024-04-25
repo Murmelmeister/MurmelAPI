@@ -18,7 +18,9 @@ public final class GroupSettingsProvider implements GroupSettings {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, FOREIGN KEY (GroupID) REFERENCES Groups(ID), CreatorID INT, FOREIGN KEY (CreatorID) REFERENCES User(ID), CreatedTime BIGINT(255))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, CreatedTime BIGINT(255)," +
+                        "FOREIGN KEY (GroupID) REFERENCES Groups(ID)," +
+                        "FOREIGN KEY (CreatorID) REFERENCES User(ID))", TABLE_NAME);
     }
 
     @Override
@@ -27,9 +29,9 @@ public final class GroupSettingsProvider implements GroupSettings {
     }
 
     @Override
-    public void createGroup(int groupId, UUID creator) throws SQLException {
+    public void createGroup(int groupId, int creatorId) throws SQLException {
         if (existsGroup(groupId)) return;
-        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), groupId, creator, System.currentTimeMillis());
+        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), groupId, creatorId, System.currentTimeMillis());
     }
 
     @Override

@@ -22,11 +22,11 @@ public sealed interface GroupSettings permits GroupSettingsProvider {
      * Creates a new group and checks if the group already exists.
      * If the group already exists, the method will return without creating a new group.
      *
-     * @param groupId The id of the group.
-     * @param creator The creator of the group.
+     * @param groupId   The id of the group.
+     * @param creatorId The creator id of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    void createGroup(int groupId, UUID creator) throws SQLException;
+    void createGroup(int groupId, int creatorId) throws SQLException;
 
     /**
      * Deletes a group.
