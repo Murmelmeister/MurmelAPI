@@ -49,11 +49,11 @@ public final class GroupProvider implements Group {
     }
 
     @Override
-    public void createNewGroup(String name, int creatorId) throws SQLException {
+    public void createNewGroup(String name, int creatorId, int sortId) throws SQLException {
         if (existsGroup(name)) return;
         Database.update("CALL %s('%s')", Procedure.PROCEDURE_INSERT.getName(), name);
         var id = getUniqueId(name);
-        settings.createGroup(id, creatorId);
+        settings.createGroup(id, creatorId, sortId);
         colorSettings.createGroup(id, creatorId);
     }
 
@@ -106,7 +106,7 @@ public final class GroupProvider implements Group {
     @Override
     public int getDefaultGroup() throws SQLException {
         String group = "default";
-        createNewGroup(group, -1);
+        createNewGroup(group, -1, 1000);
         return getUniqueId(group);
     }
 

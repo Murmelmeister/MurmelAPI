@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.group.settings;
 
 import java.sql.SQLException;
+import java.util.List;
 
 /**
  * Group settings interface to manage group settings.
@@ -21,9 +22,10 @@ public sealed interface GroupSettings permits GroupSettingsProvider {
      *
      * @param groupId   The id of the group.
      * @param creatorId The creator id of the group.
+     * @param sortId    The sort id of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    void createGroup(int groupId, int creatorId) throws SQLException;
+    void createGroup(int groupId, int creatorId, int sortId) throws SQLException;
 
     /**
      * Deletes a group.
@@ -59,4 +61,30 @@ public sealed interface GroupSettings permits GroupSettingsProvider {
      * @throws SQLException If an SQL error occurs.
      */
     String getCreatedDate(int groupId) throws SQLException;
+
+    /**
+     * Obtains the sort id of a group.
+     *
+     * @param groupId The id of the group.
+     * @return The sort id of the group.
+     * @throws SQLException If an SQL error occurs.
+     */
+    int getSortId(int groupId) throws SQLException;
+
+    /**
+     * Sets the sort id of a group.
+     *
+     * @param groupId The id of the group.
+     * @param sortId  The sort id of the group.
+     * @throws SQLException If an SQL error occurs.
+     */
+    void setSortId(int groupId, int sortId) throws SQLException;
+
+    /**
+     * Obtains a list of all sort ids of the groups.
+     *
+     * @return A list of all sort ids of the groups.
+     * @throws SQLException If an SQL error occurs.
+     */
+    List<Integer> getSortIds() throws SQLException;
 }

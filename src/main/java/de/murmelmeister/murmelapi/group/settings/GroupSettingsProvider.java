@@ -4,6 +4,8 @@ import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 
 import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
@@ -16,7 +18,7 @@ public final class GroupSettingsProvider implements GroupSettings {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, CreatedTime BIGINT(255))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, CreatedTime BIGINT(255), SortID INT)", TABLE_NAME);
     }
 
     @Override
@@ -25,9 +27,9 @@ public final class GroupSettingsProvider implements GroupSettings {
     }
 
     @Override
-    public void createGroup(int groupId, int creatorId) throws SQLException {
+    public void createGroup(int groupId, int creatorId, int sortId) throws SQLException {
         if (existsGroup(groupId)) return;
-        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), groupId, creatorId, System.currentTimeMillis());
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), groupId, creatorId, System.currentTimeMillis(), sortId);
     }
 
     @Override
@@ -50,10 +52,27 @@ public final class GroupSettingsProvider implements GroupSettings {
         return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getCreatedTime(groupId));
     }
 
+    @Override
+    public int getSortId(int groupId) throws SQLException {
+        return Database.getInt(-1, "SortID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
+    }
+
+    @Override
+    public void setSortId(int groupId, int sortId) throws SQLException {
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_UPDATE_SORT_ID.getName(), checkArgumentSQL(groupId), checkArgumentSQL(sortId));
+    }
+
+    @Override
+    public List<Integer> getSortIds() throws SQLException {
+        return Database.getIntList(new ArrayList<>(), "SortID", "CALL %s()", Procedure.PROCEDURE_ALL.getName()).stream().sorted().toList();
+    }
+
     private enum Procedure {
         PROCEDURE_ID("GroupSettings_ID", Database.getProcedureQuery("GroupSettings_ID", "gid INT", "SELECT * FROM %s WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_INSERT("GroupSettings_Insert", Database.getProcedureQuery("GroupSettings_Insert", "gid INT, creator VARCHAR(36), time BIGINT(255)", "INSERT INTO %s VALUES (gid, creator, time);", TABLE_NAME)),
-        PROCEDURE_DELETE("GroupSettings_Delete", Database.getProcedureQuery("GroupSettings_Delete", "gid INT", "DELETE FROM %s WHERE GroupID=gid;", TABLE_NAME));
+        PROCEDURE_INSERT("GroupSettings_Insert", Database.getProcedureQuery("GroupSettings_Insert", "gid INT, creator VARCHAR(36), time BIGINT(255), sort INT", "INSERT INTO %s VALUES (gid, creator, time, sort);", TABLE_NAME)),
+        PROCEDURE_DELETE("GroupSettings_Delete", Database.getProcedureQuery("GroupSettings_Delete", "gid INT", "DELETE FROM %s WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_SORT_ID("GroupSettings_Update_SortID", Database.getProcedureQuery("GroupSettings_Update_SortID", "gid INT, sort INT", "UPDATE %s SET SortID=sort WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_ALL("GroupSettings_All", Database.getProcedureQuery("GroupSettings_All", "", "SELECT * FROM %s;", TABLE_NAME));
         private static final Procedure[] VALUES = values();
 
         private final String name;
