@@ -4,7 +4,6 @@ import de.murmelmeister.murmelapi.user.User;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * User permission interface to manage user permissions.
@@ -66,17 +65,6 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @throws SQLException If an SQL error occurs.
      */
     int getCreatorId(int userId, String permission) throws SQLException;
-
-    /**
-     * Obtains the creator id of a permission.
-     *
-     * @param user       The user.
-     * @param userId     The id of the user.
-     * @param permission The permission.
-     * @return The creator id of the permission.
-     * @throws SQLException If an SQL error occurs.
-     */
-    UUID getCreatorId(User user, int userId, String permission) throws SQLException;
 
     /**
      * Obtains the created time of a permission.

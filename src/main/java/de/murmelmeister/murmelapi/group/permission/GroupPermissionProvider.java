@@ -2,14 +2,12 @@ package de.murmelmeister.murmelapi.group.permission;
 
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
-import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
@@ -22,7 +20,7 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", TABLE_NAME);
     }
 
     @Override
@@ -65,12 +63,6 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     @Override
-    public UUID getCreatorId(User user, int groupId, String permission) throws SQLException {
-        var creatorId = getCreatorId(groupId, permission);
-        return user.getUniqueId(creatorId);
-    }
-
-    @Override
     public long getCreatedTime(int groupId, String permission) throws SQLException {
         return Database.getLong(-1, "CreatedTime", "CALL %s('%s','%s')", Procedure.PROCEDURE_PERMISSION.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission));
     }
@@ -87,7 +79,8 @@ public final class GroupPermissionProvider implements GroupPermission {
 
     @Override
     public String getExpiredDate(int groupId, String permission) throws SQLException {
-        return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getExpiredTime(groupId, permission));
+        long time = getExpiredTime(groupId, permission);
+        return time == -1 ? "never" : new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(time);
     }
 
     @Override

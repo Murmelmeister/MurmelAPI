@@ -1,14 +1,12 @@
 package de.murmelmeister.murmelapi.group.parent;
 
 import de.murmelmeister.murmelapi.group.Group;
-import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
@@ -21,7 +19,7 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     private void createTable() throws SQLException {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", TABLE_NAME);
     }
 
     @Override
@@ -64,12 +62,6 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     @Override
-    public UUID getCreatorId(User user, int groupId, int parentId) throws SQLException {
-        var creatorId = getCreatorId(groupId, parentId);
-        return user.getUniqueId(creatorId);
-    }
-
-    @Override
     public long getCreatedTime(int groupId, int parentId) throws SQLException {
         return Database.getLong(-1, "CreatedTime", "CALL %s('%s','%s')", Procedure.PROCEDURE_PARENT.getName(), checkArgumentSQL(groupId), checkArgumentSQL(parentId));
     }
@@ -86,7 +78,8 @@ public final class GroupParentProvider implements GroupParent {
 
     @Override
     public String getExpiredDate(int groupId, int parentId) throws SQLException {
-        return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getExpiredTime(groupId, parentId));
+        long time = getExpiredTime(groupId, parentId);
+        return time == -1 ? "never" : new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(time);
     }
 
     @Override

@@ -55,6 +55,9 @@ public final class UserProvider implements User {
     @Override
     public void deleteUser(UUID uuid) throws SQLException {
         var id = getId(uuid);
+        permission.clearPermission(id);
+        parent.clearParent(id);
+        settings.deleteUser(id);
         Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), id);
     }
 
@@ -87,14 +90,14 @@ public final class UserProvider implements User {
 
     @Override
     public String getUsername(int id) throws SQLException {
-        if (id == -1) return "CONSOLE";
-        return Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
+        var uid = checkArgumentSQL(id);
+        return uid == -1 ? "CONSOLE" : Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), uid);
     }
 
     @Override
     public void rename(UUID uuid, String newName) throws SQLException {
         var id = getId(uuid);
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME.getName(), id, newName);
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME.getName(), id, checkArgumentSQL(newName));
     }
 
     @Override

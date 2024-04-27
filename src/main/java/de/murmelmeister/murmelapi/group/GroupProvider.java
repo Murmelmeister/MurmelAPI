@@ -4,6 +4,8 @@ import de.murmelmeister.murmelapi.group.parent.GroupParent;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
 import de.murmelmeister.murmelapi.group.permission.GroupPermission;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
+import de.murmelmeister.murmelapi.group.settings.GroupColorSettings;
+import de.murmelmeister.murmelapi.group.settings.GroupColorSettingsProvider;
 import de.murmelmeister.murmelapi.group.settings.GroupSettings;
 import de.murmelmeister.murmelapi.group.settings.GroupSettingsProvider;
 import de.murmelmeister.murmelapi.utils.Database;
@@ -18,6 +20,7 @@ public final class GroupProvider implements Group {
     private static final String TABLE_NAME = "Groups";
 
     private final GroupSettings settings;
+    private final GroupColorSettings colorSettings;
     private final GroupParent parent;
     private final GroupPermission permission;
 
@@ -25,8 +28,10 @@ public final class GroupProvider implements Group {
         this.createTable();
         Procedure.loadAll();
         this.settings = new GroupSettingsProvider();
+        this.colorSettings = new GroupColorSettingsProvider();
         this.parent = new GroupParentProvider();
         this.permission = new GroupPermissionProvider();
+        getDefaultGroup();
     }
 
     private void createTable() throws SQLException {
@@ -49,11 +54,17 @@ public final class GroupProvider implements Group {
         Database.update("CALL %s('%s')", Procedure.PROCEDURE_INSERT.getName(), name);
         var id = getUniqueId(name);
         settings.createGroup(id, creatorId);
+        colorSettings.createGroup(id, creatorId);
     }
 
     @Override
     public void deleteGroup(int id) throws SQLException {
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), checkArgumentSQL(id));
+        int gid = checkArgumentSQL(id);
+        permission.clearPermission(gid);
+        parent.clearParent(gid);
+        colorSettings.deleteGroup(gid);
+        settings.deleteGroup(gid);
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), gid);
     }
 
     @Override
@@ -68,12 +79,12 @@ public final class GroupProvider implements Group {
 
     @Override
     public void rename(int id, String newName) throws SQLException {
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME_BY_ID.getName(), checkArgumentSQL(id), newName);
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME_BY_ID.getName(), checkArgumentSQL(id), checkArgumentSQL(newName));
     }
 
     @Override
     public void rename(String oldName, String newName) throws SQLException {
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME_BY_NAME.getName(), checkArgumentSQL(oldName), newName);
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME_BY_NAME.getName(), checkArgumentSQL(oldName), checkArgumentSQL(newName));
     }
 
     @Override
@@ -102,6 +113,11 @@ public final class GroupProvider implements Group {
     @Override
     public GroupSettings getSettings() {
         return settings;
+    }
+
+    @Override
+    public GroupColorSettings getColorSettings() {
+        return colorSettings;
     }
 
     @Override

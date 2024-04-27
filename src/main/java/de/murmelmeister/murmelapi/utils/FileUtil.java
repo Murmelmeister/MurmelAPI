@@ -40,7 +40,7 @@ public final class FileUtil {
     /**
      * Load a file.
      *
-     * @param file   File
+     * @param file File
      * @return Properties
      */
     public static Properties loadProperties(File file) {

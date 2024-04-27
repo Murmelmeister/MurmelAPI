@@ -2,11 +2,9 @@ package de.murmelmeister.murmelapi.group.permission;
 
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
-import de.murmelmeister.murmelapi.user.User;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Group permission interface to manage group permissions.
@@ -62,7 +60,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
     /**
      * Obtains all permissions of a group.
      *
-     * @param group The group.
+     * @param groupParent The group parent.
+     * @param groupId     The id of the group.
      * @return A list of all permissions of the group.
      * @throws SQLException If an SQL error occurs.
      */
@@ -77,17 +76,6 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @throws SQLException If an SQL error occurs.
      */
     int getCreatorId(int groupId, String permission) throws SQLException;
-
-    /**
-     * Obtains the creator id of a permission.
-     *
-     * @param user       The user.
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @return The creator id of the permission.
-     * @throws SQLException If an SQL error occurs.
-     */
-    UUID getCreatorId(User user, int groupId, String permission) throws SQLException;
 
     /**
      * Obtains the created time of a permission.

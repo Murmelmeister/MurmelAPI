@@ -5,7 +5,6 @@ import de.murmelmeister.murmelapi.user.User;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * User parent interface to manage user parents.
@@ -77,17 +76,6 @@ public sealed interface UserParent permits UserParentProvider {
      * @throws SQLException If an SQL error occurs.
      */
     int getCreatorId(int userId, int parentId) throws SQLException;
-
-    /**
-     * Obtains the creator id of a parent.
-     *
-     * @param user     The user.
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @return The creator id of the parent.
-     * @throws SQLException If an SQL error occurs.
-     */
-    UUID getCreatorId(User user, int userId, int parentId) throws SQLException;
 
     /**
      * Obtains the created time of a parent.

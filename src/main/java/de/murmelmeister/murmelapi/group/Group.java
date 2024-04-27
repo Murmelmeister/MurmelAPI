@@ -2,11 +2,11 @@ package de.murmelmeister.murmelapi.group;
 
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
 import de.murmelmeister.murmelapi.group.permission.GroupPermission;
+import de.murmelmeister.murmelapi.group.settings.GroupColorSettings;
 import de.murmelmeister.murmelapi.group.settings.GroupSettings;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Group interface to manage groups.
@@ -120,6 +120,13 @@ public sealed interface Group permits GroupProvider {
      * @return The settings of the group.
      */
     GroupSettings getSettings();
+
+    /**
+     * Obtains the color settings of a group.
+     *
+     * @return The color settings of the group.
+     */
+    GroupColorSettings getColorSettings();
 
     /**
      * Obtains the parent of a group.

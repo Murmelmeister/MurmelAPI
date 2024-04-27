@@ -1,9 +1,6 @@
 package de.murmelmeister.murmelapi.group.settings;
 
-import de.murmelmeister.murmelapi.user.User;
-
 import java.sql.SQLException;
-import java.util.UUID;
 
 /**
  * Group settings interface to manage group settings.
@@ -44,16 +41,6 @@ public sealed interface GroupSettings permits GroupSettingsProvider {
      * @throws SQLException If an SQL error occurs.
      */
     int getCreatorId(int groupId) throws SQLException;
-
-    /**
-     * Obtains the creator id of a group.
-     *
-     * @param user    The user.
-     * @param groupId The id of the group.
-     * @return The creator id of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    UUID getCreatorId(User user, int groupId) throws SQLException;
 
     /**
      * Obtains the created time of a group.

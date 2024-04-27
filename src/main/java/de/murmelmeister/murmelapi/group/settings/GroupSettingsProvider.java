@@ -1,11 +1,9 @@
 package de.murmelmeister.murmelapi.group.settings;
 
-import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
@@ -40,12 +38,6 @@ public final class GroupSettingsProvider implements GroupSettings {
     @Override
     public int getCreatorId(int groupId) throws SQLException {
         return Database.getInt(-2, "CreatorID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
-    }
-
-    @Override
-    public UUID getCreatorId(User user, int groupId) throws SQLException {
-        var creatorId = getCreatorId(groupId);
-        return user.getUniqueId(creatorId);
     }
 
     @Override

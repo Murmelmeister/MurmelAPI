@@ -1,11 +1,9 @@
 package de.murmelmeister.murmelapi.group.parent;
 
 import de.murmelmeister.murmelapi.group.Group;
-import de.murmelmeister.murmelapi.user.User;
 
 import java.sql.SQLException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Group parent interface to manage group parents.
@@ -77,17 +75,6 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @throws SQLException If an SQL error occurs.
      */
     int getCreatorId(int groupId, int parentId) throws SQLException;
-
-    /**
-     * Obtains the creator id of a parent.
-     *
-     * @param user     The user.
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @return The creator id of the parent.
-     * @throws SQLException If an SQL error occurs.
-     */
-    UUID getCreatorId(User user, int groupId, int parentId) throws SQLException;
 
     /**
      * Obtains the time the parent was created.
