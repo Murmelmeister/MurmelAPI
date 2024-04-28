@@ -66,7 +66,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setChatPrefix(int groupId, int creatorId, String chatPrefix) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_CHAT_PREFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(chatPrefix));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_CHAT_PREFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), chatPrefix);
     }
 
     @Override
@@ -76,7 +76,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setChatSuffix(int groupId, int creatorId, String chatSuffix) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_CHAT_SUFFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(chatSuffix));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_CHAT_SUFFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), chatSuffix);
     }
 
     @Override
@@ -86,7 +86,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setChatColor(int groupId, int creatorId, String chatColor) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_CHAT_COLOR.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(chatColor));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_CHAT_COLOR.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), chatColor);
     }
 
     @Override
@@ -96,7 +96,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setTabPrefix(int groupId, int creatorId, String tabPrefix) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAB_PREFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(tabPrefix));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAB_PREFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), tabPrefix);
     }
 
     @Override
@@ -106,7 +106,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setTabSuffix(int groupId, int creatorId, String tabSuffix) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAB_SUFFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(tabSuffix));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAB_SUFFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), tabSuffix);
     }
 
     @Override
@@ -116,7 +116,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setTabColor(int groupId, int creatorId, String tabColor) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAB_COLOR.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(tabColor));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAB_COLOR.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), tabColor);
     }
 
     @Override
@@ -126,7 +126,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setTagPrefix(int groupId, int creatorId, String tagPrefix) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAG_PREFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(tagPrefix));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAG_PREFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), tagPrefix);
     }
 
     @Override
@@ -136,7 +136,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setTagSuffix(int groupId, int creatorId, String tagSuffix) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAG_SUFFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(tagSuffix));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAG_SUFFIX.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), tagSuffix);
     }
 
     @Override
@@ -146,7 +146,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void setTagColor(int groupId, int creatorId, String tagColor) throws SQLException {
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAG_COLOR.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), checkArgumentSQL(tagColor));
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_UPDATE_TAG_COLOR.getName(), checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), tagColor);
     }
 
     private enum Procedure {
@@ -157,15 +157,15 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
                                                                                                               "tagP VARCHAR(300), tagS VARCHAR(300), tagC VARCHAR(30)",
                 "INSERT INTO %s VALUES (gid, creator, time, chatP, chatS, chatC, tabP, tabS, tabC, tagP, tagS, tagC);", TABLE_NAME)),
         PROCEDURE_DELETE("GroupColorSettings_Delete", Database.getProcedureQuery("GroupColorSettings_Delete", "gid INT", "DELETE FROM %s WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_CHAT_PREFIX("GroupColorSettings_Update_ChatPrefix", Database.getProcedureQuery("GroupColorSettings_ChatPrefix", "gid INT, creator INT, time BIGINT(255), chat VARCHAR(300)", "UPDATE %s SET ChatPrefix=chat, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_CHAT_SUFFIX("GroupColorSettings_Update_ChatSuffix", Database.getProcedureQuery("GroupColorSettings_ChatSuffix", "gid INT, creator INT, time BIGINT(255), chat VARCHAR(300)", "UPDATE %s SET ChatSuffix=chat, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_CHAT_COLOR("GroupColorSettings_Update_ChatColor", Database.getProcedureQuery("GroupColorSettings_ChatColor", "gid INT, creator INT, time BIGINT(255), chat VARCHAR(30)", "UPDATE %s SET ChatColor=chat, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_TAB_PREFIX("GroupColorSettings_Update_TabPrefix", Database.getProcedureQuery("GroupColorSettings_TabPrefix", "gid INT, creator INT, time BIGINT(255), tab VARCHAR(300)", "UPDATE %s SET TabPrefix=tab, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_TAB_SUFFIX("GroupColorSettings_Update_TabSuffix", Database.getProcedureQuery("GroupColorSettings_TabSuffix", "gid INT, creator INT, time BIGINT(255), tab VARCHAR(300)", "UPDATE %s SET TabSuffix=tab, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_TAB_COLOR("GroupColorSettings_Update_TabColor", Database.getProcedureQuery("GroupColorSettings_TabColor", "gid INT, creator INT, time BIGINT(255), tab VARCHAR(30)", "UPDATE %s SET TabColor=tab, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_TAG_PREFIX("GroupColorSettings_Update_TagPrefix", Database.getProcedureQuery("GroupColorSettings_TagPrefix", "gid INT, creator INT, time BIGINT(255), tag VARCHAR(300)", "UPDATE %s SET TagPrefix=tag, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_TAG_SUFFIX("GroupColorSettings_Update_TagSuffix", Database.getProcedureQuery("GroupColorSettings_TagSuffix", "gid INT, creator INT, time BIGINT(255), tag VARCHAR(300)", "UPDATE %s SET TagSuffix=tag, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_UPDATE_TAG_COLOR("GroupColorSettings_Update_TagColor", Database.getProcedureQuery("GroupColorSettings_TagColor", "gid INT, creator INT, time BIGINT(255), tag VARCHAR(30)", "UPDATE %s SET TagColor=tag, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME));
+        PROCEDURE_UPDATE_CHAT_PREFIX("GroupColorSettings_Update_ChatPrefix", Database.getProcedureQuery("GroupColorSettings_Update_ChatPrefix", "gid INT, creator INT, time BIGINT(255), chat VARCHAR(300)", "UPDATE %s SET ChatPrefix=chat, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_CHAT_SUFFIX("GroupColorSettings_Update_ChatSuffix", Database.getProcedureQuery("GroupColorSettings_Update_ChatSuffix", "gid INT, creator INT, time BIGINT(255), chat VARCHAR(300)", "UPDATE %s SET ChatSuffix=chat, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_CHAT_COLOR("GroupColorSettings_Update_ChatColor", Database.getProcedureQuery("GroupColorSettings_Update_ChatColor", "gid INT, creator INT, time BIGINT(255), chat VARCHAR(30)", "UPDATE %s SET ChatColor=chat, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_TAB_PREFIX("GroupColorSettings_Update_TabPrefix", Database.getProcedureQuery("GroupColorSettings_Update_TabPrefix", "gid INT, creator INT, time BIGINT(255), tab VARCHAR(300)", "UPDATE %s SET TabPrefix=tab, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_TAB_SUFFIX("GroupColorSettings_Update_TabSuffix", Database.getProcedureQuery("GroupColorSettings_Update_TabSuffix", "gid INT, creator INT, time BIGINT(255), tab VARCHAR(300)", "UPDATE %s SET TabSuffix=tab, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_TAB_COLOR("GroupColorSettings_Update_TabColor", Database.getProcedureQuery("GroupColorSettings_Update_TabColor", "gid INT, creator INT, time BIGINT(255), tab VARCHAR(30)", "UPDATE %s SET TabColor=tab, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_TAG_PREFIX("GroupColorSettings_Update_TagPrefix", Database.getProcedureQuery("GroupColorSettings_Update_TagPrefix", "gid INT, creator INT, time BIGINT(255), tag VARCHAR(300)", "UPDATE %s SET TagPrefix=tag, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_TAG_SUFFIX("GroupColorSettings_Update_TagSuffix", Database.getProcedureQuery("GroupColorSettings_Update_TagSuffix", "gid INT, creator INT, time BIGINT(255), tag VARCHAR(300)", "UPDATE %s SET TagSuffix=tag, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_TAG_COLOR("GroupColorSettings_Update_TagColor", Database.getProcedureQuery("GroupColorSettings_Update_TagColor", "gid INT, creator INT, time BIGINT(255), tag VARCHAR(30)", "UPDATE %s SET TagColor=tag, CreatorID=creator, EditedTime=time WHERE GroupID=gid;", TABLE_NAME));
         private static final Procedure[] VALUES = values();
 
         private final String name;

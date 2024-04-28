@@ -117,11 +117,11 @@ public final class GroupPermissionProvider implements GroupPermission {
 
     private enum Procedure {
         PROCEDURE_GROUP_ID("GroupPermission_GroupID", Database.getProcedureQuery("GroupPermission_GroupID", "gid INT", "SELECT * FROM %s WHERE GroupID=gid;", TABLE_NAME)),
-        PROCEDURE_PERMISSION("GroupPermission_Permission", Database.getProcedureQuery("GroupPermission_Permission", "gid INT, perm VARCHAR(1000)", "SELECT * FROM %s WHERE GroupID=uid AND Permission=perm;", TABLE_NAME)),
-        PROCEDURE_ADD("GroupPermission_Add", Database.getProcedureQuery("GroupPermission_Add", "gid INT, creator INT, perm VARCHAR(1000), created BIGINT(255), expired BIGINT(255)", "INSERT INTO %s VALUES (uid, creator, perm, created, expired);", TABLE_NAME)),
-        PROCEDURE_REMOVE("GroupPermission_Remove", Database.getProcedureQuery("GroupPermission_Remove", "gid INT, perm VARCHAR(1000)", "DELETE FROM %s WHERE GroupID=uid AND Permission=perm;", TABLE_NAME)),
-        PROCEDURE_CLEAR("GroupPermission_Clear", Database.getProcedureQuery("GroupPermission_Clear", "gid INT", "DELETE FROM %s WHERE GroupID=uid;", TABLE_NAME)),
-        PROCEDURE_EXPIRED("GroupPermission_Expired", Database.getProcedureQuery("GroupPermission_Expired", "gid INT, perm VARCHAR(1000), expired BIGINT(255)", "UPDATE %s SET ExpiredTime=expired WHERE GroupID=uid AND Permission=perm;", TABLE_NAME));
+        PROCEDURE_PERMISSION("GroupPermission_Permission", Database.getProcedureQuery("GroupPermission_Permission", "gid INT, perm VARCHAR(1000)", "SELECT * FROM %s WHERE GroupID=gid AND Permission=perm;", TABLE_NAME)),
+        PROCEDURE_ADD("GroupPermission_Add", Database.getProcedureQuery("GroupPermission_Add", "gid INT, creator INT, perm VARCHAR(1000), created BIGINT(255), expired BIGINT(255)", "INSERT INTO %s VALUES (gid, creator, perm, created, expired);", TABLE_NAME)),
+        PROCEDURE_REMOVE("GroupPermission_Remove", Database.getProcedureQuery("GroupPermission_Remove", "gid INT, perm VARCHAR(1000)", "DELETE FROM %s WHERE GroupID=gid AND Permission=perm;", TABLE_NAME)),
+        PROCEDURE_CLEAR("GroupPermission_Clear", Database.getProcedureQuery("GroupPermission_Clear", "gid INT", "DELETE FROM %s WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_EXPIRED("GroupPermission_Expired", Database.getProcedureQuery("GroupPermission_Expired", "gid INT, perm VARCHAR(1000), expired BIGINT(255)", "UPDATE %s SET ExpiredTime=expired WHERE GroupID=gid AND Permission=perm;", TABLE_NAME));
         private static final Procedure[] VALUES = values();
 
         private final String name;

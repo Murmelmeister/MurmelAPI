@@ -19,8 +19,6 @@ public record PermissionProvider(Group group, User user) implements Permission {
 
     @Override
     public boolean hasPermission(UUID uuid, String permission) throws SQLException {
-        group.loadExpired();
-        user.loadExpired();
         List<String> permissions = new ArrayList<>(getPermissions(user.getId(uuid)));
         if (permissions.contains("-" + permission)) return false;
         if (permissions.contains("*")) return true;

@@ -63,7 +63,7 @@ public final class UserProvider implements User {
 
     @Override
     public int getId(UUID uuid) throws SQLException {
-        return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), checkArgumentSQL(uuid));
+        return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), uuid);
     }
 
     @Override

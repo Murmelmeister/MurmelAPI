@@ -49,6 +49,15 @@ public sealed interface UserParent permits UserParentProvider {
     void clearParent(int userId) throws SQLException;
 
     /**
+     * Obtains the parent id of a user.
+     *
+     * @param userId The id of the user.
+     * @return The parent id of the user.
+     * @throws SQLException If an SQL error occurs.
+     */
+    int getParentId(int userId) throws SQLException;
+
+    /**
      * Obtains all parent ids of a user.
      *
      * @param userId The id of the user.

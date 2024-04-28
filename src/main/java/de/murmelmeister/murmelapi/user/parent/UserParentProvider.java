@@ -46,6 +46,11 @@ public final class UserParentProvider implements UserParent {
     }
 
     @Override
+    public int getParentId(int userId) throws SQLException {
+        return Database.getInt(-1, "ParentID", "CALL %s('%s')", Procedure.PROCEDURE_USER_ID.getName(), checkArgumentSQL(userId));
+    }
+
+    @Override
     public List<Integer> getParentIds(int userId) throws SQLException {
         return Database.getIntList(new ArrayList<>(), "ParentID", "CALL %s('%s')", Procedure.PROCEDURE_USER_ID.getName(), checkArgumentSQL(userId));
     }
