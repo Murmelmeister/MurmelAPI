@@ -91,16 +91,16 @@ public final class GroupParentProvider implements GroupParent {
     @Override
     public String addExpiredTime(int groupId, int parentId, long time) throws SQLException {
         if (Long.toString(time).startsWith("-")) return "No negative time";
-        var expired = getExpiredTime(groupId, parentId) + (System.currentTimeMillis() + time);
-        setExpiredTime(groupId, parentId, expired);
+        var expired = getExpiredTime(groupId, parentId) + time;
+        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(parentId), expired);
         return "";
     }
 
     @Override
     public String removeExpiredTime(int groupId, int parentId, long time) throws SQLException {
         if (Long.toString(time).startsWith("-")) return "No negative time";
-        var expired = getExpiredTime(groupId, parentId) - (System.currentTimeMillis() + time);
-        setExpiredTime(groupId, parentId, expired);
+        var expired = getExpiredTime(groupId, parentId) - time;
+        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(parentId), expired);
         return "";
     }
 

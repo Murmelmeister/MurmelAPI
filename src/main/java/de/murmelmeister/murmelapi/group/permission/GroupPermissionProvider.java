@@ -32,17 +32,17 @@ public final class GroupPermissionProvider implements GroupPermission {
     public void addPermission(int groupId, int creatorId, String permission, long time) throws SQLException {
         if (existsPermission(groupId, permission)) return;
         var expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_ADD.getName(), groupId, creatorId, permission, System.currentTimeMillis(), expired);
+        Database.update("CALL %s('%s','%s','%s','%s','%s')", Procedure.PROCEDURE_ADD.getName(), groupId, creatorId, permission, System.currentTimeMillis(), expired);
     }
 
     @Override
     public void removePermission(int groupId, String permission) throws SQLException {
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_PERMISSION.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission));
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_REMOVE.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission));
     }
 
     @Override
     public void clearPermission(int groupId) throws SQLException {
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), checkArgumentSQL(groupId));
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_CLEAR.getName(), checkArgumentSQL(groupId));
     }
 
     @Override
@@ -74,7 +74,7 @@ public final class GroupPermissionProvider implements GroupPermission {
 
     @Override
     public long getExpiredTime(int groupId, String permission) throws SQLException {
-        return Database.getLong(-2, "Expired", "CALL %s('%s','%s')", Procedure.PROCEDURE_PERMISSION.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission));
+        return Database.getLong(-2, "ExpiredTime", "CALL %s('%s','%s')", Procedure.PROCEDURE_PERMISSION.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission));
     }
 
     @Override
@@ -92,16 +92,16 @@ public final class GroupPermissionProvider implements GroupPermission {
     @Override
     public String addExpiredTime(int groupId, String permission, long time) throws SQLException {
         if (Long.toString(time).startsWith("-")) return "No negative time";
-        var expired = getExpiredTime(groupId, permission) + (System.currentTimeMillis() + time);
-        setExpiredTime(groupId, permission, expired);
+        var expired = getExpiredTime(groupId, permission) + time;
+        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission), expired);
         return "";
     }
 
     @Override
     public String removeExpiredTime(int groupId, String permission, long time) throws SQLException {
         if (Long.toString(time).startsWith("-")) return "No negative time";
-        var expired = getExpiredTime(groupId, permission) - (System.currentTimeMillis() + time);
-        setExpiredTime(groupId, permission, expired);
+        var expired = getExpiredTime(groupId, permission) - time;
+        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission), expired);
         return "";
     }
 
