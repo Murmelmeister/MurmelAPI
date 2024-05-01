@@ -95,19 +95,15 @@ public final class UserParentProvider implements UserParent {
     }
 
     @Override
-    public String addExpiredTime(int userId, int parentId, long time) throws SQLException {
-        if (Long.toString(time).startsWith("-")) return "No negative time";
+    public void addExpiredTime(int userId, int parentId, long time) throws SQLException {
         var expired = getExpiredTime(userId, parentId) + time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(userId), checkArgumentSQL(parentId), expired);
-        return "";
     }
 
     @Override
-    public String removeExpiredTime(int userId, int parentId, long time) throws SQLException {
-        if (Long.toString(time).startsWith("-")) return "No negative time";
+    public void removeExpiredTime(int userId, int parentId, long time) throws SQLException {
         var expired = getExpiredTime(userId, parentId) - time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(userId), checkArgumentSQL(parentId), expired);
-        return "";
     }
 
     @Override

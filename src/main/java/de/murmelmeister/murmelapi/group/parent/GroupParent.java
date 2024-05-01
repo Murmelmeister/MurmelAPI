@@ -132,10 +132,9 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
      * @param time     The time to add to the expiration.
-     * @return An error message if the time is negative, otherwise an empty string.
      * @throws SQLException If an SQL error occurs.
      */
-    String addExpiredTime(int groupId, int parentId, long time) throws SQLException;
+    void addExpiredTime(int groupId, int parentId, long time) throws SQLException;
 
     /**
      * Removes time from the parent expiration.
@@ -143,10 +142,9 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
      * @param time     The time to remove from the expiration.
-     * @return An error message if the time is negative, otherwise an empty string.
      * @throws SQLException If an SQL error occurs.
      */
-    String removeExpiredTime(int groupId, int parentId, long time) throws SQLException;
+    void removeExpiredTime(int groupId, int parentId, long time) throws SQLException;
 
     /**
      * Loads all expired parents of a group.

@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.user;
 
+import de.murmelmeister.murmelapi.playtime.PlayTime;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.settings.UserSettings;
@@ -174,4 +175,11 @@ public sealed interface User permits UserProvider {
      * @return The permission of the user.
      */
     UserPermission getPermission();
+
+    /**
+     * Obtains the play time of a user.
+     *
+     * @return The play time of the user.
+     */
+    PlayTime getPlayTime();
 }

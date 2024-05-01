@@ -90,19 +90,15 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     @Override
-    public String addExpiredTime(int groupId, String permission, long time) throws SQLException {
-        if (Long.toString(time).startsWith("-")) return "No negative time";
+    public void addExpiredTime(int groupId, String permission, long time) throws SQLException {
         var expired = getExpiredTime(groupId, permission) + time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission), expired);
-        return "";
     }
 
     @Override
-    public String removeExpiredTime(int groupId, String permission, long time) throws SQLException {
-        if (Long.toString(time).startsWith("-")) return "No negative time";
+    public void removeExpiredTime(int groupId, String permission, long time) throws SQLException {
         var expired = getExpiredTime(groupId, permission) - time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(permission), expired);
-        return "";
     }
 
     @Override

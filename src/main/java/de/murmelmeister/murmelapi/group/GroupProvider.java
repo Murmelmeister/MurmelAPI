@@ -4,10 +4,7 @@ import de.murmelmeister.murmelapi.group.parent.GroupParent;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
 import de.murmelmeister.murmelapi.group.permission.GroupPermission;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
-import de.murmelmeister.murmelapi.group.settings.GroupColorSettings;
-import de.murmelmeister.murmelapi.group.settings.GroupColorSettingsProvider;
-import de.murmelmeister.murmelapi.group.settings.GroupSettings;
-import de.murmelmeister.murmelapi.group.settings.GroupSettingsProvider;
+import de.murmelmeister.murmelapi.group.settings.*;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.sql.SQLException;
@@ -49,11 +46,12 @@ public final class GroupProvider implements Group {
     }
 
     @Override
-    public void createNewGroup(String name, int creatorId) throws SQLException {
+    public void createNewGroup(String name, int creatorId, int sortId, String teamId) throws SQLException {
         if (existsGroup(name)) return;
         Database.update("CALL %s('%s')", Procedure.PROCEDURE_INSERT.getName(), name);
         var id = getUniqueId(name);
-        settings.createGroup(id, creatorId);
+        var team = teamId + getName(id);
+        settings.createGroup(id, creatorId, sortId, team);
         colorSettings.createGroup(id, creatorId);
     }
 
@@ -106,8 +104,12 @@ public final class GroupProvider implements Group {
     @Override
     public int getDefaultGroup() throws SQLException {
         String group = "default";
-        createNewGroup(group, -1);
-        return getUniqueId(group);
+        createNewGroup(group, -1, 0, "9999");
+        var groupId = getUniqueId(group);
+        colorSettings.setColor(GroupColorType.TAG, groupId, -1, "&7");
+        colorSettings.setColor(GroupColorType.TAB, groupId, -1, "&7");
+        colorSettings.setPrefix(GroupColorType.CHAT, groupId, -1, "&7");
+        return groupId;
     }
 
     @Override

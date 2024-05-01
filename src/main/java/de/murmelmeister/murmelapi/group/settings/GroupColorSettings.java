@@ -80,173 +80,65 @@ public sealed interface GroupColorSettings permits GroupColorSettingsProvider {
     String getEditedDate(int groupId) throws SQLException;
 
     /**
-     * Obtains the chat prefix of a group.
+     * Obtains the prefix of a group.
      *
+     * @param type    The type of the group color.
      * @param groupId The id of the group.
-     * @return The chat prefix of the group.
+     * @return The prefix of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    String getChatPrefix(int groupId) throws SQLException;
+    String getPrefix(GroupColorType type, int groupId) throws SQLException;
 
     /**
-     * Sets the chat prefix of a group.
+     * Obtains the suffix of a group.
      *
-     * @param groupId    The id of the group.
-     * @param creatorId  The creator id of the group.
-     * @param chatPrefix The chat prefix of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    void setChatPrefix(int groupId, int creatorId, String chatPrefix) throws SQLException;
-
-    /**
-     * Obtains the chat suffix of a group.
-     *
+     * @param type    The type of the group color.
      * @param groupId The id of the group.
-     * @return The chat suffix of the group.
+     * @return The suffix of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    String getChatSuffix(int groupId) throws SQLException;
+    String getSuffix(GroupColorType type, int groupId) throws SQLException;
 
     /**
-     * Sets the chat suffix of a group.
+     * Obtains the color of a group.
      *
-     * @param groupId    The id of the group.
-     * @param creatorId  The creator id of the group.
-     * @param chatSuffix The chat suffix of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    void setChatSuffix(int groupId, int creatorId, String chatSuffix) throws SQLException;
-
-    /**
-     * Obtains the chat color of a group.
-     *
+     * @param type    The type of the group color.
      * @param groupId The id of the group.
-     * @return The chat color of the group.
+     * @return The color of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    String getChatColor(int groupId) throws SQLException;
+    String getColor(GroupColorType type, int groupId) throws SQLException;
 
     /**
-     * Sets the chat color of a group.
+     * Sets the prefix of a group.
      *
+     * @param type      The type of the group color.
      * @param groupId   The id of the group.
      * @param creatorId The creator id of the group.
-     * @param chatColor The chat color of the group.
+     * @param prefix    The prefix of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    void setChatColor(int groupId, int creatorId, String chatColor) throws SQLException;
+    void setPrefix(GroupColorType type, int groupId, int creatorId, String prefix) throws SQLException;
 
     /**
-     * Obtains the tab prefix of a group.
+     * Sets the suffix of a group.
      *
-     * @param groupId The id of the group.
-     * @return The tab prefix of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    String getTabPrefix(int groupId) throws SQLException;
-
-    /**
-     * Sets the tab prefix of a group.
-     *
+     * @param type      The type of the group color.
      * @param groupId   The id of the group.
      * @param creatorId The creator id of the group.
-     * @param tabPrefix The tab prefix of the group.
+     * @param suffix    The suffix of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    void setTabPrefix(int groupId, int creatorId, String tabPrefix) throws SQLException;
+    void setSuffix(GroupColorType type, int groupId, int creatorId, String suffix) throws SQLException;
 
     /**
-     * Obtains the tab suffix of a group.
+     * Sets the color of a group.
      *
-     * @param groupId The id of the group.
-     * @return The tab suffix of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    String getTabSuffix(int groupId) throws SQLException;
-
-    /**
-     * Sets the tab suffix of a group.
-     *
+     * @param type      The type of the group color.
      * @param groupId   The id of the group.
      * @param creatorId The creator id of the group.
-     * @param tabSuffix The tab suffix of the group.
+     * @param color     The color of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    void setTabSuffix(int groupId, int creatorId, String tabSuffix) throws SQLException;
-
-    /**
-     * Obtains the tab color of a group.
-     *
-     * @param groupId The id of the group.
-     * @return The tab color of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    String getTabColor(int groupId) throws SQLException;
-
-    /**
-     * Sets the tab color of a group.
-     *
-     * @param groupId   The id of the group.
-     * @param creatorId The creator id of the group.
-     * @param tabColor  The tab color of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    void setTabColor(int groupId, int creatorId, String tabColor) throws SQLException;
-
-    /**
-     * Obtains the tag prefix of a group.
-     *
-     * @param groupId The id of the group.
-     * @return The tag prefix of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    String getTagPrefix(int groupId) throws SQLException;
-
-    /**
-     * Sets the tag prefix of a group.
-     *
-     * @param groupId   The id of the group.
-     * @param creatorId The creator id of the group.
-     * @param tagPrefix The tag prefix of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    void setTagPrefix(int groupId, int creatorId, String tagPrefix) throws SQLException;
-
-    /**
-     * Obtains the tag suffix of a group.
-     *
-     * @param groupId The id of the group.
-     * @return The tag suffix of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    String getTagSuffix(int groupId) throws SQLException;
-
-    /**
-     * Sets the tag suffix of a group.
-     *
-     * @param groupId   The id of the group.
-     * @param creatorId The creator id of the group.
-     * @param tagSuffix The tag suffix of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    void setTagSuffix(int groupId, int creatorId, String tagSuffix) throws SQLException;
-
-    /**
-     * Obtains the tag color of a group.
-     *
-     * @param groupId The id of the group.
-     * @return The tag color of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    String getTagColor(int groupId) throws SQLException;
-
-    /**
-     * Sets the tag color of a group.
-     *
-     * @param groupId   The id of the group.
-     * @param creatorId The creator id of the group.
-     * @param tagColor  The tag color of the group.
-     * @throws SQLException If an SQL error occurs.
-     */
-    void setTagColor(int groupId, int creatorId, String tagColor) throws SQLException;
+    void setColor(GroupColorType type, int groupId, int creatorId, String color) throws SQLException;
 }

@@ -82,19 +82,15 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     @Override
-    public String addExpiredTime(int userId, String permission, long time) throws SQLException {
-        if (Long.toString(time).startsWith("-")) return "No negative time";
+    public void addExpiredTime(int userId, String permission, long time) throws SQLException {
         var expired = getExpiredTime(userId, permission) + time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(userId), checkArgumentSQL(permission), expired);
-        return "";
     }
 
     @Override
-    public String removeExpiredTime(int userId, String permission, long time) throws SQLException {
-        if (Long.toString(time).startsWith("-")) return "No negative time";
+    public void removeExpiredTime(int userId, String permission, long time) throws SQLException {
         var expired = getExpiredTime(userId, permission) - time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(userId), checkArgumentSQL(permission), expired);
-        return "";
     }
 
     @Override

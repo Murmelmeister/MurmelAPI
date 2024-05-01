@@ -1,5 +1,7 @@
 package de.murmelmeister.murmelapi.user;
 
+import de.murmelmeister.murmelapi.playtime.PlayTime;
+import de.murmelmeister.murmelapi.playtime.PlayTimeProvider;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
@@ -22,12 +24,15 @@ public final class UserProvider implements User {
     private final UserParent parent;
     private final UserPermission permission;
 
+    private final PlayTime playTime;
+
     public UserProvider() throws SQLException {
         this.createTable();
         Procedure.loadAll();
         this.settings = new UserSettingsProvider();
         this.parent = new UserParentProvider();
         this.permission = new UserPermissionProvider();
+        this.playTime = new PlayTimeProvider(this);
     }
 
     private void createTable() throws SQLException {
@@ -50,11 +55,13 @@ public final class UserProvider implements User {
         Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_INSERT.getName(), uuid, username);
         var id = getId(uuid);
         settings.createUser(id);
+        playTime.createUser(id);
     }
 
     @Override
     public void deleteUser(UUID uuid) throws SQLException {
         var id = getId(uuid);
+        playTime.deleteUser(id);
         permission.clearPermission(id);
         parent.clearParent(id);
         settings.deleteUser(id);
@@ -141,6 +148,11 @@ public final class UserProvider implements User {
     @Override
     public UserPermission getPermission() {
         return permission;
+    }
+
+    @Override
+    public PlayTime getPlayTime() {
+        return playTime;
     }
 
     private enum Procedure {

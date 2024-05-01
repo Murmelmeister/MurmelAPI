@@ -36,9 +36,11 @@ public sealed interface Group permits GroupProvider {
      *
      * @param name      The name of the group.
      * @param creatorId The creator id of the group.
+     * @param sortId    The sort id of the group.
+     * @param teamId    The team id of the group.
      * @throws SQLException If an SQL error occurs.
      */
-    void createNewGroup(String name, int creatorId) throws SQLException;
+    void createNewGroup(String name, int creatorId, int sortId, String teamId) throws SQLException;
 
     /**
      * Deletes a group.
