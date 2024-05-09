@@ -1,6 +1,11 @@
 package de.murmelmeister.murmelapi.utils;
 
 
+import de.murmelmeister.murmelapi.playtime.PlayTime;
+import de.murmelmeister.murmelapi.playtime.PlayTimeType;
+
+import java.sql.SQLException;
+
 /**
  * Utility class for time-related operations.
  */
@@ -63,5 +68,40 @@ public final class TimeUtil {
             default -> time = -3L; // Wrong valid format
         }
         return time;
+    }
+
+
+    /**
+     * Formats the time value based on the given PlayTime and user ID.
+     *
+     * @param playTime The PlayTime object to get the time from.
+     * @param userId   The ID of the user.
+     * @return The formatted time value as a string.
+     * @throws SQLException If an error occurs while retrieving the time from the PlayTime object.
+     */
+    public static String formatTimeValue(PlayTime playTime, int userId) throws SQLException {
+        long seconds = playTime.getTime(userId, PlayTimeType.SECONDS);
+        long minutes = playTime.getTime(userId, PlayTimeType.MINUTES);
+        long hours = playTime.getTime(userId, PlayTimeType.HOURS);
+        long days = playTime.getTime(userId, PlayTimeType.DAYS);
+        long years = playTime.getTime(userId, PlayTimeType.YEARS);
+
+        return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
+               + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
+               + (hours != 0 ? getTimeValue(hours, PlayTimeType.HOURS).replace("60 minutes", "") + " " : "")
+               + (minutes != 0 ? getTimeValue(minutes, PlayTimeType.MINUTES).replace("60 seconds", "") + " " : "")
+               + (seconds != 0 ? getTimeValue(seconds, PlayTimeType.SECONDS) : "");
+    }
+
+
+    /**
+     * Returns the formatted time value based on the given time and PlayTimeType.
+     *
+     * @param time the time value to format
+     * @param type the PlayTimeType representing the time unit
+     * @return the formatted time value as a string
+     */
+    private static String getTimeValue(long time, PlayTimeType type) {
+        return time == 1 ? "1 " + type.getName().replace("s", "").toLowerCase() : time + " " + type.getName().toLowerCase();
     }
 }

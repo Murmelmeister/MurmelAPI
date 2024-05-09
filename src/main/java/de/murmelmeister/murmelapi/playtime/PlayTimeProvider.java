@@ -93,7 +93,30 @@ public final class PlayTimeProvider implements PlayTime {
         setTime(userId, type, 0L);
     }
 
-    public void loadTables(User user) throws SQLException {
+    @Override
+    public void timer(int userId) throws SQLException {
+        long seconds = getTime(userId, PlayTimeType.SECONDS);
+        long minutes = getTime(userId, PlayTimeType.MINUTES);
+        long hours = getTime(userId, PlayTimeType.HOURS);
+        long days = getTime(userId, PlayTimeType.DAYS);
+
+        addTime(userId, PlayTimeType.SECONDS);
+        if (seconds >= 59) {
+            resetTime(userId, PlayTimeType.SECONDS);
+            addTime(userId, PlayTimeType.MINUTES);
+        } else if (minutes >= 59) {
+            resetTime(userId, PlayTimeType.MINUTES);
+            addTime(userId, PlayTimeType.HOURS);
+        } else if (hours >= 24) {
+            resetTime(userId, PlayTimeType.HOURS);
+            addTime(userId, PlayTimeType.DAYS);
+        } else if (days >= 365) {
+            resetTime(userId, PlayTimeType.DAYS);
+            addTime(userId, PlayTimeType.YEARS);
+        }
+    }
+
+    private void loadTables(User user) throws SQLException {
         for (var userId : user.getIds())
             createUser(userId);
     }
