@@ -111,6 +111,7 @@ public sealed interface Group permits GroupProvider {
 
     /**
      * Obtains the default group.
+     * The default group is the group with the id 1.
      *
      * @throws SQLException If an SQL error occurs.
      */

@@ -83,21 +83,26 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     @Override
-    public void setExpiredTime(int groupId, int parentId, long time) throws SQLException {
+    public String setExpiredTime(int groupId, int parentId, long time) throws SQLException {
         var expired = time == -1 ? time : System.currentTimeMillis() + time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(parentId), expired);
+        return getExpiredDate(groupId, parentId);
     }
 
     @Override
-    public void addExpiredTime(int groupId, int parentId, long time) throws SQLException {
-        var expired = getExpiredTime(groupId, parentId) + time;
+    public String addExpiredTime(int groupId, int parentId, long time) throws SQLException {
+        var current = getExpiredTime(groupId, parentId);
+        var expired = current == -1 ? System.currentTimeMillis() + time : current + time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(parentId), expired);
+        return getExpiredDate(groupId, parentId);
     }
 
     @Override
-    public void removeExpiredTime(int groupId, int parentId, long time) throws SQLException {
-        var expired = getExpiredTime(groupId, parentId) - time;
+    public String removeExpiredTime(int groupId, int parentId, long time) throws SQLException {
+        var current = getExpiredTime(groupId, parentId);
+        var expired = current == -1 ? System.currentTimeMillis() : current - time;
         Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), checkArgumentSQL(groupId), checkArgumentSQL(parentId), expired);
+        return getExpiredDate(groupId, parentId);
     }
 
     @Override

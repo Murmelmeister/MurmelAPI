@@ -56,14 +56,26 @@ public final class GroupSettingsProvider implements GroupSettings {
     }
 
     @Override
+    public void setSortId(int groupId, int sortId) throws SQLException {
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_UPDATE_SORT.getName(), checkArgumentSQL(groupId), checkArgumentSQL(sortId));
+    }
+
+    @Override
     public String getTeamId(int groupId) throws SQLException {
         return Database.getString(null, "TeamID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
+    }
+
+    @Override
+    public void setTeamId(int groupId, String teamId) throws SQLException {
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_UPDATE_TEAM.getName(), checkArgumentSQL(groupId), checkArgumentSQL(teamId));
     }
 
     private enum Procedure {
         PROCEDURE_ID("GroupSettings_ID", Database.getProcedureQuery("GroupSettings_ID", "gid INT", "SELECT * FROM %s WHERE GroupID=gid;", TABLE_NAME)),
         PROCEDURE_INSERT("GroupSettings_Insert", Database.getProcedureQuery("GroupSettings_Insert", "gid INT, creator VARCHAR(36), time BIGINT(255), sort INT, team VARCHAR(100)", "INSERT INTO %s VALUES (gid, creator, time, sort, team);", TABLE_NAME)),
-        PROCEDURE_DELETE("GroupSettings_Delete", Database.getProcedureQuery("GroupSettings_Delete", "gid INT", "DELETE FROM %s WHERE GroupID=gid;", TABLE_NAME));
+        PROCEDURE_DELETE("GroupSettings_Delete", Database.getProcedureQuery("GroupSettings_Delete", "gid INT", "DELETE FROM %s WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_SORT("GroupSettings_Update_SortID", Database.getProcedureQuery("GroupSettings_Update_SortID", "gid INT, sort INT", "UPDATE %s SET SortID=sort WHERE GroupID=gid;", TABLE_NAME)),
+        PROCEDURE_UPDATE_TEAM("GroupSettings_Update_TeamID", Database.getProcedureQuery("GroupSettings_Update_TeamID", "gid INT, team VARCHAR(100)", "UPDATE %s SET TeamID=team WHERE GroupID=gid;", TABLE_NAME));
         private static final Procedure[] VALUES = values();
 
         private final String name;

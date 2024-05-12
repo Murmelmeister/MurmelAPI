@@ -132,9 +132,10 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @param time     The time the parent expires.
+     * @return The date the parent will expire.
      * @throws SQLException If an SQL error occurs.
      */
-    void setExpiredTime(int userId, int parentId, long time) throws SQLException;
+    String setExpiredTime(int userId, int parentId, long time) throws SQLException;
 
     /**
      * Adds an expired time to a parent.
@@ -142,9 +143,10 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @param time     The time to add to the expired time.
+     * @return The date the parent will expire.
      * @throws SQLException If an SQL error occurs.
      */
-    void addExpiredTime(int userId, int parentId, long time) throws SQLException;
+    String addExpiredTime(int userId, int parentId, long time) throws SQLException;
 
     /**
      * Removes an expired time from a parent.
@@ -152,9 +154,10 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @param time     The time to remove from the expired time.
+     * @return The date the parent will expire.
      * @throws SQLException If an SQL error occurs.
      */
-    void removeExpiredTime(int userId, int parentId, long time) throws SQLException;
+    String removeExpiredTime(int userId, int parentId, long time) throws SQLException;
 
     /**
      * Loads all expired parents of a user.

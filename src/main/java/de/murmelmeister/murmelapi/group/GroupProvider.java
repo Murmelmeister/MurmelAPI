@@ -28,7 +28,7 @@ public final class GroupProvider implements Group {
         this.colorSettings = new GroupColorSettingsProvider();
         this.parent = new GroupParentProvider();
         this.permission = new GroupPermissionProvider();
-        getDefaultGroup();
+        createDefaultGroup();
     }
 
     private void createTable() throws SQLException {
@@ -101,15 +101,21 @@ public final class GroupProvider implements Group {
         permission.loadExpired(this);
     }
 
+    private int createDefaultGroup() throws SQLException {
+        var id = 1;
+        if (existsGroup(id)) return id;
+        var name = "default";
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_INSERT.getName(), name);
+        var creatorId = -1;
+        var team = 9999 + getName(id);
+        settings.createGroup(id, creatorId, 0, team);
+        colorSettings.createGroup(id, creatorId, "&7", "", "", "", "", "&7", "", "", "&7");
+        return id;
+    }
+
     @Override
     public int getDefaultGroup() throws SQLException {
-        String group = "default";
-        createNewGroup(group, -1, 0, "9999");
-        var groupId = getUniqueId(group);
-        colorSettings.setColor(GroupColorType.TAG, groupId, -1, "&7");
-        colorSettings.setColor(GroupColorType.TAB, groupId, -1, "&7");
-        colorSettings.setPrefix(GroupColorType.CHAT, groupId, -1, "&7");
-        return groupId;
+        return createDefaultGroup();
     }
 
     @Override

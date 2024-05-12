@@ -32,7 +32,7 @@ public final class StringUtil {
      * @throws IllegalArgumentException If the value is not valid
      */
     public static <T> T checkArgumentSQL(T value) {
-        Pattern pattern = Pattern.compile("^[a-zA-Z0-9-.?!]+$");
+        Pattern pattern = Pattern.compile("^[a-zA-Z0-9-.?!*]+$");
         if (!pattern.matcher(value.toString()).matches()) throw new IllegalArgumentException(value + " is not valid");
         return value;
     }

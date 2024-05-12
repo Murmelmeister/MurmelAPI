@@ -112,9 +112,10 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @param time       The time the permission will expire.
+     * @return The expired date of the permission.
      * @throws SQLException If an SQL error occurs.
      */
-    void setExpiredTime(int userId, String permission, long time) throws SQLException;
+    String setExpiredTime(int userId, String permission, long time) throws SQLException;
 
     /**
      * Adds an expired time to a permission.
@@ -122,9 +123,10 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @param time       The time to add to the expired time.
+     * @return The expired date of the permission.
      * @throws SQLException If an SQL error occurs.
      */
-    void addExpiredTime(int userId, String permission, long time) throws SQLException;
+    String addExpiredTime(int userId, String permission, long time) throws SQLException;
 
     /**
      * Removes an expired time from a permission.
@@ -132,9 +134,10 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @param time       The time to remove from the expired time.
+     * @return The expired date of the permission.
      * @throws SQLException If an SQL error occurs.
      */
-    void removeExpiredTime(int userId, String permission, long time) throws SQLException;
+    String removeExpiredTime(int userId, String permission, long time) throws SQLException;
 
     /**
      * Loads all expired permissions of a user.

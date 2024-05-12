@@ -73,6 +73,15 @@ public sealed interface GroupSettings permits GroupSettingsProvider {
     int getSortId(int groupId) throws SQLException;
 
     /**
+     * Sets the sort id of a group.
+     *
+     * @param groupId The id of the group.
+     * @param sortId  The sort id of the group.
+     * @throws SQLException If an SQL error occurs.
+     */
+    void setSortId(int groupId, int sortId) throws SQLException;
+
+    /**
      * Obtains the team id of a group.
      *
      * @param groupId The id of the group.
@@ -80,4 +89,13 @@ public sealed interface GroupSettings permits GroupSettingsProvider {
      * @throws SQLException If an SQL error occurs.
      */
     String getTeamId(int groupId) throws SQLException;
+
+    /**
+     * Sets the team id of a group.
+     *
+     * @param groupId The id of the group.
+     * @param teamId  The team id of the group.
+     * @throws SQLException If an SQL error occurs.
+     */
+    void setTeamId(int groupId, String teamId) throws SQLException;
 }

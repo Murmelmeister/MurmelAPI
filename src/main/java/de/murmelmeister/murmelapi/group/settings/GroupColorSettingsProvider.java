@@ -29,7 +29,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public void createGroup(int groupId, int creatorId) throws SQLException {
-        createGroup(groupId, creatorId, "", "", "", "", "", "", "", "", "");
+        createGroup(groupId, creatorId, "", "", "", "", "", "", "", "", "&7");
     }
 
     @Override

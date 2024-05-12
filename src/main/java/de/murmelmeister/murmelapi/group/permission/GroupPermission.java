@@ -123,9 +123,10 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @param time       The time the permission will expire.
+     * @return The expired date of the permission.
      * @throws SQLException If an SQL error occurs.
      */
-    void setExpiredTime(int groupId, String permission, long time) throws SQLException;
+    String setExpiredTime(int groupId, String permission, long time) throws SQLException;
 
     /**
      * Adds time to the expired time of a permission.
@@ -133,9 +134,10 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @param time       The time to add to the expired time.
+     * @return The expired date of the permission.
      * @throws SQLException If an SQL error occurs.
      */
-    void addExpiredTime(int groupId, String permission, long time) throws SQLException;
+    String addExpiredTime(int groupId, String permission, long time) throws SQLException;
 
     /**
      * Removes time from the expired time of a permission.
@@ -143,9 +145,10 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @param time       The time to remove from the expired time.
+     * @return The expired date of the permission.
      * @throws SQLException If an SQL error occurs.
      */
-    void removeExpiredTime(int groupId, String permission, long time) throws SQLException;
+    String removeExpiredTime(int groupId, String permission, long time) throws SQLException;
 
     /**
      * Loads all expired permissions of a group.
