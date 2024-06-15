@@ -3,41 +3,37 @@ package de.murmelmeister.murmelapi.playtime;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.Database;
 
-import java.sql.SQLException;
-
-import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
-
 public final class PlayTimeProvider implements PlayTime {
     private static final String TABLE_NAME = "PlayTime";
 
-    public PlayTimeProvider(User user) throws SQLException {
+    public PlayTimeProvider(User user) {
         createTable();
         Procedure.loadAll();
         loadTables(user);
     }
 
-    private void createTable() throws SQLException {
+    private void createTable() {
         Database.update("CREATE TABLE IF NOT EXISTS %s (UserID INT PRIMARY KEY, Seconds BIGINT(255), Minutes BIGINT(255), Hours BIGINT(255), Days BIGINT(255), Years BIGINT(255))", TABLE_NAME);
     }
 
     @Override
-    public boolean existsUser(int userId) throws SQLException {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_USER_ID.getName(), checkArgumentSQL(userId));
+    public boolean existsUser(int userId) {
+        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_USER_ID.getName(), userId);
     }
 
     @Override
-    public void createUser(int userId) throws SQLException {
+    public void createUser(int userId) {
         if (existsUser(userId)) return;
         Database.update("CALL %s('%s','%s','%s','%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), userId, 0L, 0L, 0L, 0L, 0L);
     }
 
     @Override
-    public void deleteUser(int userId) throws SQLException {
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), checkArgumentSQL(userId));
+    public void deleteUser(int userId) {
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), userId);
     }
 
     @Override
-    public long getTime(int userId, PlayTimeType type) throws SQLException {
+    public long getTime(int userId, PlayTimeType type) {
         var name = switch (type) {
             case SECONDS -> PlayTimeType.SECONDS.getName();
             case MINUTES -> PlayTimeType.MINUTES.getName();
@@ -45,11 +41,11 @@ public final class PlayTimeProvider implements PlayTime {
             case DAYS -> PlayTimeType.DAYS.getName();
             case YEARS -> PlayTimeType.YEARS.getName();
         };
-        return Database.getInt(-1, name, "CALL %s('%s')", Procedure.PROCEDURE_USER_ID.getName(), checkArgumentSQL(userId));
+        return Database.getInt(-1, name, "CALL %s('%s')", Procedure.PROCEDURE_USER_ID.getName(), userId);
     }
 
     @Override
-    public void setTime(int userId, PlayTimeType type, long time) throws SQLException {
+    public void setTime(int userId, PlayTimeType type, long time) {
         var name = switch (type) {
             case SECONDS -> Procedure.PROCEDURE_UPDATE_SECONDS.getName();
             case MINUTES -> Procedure.PROCEDURE_UPDATE_MINUTES.getName();
@@ -57,48 +53,48 @@ public final class PlayTimeProvider implements PlayTime {
             case DAYS -> Procedure.PROCEDURE_UPDATE_DAYS.getName();
             case YEARS -> Procedure.PROCEDURE_UPDATE_YEARS.getName();
         };
-        Database.update("CALL %s('%s','%s')", name, checkArgumentSQL(userId), time);
+        Database.update("CALL %s('%s','%s')", name, userId, time);
     }
 
     @Override
-    public void addTime(int userId, PlayTimeType type) throws SQLException {
-        long current = getTime(userId, type);
+    public void addTime(int userId, PlayTimeType type) {
+        var current = getTime(userId, type);
         ++current;
         setTime(userId, type, current);
     }
 
     @Override
-    public void addTime(int userId, PlayTimeType type, long time) throws SQLException {
-        long current = getTime(userId, type);
+    public void addTime(int userId, PlayTimeType type, long time) {
+        var current = getTime(userId, type);
         current = current + time;
         setTime(userId, type, current);
     }
 
     @Override
-    public void removeTime(int userId, PlayTimeType type) throws SQLException {
-        long current = getTime(userId, type);
+    public void removeTime(int userId, PlayTimeType type) {
+        var current = getTime(userId, type);
         --current;
         setTime(userId, type, current);
     }
 
     @Override
-    public void removeTime(int userId, PlayTimeType type, long time) throws SQLException {
-        long current = getTime(userId, type);
+    public void removeTime(int userId, PlayTimeType type, long time) {
+        var current = getTime(userId, type);
         current = current - time;
         setTime(userId, type, current);
     }
 
     @Override
-    public void resetTime(int userId, PlayTimeType type) throws SQLException {
+    public void resetTime(int userId, PlayTimeType type) {
         setTime(userId, type, 0L);
     }
 
     @Override
-    public void timer(int userId) throws SQLException {
-        long seconds = getTime(userId, PlayTimeType.SECONDS);
-        long minutes = getTime(userId, PlayTimeType.MINUTES);
-        long hours = getTime(userId, PlayTimeType.HOURS);
-        long days = getTime(userId, PlayTimeType.DAYS);
+    public void timer(int userId) {
+        var seconds = getTime(userId, PlayTimeType.SECONDS);
+        var minutes = getTime(userId, PlayTimeType.MINUTES);
+        var hours = getTime(userId, PlayTimeType.HOURS);
+        var days = getTime(userId, PlayTimeType.DAYS);
 
         addTime(userId, PlayTimeType.SECONDS);
         if (seconds >= 59) {
@@ -116,7 +112,7 @@ public final class PlayTimeProvider implements PlayTime {
         }
     }
 
-    private void loadTables(User user) throws SQLException {
+    private void loadTables(User user) {
         for (var userId : user.getIds())
             createUser(userId);
     }
@@ -148,8 +144,8 @@ public final class PlayTimeProvider implements PlayTime {
             return query;
         }
 
-        public static void loadAll() throws SQLException {
-            for (Procedure procedure : VALUES)
+        public static void loadAll() {
+            for (var procedure : VALUES)
                 Database.update(procedure.getQuery());
         }
     }

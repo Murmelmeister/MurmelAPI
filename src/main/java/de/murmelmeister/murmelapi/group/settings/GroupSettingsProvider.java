@@ -2,72 +2,69 @@ package de.murmelmeister.murmelapi.group.settings;
 
 import de.murmelmeister.murmelapi.utils.Database;
 
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-
-import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
 public final class GroupSettingsProvider implements GroupSettings {
     private static final String TABLE_NAME = "GroupSettings";
 
-    public GroupSettingsProvider() throws SQLException {
+    public GroupSettingsProvider() {
         this.createTable();
         Procedure.loadAll();
     }
 
-    private void createTable() throws SQLException {
+    private void createTable() {
         Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, CreatedTime BIGINT(255), SortID INT, TeamID VARCHAR(100))", TABLE_NAME);
     }
 
     @Override
-    public boolean existsGroup(int groupId) throws SQLException {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
+    public boolean existsGroup(int groupId) {
+        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), groupId);
     }
 
     @Override
-    public void createGroup(int groupId, int creatorId, int sortId, String teamId) throws SQLException {
+    public void createGroup(int groupId, int creatorId, int sortId, String teamId) {
         if (existsGroup(groupId)) return;
         Database.update("CALL %s('%s','%s','%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), groupId, creatorId, System.currentTimeMillis(), sortId, teamId);
     }
 
     @Override
-    public void deleteGroup(int groupId) throws SQLException {
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), checkArgumentSQL(groupId));
+    public void deleteGroup(int groupId) {
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), groupId);
     }
 
     @Override
-    public int getCreatorId(int groupId) throws SQLException {
-        return Database.getInt(-2, "CreatorID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
+    public int getCreatorId(int groupId) {
+        return Database.getInt(-2, "CreatorID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), groupId);
     }
 
     @Override
-    public long getCreatedTime(int groupId) throws SQLException {
-        return Database.getLong(-1, "CreatedTime", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
+    public long getCreatedTime(int groupId) {
+        return Database.getLong(-1, "CreatedTime", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), groupId);
     }
 
     @Override
-    public String getCreatedDate(int groupId) throws SQLException {
+    public String getCreatedDate(int groupId) {
         return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getCreatedTime(groupId));
     }
 
     @Override
-    public int getSortId(int groupId) throws SQLException {
-        return Database.getInt(-1, "SortID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
+    public int getSortId(int groupId) {
+        return Database.getInt(-1, "SortID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), groupId);
     }
 
     @Override
-    public void setSortId(int groupId, int sortId) throws SQLException {
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_UPDATE_SORT.getName(), checkArgumentSQL(groupId), checkArgumentSQL(sortId));
+    public void setSortId(int groupId, int sortId) {
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_UPDATE_SORT.getName(), groupId, sortId);
     }
 
     @Override
-    public String getTeamId(int groupId) throws SQLException {
-        return Database.getString(null, "TeamID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(groupId));
+    public String getTeamId(int groupId) {
+        return Database.getString(null, "TeamID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), groupId);
     }
 
     @Override
-    public void setTeamId(int groupId, String teamId) throws SQLException {
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_UPDATE_TEAM.getName(), checkArgumentSQL(groupId), checkArgumentSQL(teamId));
+    public void setTeamId(int groupId, String teamId) {
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_UPDATE_TEAM.getName(), groupId, teamId);
     }
 
     private enum Procedure {
@@ -94,8 +91,8 @@ public final class GroupSettingsProvider implements GroupSettings {
             return query;
         }
 
-        public static void loadAll() throws SQLException {
-            for (Procedure procedure : VALUES)
+        public static void loadAll() {
+            for (var procedure : VALUES)
                 Database.update(procedure.getQuery());
         }
     }

@@ -1,8 +1,5 @@
 package de.murmelmeister.murmelapi.group.settings;
 
-import java.sql.SQLException;
-import java.util.List;
-
 /**
  * Group settings interface to manage group settings.
  */
@@ -12,9 +9,8 @@ public sealed interface GroupSettings permits GroupSettingsProvider {
      *
      * @param groupId The id of the group.
      * @return True if the group exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsGroup(int groupId) throws SQLException;
+    boolean existsGroup(int groupId);
 
     /**
      * Creates a new group and checks if the group already exists.
@@ -24,78 +20,69 @@ public sealed interface GroupSettings permits GroupSettingsProvider {
      * @param creatorId The creator id of the group.
      * @param sortId    The sort id of the group.
      * @param teamId    The team id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void createGroup(int groupId, int creatorId, int sortId, String teamId) throws SQLException;
+    void createGroup(int groupId, int creatorId, int sortId, String teamId);
 
     /**
      * Deletes a group.
      *
      * @param groupId The id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void deleteGroup(int groupId) throws SQLException;
+    void deleteGroup(int groupId);
 
     /**
      * Obtains the creator id of a group.
      *
      * @param groupId The id of the group.
      * @return The creator id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getCreatorId(int groupId) throws SQLException;
+    int getCreatorId(int groupId);
 
     /**
      * Obtains the created time of a group.
      *
      * @param groupId The id of the group.
      * @return The created time of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getCreatedTime(int groupId) throws SQLException;
+    long getCreatedTime(int groupId);
 
     /**
      * Obtains the created date of a group.
      *
      * @param groupId The id of the group.
      * @return The created date of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getCreatedDate(int groupId) throws SQLException;
+    String getCreatedDate(int groupId);
 
     /**
      * Obtains the sort id of a group.
      *
      * @param groupId The id of the group.
      * @return The sort id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getSortId(int groupId) throws SQLException;
+    int getSortId(int groupId);
 
     /**
      * Sets the sort id of a group.
      *
      * @param groupId The id of the group.
      * @param sortId  The sort id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void setSortId(int groupId, int sortId) throws SQLException;
+    void setSortId(int groupId, int sortId);
 
     /**
      * Obtains the team id of a group.
      *
      * @param groupId The id of the group.
      * @return The team id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getTeamId(int groupId) throws SQLException;
+    String getTeamId(int groupId);
 
     /**
      * Sets the team id of a group.
      *
      * @param groupId The id of the group.
      * @param teamId  The team id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void setTeamId(int groupId, String teamId) throws SQLException;
+    void setTeamId(int groupId, String teamId);
 }

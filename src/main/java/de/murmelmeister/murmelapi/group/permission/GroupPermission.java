@@ -3,7 +3,6 @@ package de.murmelmeister.murmelapi.group.permission;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
 
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -16,9 +15,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @return True if the permission exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsPermission(int groupId, String permission) throws SQLException;
+    boolean existsPermission(int groupId, String permission);
 
     /**
      * Adds a permission to a group.
@@ -27,35 +25,31 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param creatorId  The id of the creator.
      * @param permission The permission.
      * @param time       The time the permission was added.
-     * @throws SQLException If an SQL error occurs.
      */
-    void addPermission(int groupId, int creatorId, String permission, long time) throws SQLException;
+    void addPermission(int groupId, int creatorId, String permission, long time);
 
     /**
      * Removes a permission from a group.
      *
      * @param groupId    The id of the group.
      * @param permission The permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    void removePermission(int groupId, String permission) throws SQLException;
+    void removePermission(int groupId, String permission);
 
     /**
      * Clears all permissions of a group.
      *
      * @param groupId The id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void clearPermission(int groupId) throws SQLException;
+    void clearPermission(int groupId);
 
     /**
      * Obtains all permissions of a group.
      *
      * @param groupId The id of the group.
      * @return A list of all permissions of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<String> getPermissions(int groupId) throws SQLException;
+    List<String> getPermissions(int groupId);
 
     /**
      * Obtains all permissions of a group.
@@ -63,9 +57,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupParent The group parent.
      * @param groupId     The id of the group.
      * @return A list of all permissions of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<String> getAllPermissions(GroupParent groupParent, int groupId) throws SQLException;
+    List<String> getAllPermissions(GroupParent groupParent, int groupId);
 
     /**
      * Obtains the creator id of a permission.
@@ -73,9 +66,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @return The creator id of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getCreatorId(int groupId, String permission) throws SQLException;
+    int getCreatorId(int groupId, String permission);
 
     /**
      * Obtains the created time of a permission.
@@ -83,9 +75,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @return The created time of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getCreatedTime(int groupId, String permission) throws SQLException;
+    long getCreatedTime(int groupId, String permission);
 
     /**
      * Obtains the created date of a permission.
@@ -93,9 +84,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @return The created date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getCreatedDate(int groupId, String permission) throws SQLException;
+    String getCreatedDate(int groupId, String permission);
 
     /**
      * Obtains the expired time of a permission.
@@ -103,9 +93,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @return The expired time of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getExpiredTime(int groupId, String permission) throws SQLException;
+    long getExpiredTime(int groupId, String permission);
 
     /**
      * Obtains the expired date of a permission.
@@ -113,9 +102,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The id of the group.
      * @param permission The permission.
      * @return The expired date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getExpiredDate(int groupId, String permission) throws SQLException;
+    String getExpiredDate(int groupId, String permission);
 
     /**
      * Sets the expired time of a permission.
@@ -124,9 +112,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param permission The permission.
      * @param time       The time the permission will expire.
      * @return The expired date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String setExpiredTime(int groupId, String permission, long time) throws SQLException;
+    String setExpiredTime(int groupId, String permission, long time);
 
     /**
      * Adds time to the expired time of a permission.
@@ -135,9 +122,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param permission The permission.
      * @param time       The time to add to the expired time.
      * @return The expired date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String addExpiredTime(int groupId, String permission, long time) throws SQLException;
+    String addExpiredTime(int groupId, String permission, long time);
 
     /**
      * Removes time from the expired time of a permission.
@@ -146,15 +132,13 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param permission The permission.
      * @param time       The time to remove from the expired time.
      * @return The expired date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String removeExpiredTime(int groupId, String permission, long time) throws SQLException;
+    String removeExpiredTime(int groupId, String permission, long time);
 
     /**
      * Loads all expired permissions of a group.
      *
      * @param group The group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void loadExpired(Group group) throws SQLException;
+    void loadExpired(Group group);
 }

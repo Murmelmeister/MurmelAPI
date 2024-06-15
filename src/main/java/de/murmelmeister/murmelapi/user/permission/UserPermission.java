@@ -2,7 +2,6 @@ package de.murmelmeister.murmelapi.user.permission;
 
 import de.murmelmeister.murmelapi.user.User;
 
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -15,9 +14,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @return True if the permission exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsPermission(int userId, String permission) throws SQLException;
+    boolean existsPermission(int userId, String permission);
 
     /**
      * Adds a permission to a user.
@@ -26,35 +24,31 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param creatorId  The id of the creator.
      * @param permission The permission.
      * @param time       The time the permission was added.
-     * @throws SQLException If an SQL error occurs.
      */
-    void addPermission(int userId, int creatorId, String permission, long time) throws SQLException;
+    void addPermission(int userId, int creatorId, String permission, long time);
 
     /**
      * Removes a permission from a user.
      *
      * @param userId     The id of the user.
      * @param permission The permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    void removePermission(int userId, String permission) throws SQLException;
+    void removePermission(int userId, String permission);
 
     /**
      * Clears all permissions from a user.
      *
      * @param userId The id of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    void clearPermission(int userId) throws SQLException;
+    void clearPermission(int userId);
 
     /**
      * Obtains all permissions of a user.
      *
      * @param userId The id of the user.
      * @return A list of all permissions of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<String> getPermissions(int userId) throws SQLException;
+    List<String> getPermissions(int userId);
 
     /**
      * Obtains the creator id of a permission.
@@ -62,9 +56,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @return The creator id of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getCreatorId(int userId, String permission) throws SQLException;
+    int getCreatorId(int userId, String permission);
 
     /**
      * Obtains the created time of a permission.
@@ -72,9 +65,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @return The created time of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getCreatedTime(int userId, String permission) throws SQLException;
+    long getCreatedTime(int userId, String permission);
 
     /**
      * Obtains the created date of a permission.
@@ -82,9 +74,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @return The created date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getCreatedDate(int userId, String permission) throws SQLException;
+    String getCreatedDate(int userId, String permission);
 
     /**
      * Obtains the expired time of a permission.
@@ -92,9 +83,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @return The expired time of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getExpiredTime(int userId, String permission) throws SQLException;
+    long getExpiredTime(int userId, String permission);
 
     /**
      * Obtains the expired date of a permission.
@@ -102,9 +92,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The id of the user.
      * @param permission The permission.
      * @return The expired date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getExpiredDate(int userId, String permission) throws SQLException;
+    String getExpiredDate(int userId, String permission);
 
     /**
      * Sets the expired time of a permission.
@@ -113,9 +102,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param permission The permission.
      * @param time       The time the permission will expire.
      * @return The expired date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String setExpiredTime(int userId, String permission, long time) throws SQLException;
+    String setExpiredTime(int userId, String permission, long time);
 
     /**
      * Adds an expired time to a permission.
@@ -124,9 +112,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param permission The permission.
      * @param time       The time to add to the expired time.
      * @return The expired date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String addExpiredTime(int userId, String permission, long time) throws SQLException;
+    String addExpiredTime(int userId, String permission, long time);
 
     /**
      * Removes an expired time from a permission.
@@ -135,15 +122,13 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param permission The permission.
      * @param time       The time to remove from the expired time.
      * @return The expired date of the permission.
-     * @throws SQLException If an SQL error occurs.
      */
-    String removeExpiredTime(int userId, String permission, long time) throws SQLException;
+    String removeExpiredTime(int userId, String permission, long time);
 
     /**
      * Loads all expired permissions of a user.
      *
      * @param user The user.
-     * @throws SQLException If an SQL error occurs.
      */
-    void loadExpired(User user) throws SQLException;
+    void loadExpired(User user);
 }

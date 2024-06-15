@@ -2,7 +2,6 @@ package de.murmelmeister.murmelapi.group.parent;
 
 import de.murmelmeister.murmelapi.group.Group;
 
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -15,9 +14,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
      * @return True if the parent exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsParent(int groupId, int parentId) throws SQLException;
+    boolean existsParent(int groupId, int parentId);
 
     /**
      * Adds a parent to a group.
@@ -26,35 +24,31 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param creatorId The id of the creator.
      * @param parentId  The id of the parent.
      * @param time      The time the parent was added.
-     * @throws SQLException If an SQL error occurs.
      */
-    void addParent(int groupId, int creatorId, int parentId, long time) throws SQLException;
+    void addParent(int groupId, int creatorId, int parentId, long time);
 
     /**
      * Removes a parent from a group.
      *
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
-     * @throws SQLException If an SQL error occurs.
      */
-    void removeParent(int groupId, int parentId) throws SQLException;
+    void removeParent(int groupId, int parentId);
 
     /**
      * Clears all parents from a group.
      *
      * @param groupId The id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void clearParent(int groupId) throws SQLException;
+    void clearParent(int groupId);
 
     /**
      * Obtains all parent ids of a group.
      *
      * @param groupId The id of the group.
      * @return A list of all parent ids of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<Integer> getParentIds(int groupId) throws SQLException;
+    List<Integer> getParentIds(int groupId);
 
     /**
      * Obtains all parent names of a group.
@@ -62,9 +56,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param group   The group.
      * @param groupId The id of the group.
      * @return A list of all parent names of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<String> getParentNames(Group group, int groupId) throws SQLException;
+    List<String> getParentNames(Group group, int groupId);
 
     /**
      * Obtains the creator id of a parent.
@@ -72,9 +65,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
      * @return The creator id of the parent.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getCreatorId(int groupId, int parentId) throws SQLException;
+    int getCreatorId(int groupId, int parentId);
 
     /**
      * Obtains the time the parent was created.
@@ -82,9 +74,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
      * @return The time the parent was created.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getCreatedTime(int groupId, int parentId) throws SQLException;
+    long getCreatedTime(int groupId, int parentId);
 
     /**
      * Obtains the date the parent was created.
@@ -92,9 +83,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
      * @return The date the parent was created.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getCreatedDate(int groupId, int parentId) throws SQLException;
+    String getCreatedDate(int groupId, int parentId);
 
     /**
      * Obtains the time the parent will expire.
@@ -102,9 +92,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
      * @return The time the parent will expire.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getExpiredTime(int groupId, int parentId) throws SQLException;
+    long getExpiredTime(int groupId, int parentId);
 
     /**
      * Obtains the date the parent will expire.
@@ -112,9 +101,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId  The id of the group.
      * @param parentId The id of the parent.
      * @return The date the parent will expire.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getExpiredDate(int groupId, int parentId) throws SQLException;
+    String getExpiredDate(int groupId, int parentId);
 
     /**
      * Sets the time the parent will expire.
@@ -123,9 +111,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param parentId The id of the parent.
      * @param time     The time the parent will expire.
      * @return The date the parent will expire.
-     * @throws SQLException If an SQL error occurs.
      */
-    String setExpiredTime(int groupId, int parentId, long time) throws SQLException;
+    String setExpiredTime(int groupId, int parentId, long time);
 
     /**
      * Adds time to the parent expiration.
@@ -134,9 +121,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param parentId The id of the parent.
      * @param time     The time to add to the expiration.
      * @return The date the parent will expire.
-     * @throws SQLException If an SQL error occurs.
      */
-    String addExpiredTime(int groupId, int parentId, long time) throws SQLException;
+    String addExpiredTime(int groupId, int parentId, long time);
 
     /**
      * Removes time from the parent expiration.
@@ -145,15 +131,13 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param parentId The id of the parent.
      * @param time     The time to remove from the expiration.
      * @return The date the parent will expire.
-     * @throws SQLException If an SQL error occurs.
      */
-    String removeExpiredTime(int groupId, int parentId, long time) throws SQLException;
+    String removeExpiredTime(int groupId, int parentId, long time);
 
     /**
      * Loads all expired parents of a group.
      *
      * @param group The group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void loadExpired(Group group) throws SQLException;
+    void loadExpired(Group group);
 }

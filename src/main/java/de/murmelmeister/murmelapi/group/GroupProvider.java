@@ -7,11 +7,7 @@ import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
 import de.murmelmeister.murmelapi.group.settings.*;
 import de.murmelmeister.murmelapi.utils.Database;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
-
-import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
 public final class GroupProvider implements Group {
     private static final String TABLE_NAME = "Groups";
@@ -21,7 +17,7 @@ public final class GroupProvider implements Group {
     private final GroupParent parent;
     private final GroupPermission permission;
 
-    public GroupProvider() throws SQLException {
+    public GroupProvider() {
         this.createTable();
         Procedure.loadAll();
         this.settings = new GroupSettingsProvider();
@@ -31,22 +27,22 @@ public final class GroupProvider implements Group {
         createDefaultGroup();
     }
 
-    private void createTable() throws SQLException {
+    private void createTable() {
         Database.update("CREATE TABLE IF NOT EXISTS %s (ID INT PRIMARY KEY AUTO_INCREMENT, GroupName VARCHAR(100))", TABLE_NAME);
     }
 
     @Override
-    public boolean existsGroup(int id) throws SQLException {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(id));
+    public boolean existsGroup(int id) {
+        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
     }
 
     @Override
-    public boolean existsGroup(String name) throws SQLException {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_NAME.getName(), checkArgumentSQL(name));
+    public boolean existsGroup(String name) {
+        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_NAME.getName(), name);
     }
 
     @Override
-    public void createNewGroup(String name, int creatorId, int sortId, String teamId) throws SQLException {
+    public void createNewGroup(String name, int creatorId, int sortId, String teamId) {
         if (existsGroup(name)) return;
         Database.update("CALL %s('%s')", Procedure.PROCEDURE_INSERT.getName(), name);
         var id = getUniqueId(name);
@@ -56,52 +52,51 @@ public final class GroupProvider implements Group {
     }
 
     @Override
-    public void deleteGroup(int id) throws SQLException {
-        int gid = checkArgumentSQL(id);
-        permission.clearPermission(gid);
-        parent.clearParent(gid);
-        colorSettings.deleteGroup(gid);
-        settings.deleteGroup(gid);
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), gid);
+    public void deleteGroup(int id) {
+        permission.clearPermission(id);
+        parent.clearParent(id);
+        colorSettings.deleteGroup(id);
+        settings.deleteGroup(id);
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), id);
     }
 
     @Override
-    public int getUniqueId(String name) throws SQLException {
-        return Database.getInt(-1, "ID", "CALL %s('%s')", Procedure.PROCEDURE_NAME.getName(), checkArgumentSQL(name));
+    public int getUniqueId(String name) {
+        return Database.getInt(-1, "ID", "CALL %s('%s')", Procedure.PROCEDURE_NAME.getName(), name);
     }
 
     @Override
-    public String getName(int id) throws SQLException {
-        return Database.getString(null, "GroupName", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(id));
+    public String getName(int id) {
+        return Database.getString(null, "GroupName", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
     }
 
     @Override
-    public void rename(int id, String newName) throws SQLException {
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME_BY_ID.getName(), checkArgumentSQL(id), checkArgumentSQL(newName));
+    public void rename(int id, String newName) {
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME_BY_ID.getName(), id, newName);
     }
 
     @Override
-    public void rename(String oldName, String newName) throws SQLException {
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME_BY_NAME.getName(), checkArgumentSQL(oldName), checkArgumentSQL(newName));
+    public void rename(String oldName, String newName) {
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME_BY_NAME.getName(), oldName, newName);
     }
 
     @Override
-    public List<Integer> getUniqueIds() throws SQLException {
-        return Database.getIntList(new ArrayList<>(), "ID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+    public List<Integer> getUniqueIds() {
+        return Database.getIntList("ID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override
-    public List<String> getNames() throws SQLException {
-        return Database.getStringList(new ArrayList<>(), "GroupName", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+    public List<String> getNames() {
+        return Database.getStringList("GroupName", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override
-    public void loadExpired() throws SQLException {
+    public void loadExpired() {
         parent.loadExpired(this);
         permission.loadExpired(this);
     }
 
-    private int createDefaultGroup() throws SQLException {
+    private int createDefaultGroup() {
         var id = 1;
         if (existsGroup(id)) return id;
         var name = "default";
@@ -114,7 +109,7 @@ public final class GroupProvider implements Group {
     }
 
     @Override
-    public int getDefaultGroup() throws SQLException {
+    public int getDefaultGroup() {
         return createDefaultGroup();
     }
 
@@ -164,8 +159,8 @@ public final class GroupProvider implements Group {
             return query;
         }
 
-        public static void loadAll() throws SQLException {
-            for (Procedure procedure : VALUES)
+        public static void loadAll() {
+            for (var procedure : VALUES)
                 Database.update(procedure.getQuery());
         }
     }

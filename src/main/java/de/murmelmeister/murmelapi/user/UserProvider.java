@@ -10,12 +10,8 @@ import de.murmelmeister.murmelapi.user.settings.UserSettings;
 import de.murmelmeister.murmelapi.user.settings.UserSettingsProvider;
 import de.murmelmeister.murmelapi.utils.Database;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-
-import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
 public final class UserProvider implements User {
     private static final String TABLE_NAME = "User";
@@ -26,7 +22,7 @@ public final class UserProvider implements User {
 
     private final PlayTime playTime;
 
-    public UserProvider() throws SQLException {
+    public UserProvider() {
         this.createTable();
         Procedure.loadAll();
         this.settings = new UserSettingsProvider();
@@ -35,22 +31,22 @@ public final class UserProvider implements User {
         this.playTime = new PlayTimeProvider(this);
     }
 
-    private void createTable() throws SQLException {
+    private void createTable() {
         Database.update("CREATE TABLE IF NOT EXISTS %s (ID INT PRIMARY KEY AUTO_INCREMENT, UUID VARCHAR(36), Username VARCHAR(100))", TABLE_NAME);
     }
 
     @Override
-    public boolean existsUser(UUID uuid) throws SQLException {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), checkArgumentSQL(uuid));
+    public boolean existsUser(UUID uuid) {
+        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), uuid);
     }
 
     @Override
-    public boolean existsUser(String username) throws SQLException {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_USERNAME.getName(), checkArgumentSQL(username));
+    public boolean existsUser(String username) {
+        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_USERNAME.getName(), username);
     }
 
     @Override
-    public void createNewUser(UUID uuid, String username) throws SQLException {
+    public void createNewUser(UUID uuid, String username) {
         if (existsUser(uuid)) return;
         Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_INSERT.getName(), uuid, username);
         var id = getId(uuid);
@@ -59,7 +55,7 @@ public final class UserProvider implements User {
     }
 
     @Override
-    public void deleteUser(UUID uuid) throws SQLException {
+    public void deleteUser(UUID uuid) {
         var id = getId(uuid);
         playTime.deleteUser(id);
         permission.clearPermission(id);
@@ -69,68 +65,67 @@ public final class UserProvider implements User {
     }
 
     @Override
-    public int getId(UUID uuid) throws SQLException {
+    public int getId(UUID uuid) {
         return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), uuid);
     }
 
     @Override
-    public int getId(String username) throws SQLException {
-        return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_USERNAME.getName(), checkArgumentSQL(username));
+    public int getId(String username) {
+        return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_USERNAME.getName(), username);
     }
 
     @Override
-    public UUID getUniqueId(String username) throws SQLException {
+    public UUID getUniqueId(String username) {
         var id = getId(username);
         return Database.getUniqueId(null, "UUID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
     }
 
     @Override
-    public UUID getUniqueId(int id) throws SQLException {
+    public UUID getUniqueId(int id) {
         if (id == -1) return null;
-        return UUID.fromString(Database.getString(null, "UUID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), checkArgumentSQL(id)));
+        return UUID.fromString(Database.getString(null, "UUID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id));
     }
 
     @Override
-    public String getUsername(UUID uuid) throws SQLException {
+    public String getUsername(UUID uuid) {
         var id = getId(uuid);
         return Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
     }
 
     @Override
-    public String getUsername(int id) throws SQLException {
-        var uid = checkArgumentSQL(id);
-        return uid == -1 ? "CONSOLE" : Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), uid);
+    public String getUsername(int id) {
+        return id == -1 ? "CONSOLE" : Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
     }
 
     @Override
-    public void rename(UUID uuid, String newName) throws SQLException {
+    public void rename(UUID uuid, String newName) {
         var id = getId(uuid);
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME.getName(), id, checkArgumentSQL(newName));
+        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME.getName(), id, newName);
     }
 
     @Override
-    public List<UUID> getUniqueIds() throws SQLException {
-        return Database.getUniqueIdList(new ArrayList<>(), "UUID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+    public List<UUID> getUniqueIds() {
+        return Database.getUniqueIdList("UUID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override
-    public List<String> getUsernames() throws SQLException {
-        return Database.getStringList(new ArrayList<>(), "Username", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+    public List<String> getUsernames() {
+        return Database.getStringList("Username", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override
-    public List<Integer> getIds() throws SQLException {
-        return Database.getIntList(new ArrayList<>(), "ID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+    public List<Integer> getIds() {
+        return Database.getIntList("ID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
     }
 
     @Override
-    public void joinUser(UUID uuid, String username) throws SQLException {
+    public void joinUser(UUID uuid, String username) {
         createNewUser(uuid, username);
         if (!getUsername(uuid).equals(username)) rename(uuid, username);
     }
 
     @Override
-    public void loadExpired() throws SQLException {
+    public void loadExpired() {
         parent.loadExpired(this);
         permission.loadExpired(this);
     }
@@ -181,8 +176,8 @@ public final class UserProvider implements User {
             return query;
         }
 
-        public static void loadAll() throws SQLException {
-            for (Procedure procedure : VALUES)
+        public static void loadAll() {
+            for (var procedure : VALUES)
                 Database.update(procedure.getQuery());
         }
     }

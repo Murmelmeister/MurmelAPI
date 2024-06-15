@@ -3,7 +3,6 @@ package de.murmelmeister.murmelapi.user.parent;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.user.User;
 
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -16,9 +15,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @return True if the parent exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsParent(int userId, int parentId) throws SQLException;
+    boolean existsParent(int userId, int parentId);
 
     /**
      * Adds a parent to a user.
@@ -27,44 +25,39 @@ public sealed interface UserParent permits UserParentProvider {
      * @param creatorId The id of the creator.
      * @param parentId  The id of the parent.
      * @param time      The time the parent was added.
-     * @throws SQLException If an SQL error occurs.
      */
-    void addParent(int userId, int creatorId, int parentId, long time) throws SQLException;
+    void addParent(int userId, int creatorId, int parentId, long time);
 
     /**
      * Removes a parent from a user.
      *
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
-     * @throws SQLException If an SQL error occurs.
      */
-    void removeParent(int userId, int parentId) throws SQLException;
+    void removeParent(int userId, int parentId);
 
     /**
      * Clears all parents from a user.
      *
      * @param userId The id of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    void clearParent(int userId) throws SQLException;
+    void clearParent(int userId);
 
     /**
      * Obtains the parent id of a user.
      *
      * @param userId The id of the user.
      * @return The parent id of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getParentId(int userId) throws SQLException;
+    int getParentId(int userId);
 
     /**
      * Obtains all parent ids of a user.
      *
      * @param userId The id of the user.
      * @return A list of all parent ids of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<Integer> getParentIds(int userId) throws SQLException;
+    List<Integer> getParentIds(int userId);
 
     /**
      * Obtains all parent names of a user.
@@ -72,9 +65,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param group  The group.
      * @param userId The id of the user.
      * @return A list of all parent names of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<String> getParentNames(Group group, int userId) throws SQLException;
+    List<String> getParentNames(Group group, int userId);
 
     /**
      * Obtains the creator id of a parent.
@@ -82,9 +74,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @return The creator id of the parent.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getCreatorId(int userId, int parentId) throws SQLException;
+    int getCreatorId(int userId, int parentId);
 
     /**
      * Obtains the created time of a parent.
@@ -92,9 +83,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @return The created time of the parent.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getCreatedTime(int userId, int parentId) throws SQLException;
+    long getCreatedTime(int userId, int parentId);
 
     /**
      * Obtains the created date of a parent.
@@ -102,9 +92,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @return The created date of the parent.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getCreatedDate(int userId, int parentId) throws SQLException;
+    String getCreatedDate(int userId, int parentId);
 
     /**
      * Obtains the expired time of a parent.
@@ -112,9 +101,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @return The expired time of the parent.
-     * @throws SQLException If an SQL error occurs.
      */
-    long getExpiredTime(int userId, int parentId) throws SQLException;
+    long getExpiredTime(int userId, int parentId);
 
     /**
      * Obtains the expired date of a parent.
@@ -122,9 +110,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param userId   The id of the user.
      * @param parentId The id of the parent.
      * @return The expired date of the parent.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getExpiredDate(int userId, int parentId) throws SQLException;
+    String getExpiredDate(int userId, int parentId);
 
     /**
      * Sets the expired time of a parent.
@@ -133,9 +120,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param parentId The id of the parent.
      * @param time     The time the parent expires.
      * @return The date the parent will expire.
-     * @throws SQLException If an SQL error occurs.
      */
-    String setExpiredTime(int userId, int parentId, long time) throws SQLException;
+    String setExpiredTime(int userId, int parentId, long time);
 
     /**
      * Adds an expired time to a parent.
@@ -144,9 +130,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param parentId The id of the parent.
      * @param time     The time to add to the expired time.
      * @return The date the parent will expire.
-     * @throws SQLException If an SQL error occurs.
      */
-    String addExpiredTime(int userId, int parentId, long time) throws SQLException;
+    String addExpiredTime(int userId, int parentId, long time);
 
     /**
      * Removes an expired time from a parent.
@@ -155,15 +140,13 @@ public sealed interface UserParent permits UserParentProvider {
      * @param parentId The id of the parent.
      * @param time     The time to remove from the expired time.
      * @return The date the parent will expire.
-     * @throws SQLException If an SQL error occurs.
      */
-    String removeExpiredTime(int userId, int parentId, long time) throws SQLException;
+    String removeExpiredTime(int userId, int parentId, long time);
 
     /**
      * Loads all expired parents of a user.
      *
      * @param user The user.
-     * @throws SQLException If an SQL error occurs.
      */
-    void loadExpired(User user) throws SQLException;
+    void loadExpired(User user);
 }

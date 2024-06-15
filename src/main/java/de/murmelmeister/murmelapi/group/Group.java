@@ -5,7 +5,6 @@ import de.murmelmeister.murmelapi.group.permission.GroupPermission;
 import de.murmelmeister.murmelapi.group.settings.GroupColorSettings;
 import de.murmelmeister.murmelapi.group.settings.GroupSettings;
 
-import java.sql.SQLException;
 import java.util.List;
 
 /**
@@ -17,18 +16,16 @@ public sealed interface Group permits GroupProvider {
      *
      * @param id The id of the group.
      * @return True if the group exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsGroup(int id) throws SQLException;
+    boolean existsGroup(int id);
 
     /**
      * Checks if a group exists.
      *
      * @param name The name of the group.
      * @return True if the group exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsGroup(String name) throws SQLException;
+    boolean existsGroup(String name);
 
     /**
      * Creates a new group and checks if the group already exists.
@@ -38,84 +35,72 @@ public sealed interface Group permits GroupProvider {
      * @param creatorId The creator id of the group.
      * @param sortId    The sort id of the group.
      * @param teamId    The team id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void createNewGroup(String name, int creatorId, int sortId, String teamId) throws SQLException;
+    void createNewGroup(String name, int creatorId, int sortId, String teamId);
 
     /**
      * Deletes a group.
      *
      * @param id The id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void deleteGroup(int id) throws SQLException;
+    void deleteGroup(int id);
 
     /**
      * Obtains the unique id of a group.
      *
      * @param name The name of the group.
      * @return The unique id of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getUniqueId(String name) throws SQLException;
+    int getUniqueId(String name);
 
     /**
      * Obtains the name of a group.
      *
      * @param id The id of the group.
      * @return The name of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getName(int id) throws SQLException;
+    String getName(int id);
 
     /**
      * Renames a group.
      *
      * @param id      The id of the group.
      * @param newName The new name of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void rename(int id, String newName) throws SQLException;
+    void rename(int id, String newName);
 
     /**
      * Renames a group.
      *
      * @param oldName The old name of the group.
      * @param newName The new name of the group.
-     * @throws SQLException If an SQL error occurs.
      */
-    void rename(String oldName, String newName) throws SQLException;
+    void rename(String oldName, String newName);
 
     /**
      * Obtains a list of all unique ids of the groups.
      *
      * @return A list of all unique ids of the groups.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<Integer> getUniqueIds() throws SQLException;
+    List<Integer> getUniqueIds();
 
     /**
      * Obtains a list of all names of the groups.
      *
      * @return A list of all names of the groups.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<String> getNames() throws SQLException;
+    List<String> getNames();
 
     /**
      * Loads all expired things.
-     *
-     * @throws SQLException If an SQL error occurs.
      */
-    void loadExpired() throws SQLException;
+    void loadExpired();
 
     /**
      * Obtains the default group.
      * The default group is the group with the id 1.
-     *
-     * @throws SQLException If an SQL error occurs.
      */
-    int getDefaultGroup() throws SQLException;
+    int getDefaultGroup();
 
     /**
      * Obtains the settings of a group.

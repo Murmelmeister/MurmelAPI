@@ -8,8 +8,6 @@ import de.murmelmeister.murmelapi.playtime.PlayTime;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.UserProvider;
 
-import java.sql.SQLException;
-
 /**
  * The MurmelAPI main class.
  */
@@ -20,14 +18,10 @@ public final class MurmelAPI {
     private static final PlayTime PLAY_TIME;
 
     static {
-        try {
-            GROUP = new GroupProvider();
-            USER = new UserProvider();
-            PERMISSION = new PermissionProvider(GROUP, USER);
-            PLAY_TIME = USER.getPlayTime();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        GROUP = new GroupProvider();
+        USER = new UserProvider();
+        PERMISSION = new PermissionProvider(GROUP, USER);
+        PLAY_TIME = USER.getPlayTime();
     }
 
     /**

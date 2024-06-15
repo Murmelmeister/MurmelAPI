@@ -4,8 +4,6 @@ package de.murmelmeister.murmelapi.utils;
 import de.murmelmeister.murmelapi.playtime.PlayTime;
 import de.murmelmeister.murmelapi.playtime.PlayTimeType;
 
-import java.sql.SQLException;
-
 /**
  * Utility class for time-related operations.
  */
@@ -77,9 +75,8 @@ public final class TimeUtil {
      * @param playTime The PlayTime object to get the time from.
      * @param userId   The ID of the user.
      * @return The formatted time value as a string.
-     * @throws SQLException If an error occurs while retrieving the time from the PlayTime object.
      */
-    public static String formatTimeValue(PlayTime playTime, int userId) throws SQLException {
+    public static String formatTimeValue(PlayTime playTime, int userId) {
         long seconds = playTime.getTime(userId, PlayTimeType.SECONDS);
         long minutes = playTime.getTime(userId, PlayTimeType.MINUTES);
         long hours = playTime.getTime(userId, PlayTimeType.HOURS);

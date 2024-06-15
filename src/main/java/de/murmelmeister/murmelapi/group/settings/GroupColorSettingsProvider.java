@@ -2,20 +2,17 @@ package de.murmelmeister.murmelapi.group.settings;
 
 import de.murmelmeister.murmelapi.utils.Database;
 
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-
-import static de.murmelmeister.murmelapi.utils.StringUtil.checkArgumentSQL;
 
 public final class GroupColorSettingsProvider implements GroupColorSettings {
     private static final String TABLE_NAME = "GroupColorSettings";
 
-    public GroupColorSettingsProvider() throws SQLException {
+    public GroupColorSettingsProvider() {
         createTable();
         Procedure.loadAll();
     }
 
-    private void createTable() throws SQLException {
+    private void createTable() {
         Database.update("CREATE TABLE IF NOT EXISTS %s (GroupID INT PRIMARY KEY, CreatorID INT, EditedTime BIGINT(255), " +
                         "ChatPrefix VARCHAR(300), ChatSuffix VARCHAR(300), ChatColor VARCHAR(30), " +
                         "TabPrefix VARCHAR(300), TabSuffix VARCHAR(300), TabColor VARCHAR(30), " +
@@ -23,85 +20,85 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
     }
 
     @Override
-    public boolean existsGroup(int groupId) throws SQLException {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), checkArgumentSQL(groupId));
+    public boolean existsGroup(int groupId) {
+        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), groupId);
     }
 
     @Override
-    public void createGroup(int groupId, int creatorId) throws SQLException {
+    public void createGroup(int groupId, int creatorId) {
         createGroup(groupId, creatorId, "", "", "", "", "", "", "", "", "&7");
     }
 
     @Override
-    public void createGroup(int groupId, int creatorId, String chatPrefix, String chatSuffix, String chatColor, String tabPrefix, String tabSuffix, String tabColor, String tagPrefix, String tagSuffix, String tagColor) throws SQLException {
+    public void createGroup(int groupId, int creatorId, String chatPrefix, String chatSuffix, String chatColor, String tabPrefix, String tabSuffix, String tabColor, String tagPrefix, String tagSuffix, String tagColor) {
         if (existsGroup(groupId)) return;
         Database.update("CALL %s('%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), groupId, creatorId, System.currentTimeMillis(),
                 chatPrefix, chatSuffix, chatColor, tabPrefix, tabSuffix, tabColor, tagPrefix, tagSuffix, tagColor);
     }
 
     @Override
-    public void deleteGroup(int groupId) throws SQLException {
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), checkArgumentSQL(groupId));
+    public void deleteGroup(int groupId) {
+        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), groupId);
     }
 
     @Override
-    public int getCreatorId(int groupId) throws SQLException {
-        return Database.getInt(-2, "CreatorID", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), checkArgumentSQL(groupId));
+    public int getCreatorId(int groupId) {
+        return Database.getInt(-2, "CreatorID", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), groupId);
     }
 
     @Override
-    public long getEditedTime(int groupId) throws SQLException {
-        return Database.getLong(-1, "EditedTime", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), checkArgumentSQL(groupId));
+    public long getEditedTime(int groupId) {
+        return Database.getLong(-1, "EditedTime", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), groupId);
     }
 
     @Override
-    public String getEditedDate(int groupId) throws SQLException {
+    public String getEditedDate(int groupId) {
         return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getEditedTime(groupId));
     }
 
     @Override
-    public String getPrefix(GroupColorType type, int groupId) throws SQLException {
-        return Database.getString(null, type.getName() + "Prefix", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), checkArgumentSQL(groupId));
+    public String getPrefix(GroupColorType type, int groupId) {
+        return Database.getString(null, type.getName() + "Prefix", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), groupId);
     }
 
     @Override
-    public String getSuffix(GroupColorType type, int groupId) throws SQLException {
-        return Database.getString(null, type.getName() + "Suffix", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), checkArgumentSQL(groupId));
+    public String getSuffix(GroupColorType type, int groupId) {
+        return Database.getString(null, type.getName() + "Suffix", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), groupId);
     }
 
     @Override
-    public String getColor(GroupColorType type, int groupId) throws SQLException {
-        return Database.getString(null, type.getName() + "Color", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), checkArgumentSQL(groupId));
+    public String getColor(GroupColorType type, int groupId) {
+        return Database.getString(null, type.getName() + "Color", "CALL %s('%s')", Procedure.PROCEDURE_GROUP_ID.getName(), groupId);
     }
 
     @Override
-    public void setPrefix(GroupColorType type, int groupId, int creatorId, String prefix) throws SQLException {
+    public void setPrefix(GroupColorType type, int groupId, int creatorId, String prefix) {
         var name = switch (type) {
             case CHAT -> Procedure.PROCEDURE_UPDATE_CHAT_PREFIX.getName();
             case TAB -> Procedure.PROCEDURE_UPDATE_TAB_PREFIX.getName();
             case TAG -> Procedure.PROCEDURE_UPDATE_TAG_PREFIX.getName();
         };
-        Database.update("CALL %s('%s','%s','%s','%s')", name, checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), prefix);
+        Database.update("CALL %s('%s','%s','%s','%s')", name, groupId, creatorId, System.currentTimeMillis(), prefix);
     }
 
     @Override
-    public void setSuffix(GroupColorType type, int groupId, int creatorId, String suffix) throws SQLException {
+    public void setSuffix(GroupColorType type, int groupId, int creatorId, String suffix) {
         var name = switch (type) {
             case CHAT -> Procedure.PROCEDURE_UPDATE_CHAT_SUFFIX.getName();
             case TAB -> Procedure.PROCEDURE_UPDATE_TAB_SUFFIX.getName();
             case TAG -> Procedure.PROCEDURE_UPDATE_TAG_SUFFIX.getName();
         };
-        Database.update("CALL %s('%s','%s','%s','%s')", name, checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), suffix);
+        Database.update("CALL %s('%s','%s','%s','%s')", name, groupId, creatorId, System.currentTimeMillis(), suffix);
     }
 
     @Override
-    public void setColor(GroupColorType type, int groupId, int creatorId, String color) throws SQLException {
+    public void setColor(GroupColorType type, int groupId, int creatorId, String color) {
         var name = switch (type) {
             case CHAT -> Procedure.PROCEDURE_UPDATE_CHAT_COLOR.getName();
             case TAB -> Procedure.PROCEDURE_UPDATE_TAB_COLOR.getName();
             case TAG -> Procedure.PROCEDURE_UPDATE_TAG_COLOR.getName();
         };
-        Database.update("CALL %s('%s','%s','%s','%s')", name, checkArgumentSQL(groupId), checkArgumentSQL(creatorId), System.currentTimeMillis(), color);
+        Database.update("CALL %s('%s','%s','%s','%s')", name, groupId, creatorId, System.currentTimeMillis(), color);
     }
 
     private enum Procedure {
@@ -139,8 +136,8 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
             return query;
         }
 
-        public static void loadAll() throws SQLException {
-            for (Procedure procedure : VALUES)
+        public static void loadAll() {
+            for (var procedure : VALUES)
                 Database.update(procedure.getQuery());
         }
     }

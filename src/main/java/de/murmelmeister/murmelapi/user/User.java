@@ -5,7 +5,6 @@ import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.settings.UserSettings;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,18 +17,16 @@ public sealed interface User permits UserProvider {
      *
      * @param uuid The unique id of the user.
      * @return True if the user exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsUser(UUID uuid) throws SQLException;
+    boolean existsUser(UUID uuid);
 
     /**
      * Checks if a user exists.
      *
      * @param username The username of the user.
      * @return True if the user exists, otherwise false.
-     * @throws SQLException If an SQL error occurs.
      */
-    boolean existsUser(String username) throws SQLException;
+    boolean existsUser(String username);
 
     /**
      * Create a new user and check if the user already exists.
@@ -37,62 +34,55 @@ public sealed interface User permits UserProvider {
      *
      * @param uuid     The unique id of the user.
      * @param username The username of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    void createNewUser(UUID uuid, String username) throws SQLException;
+    void createNewUser(UUID uuid, String username);
 
     /**
      * Deletes a user.
      *
      * @param uuid The unique id of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    void deleteUser(UUID uuid) throws SQLException;
+    void deleteUser(UUID uuid);
 
     /**
      * Obtains the id of a user.
      *
      * @param uuid The unique id of the user.
      * @return The id of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getId(UUID uuid) throws SQLException;
+    int getId(UUID uuid);
 
     /**
      * Obtains the id of a user.
      *
      * @param username The username of the user.
      * @return The id of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    int getId(String username) throws SQLException;
+    int getId(String username);
 
     /**
      * Obtains the unique id of a user.
      *
      * @param username The username of the user.
      * @return The unique id of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    UUID getUniqueId(String username) throws SQLException;
+    UUID getUniqueId(String username);
 
     /**
      * Obtains the unique id of a user.
      *
      * @param id The id of the user.
      * @return The unique id of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    UUID getUniqueId(int id) throws SQLException;
+    UUID getUniqueId(int id);
 
     /**
      * Obtains the username of a user.
      *
      * @param uuid The unique id of the user.
      * @return The username of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getUsername(UUID uuid) throws SQLException;
+    String getUsername(UUID uuid);
 
     /**
      * Obtains the username of a user.
@@ -100,42 +90,37 @@ public sealed interface User permits UserProvider {
      *
      * @param id The id of the user.
      * @return The username of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    String getUsername(int id) throws SQLException;
+    String getUsername(int id);
 
     /**
      * Renames a user.
      *
      * @param uuid    The unique id of the user.
      * @param newName The new username of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    void rename(UUID uuid, String newName) throws SQLException;
+    void rename(UUID uuid, String newName);
 
     /**
      * Obtains a list of all unique ids.
      *
      * @return A list of all unique ids.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<UUID> getUniqueIds() throws SQLException;
+    List<UUID> getUniqueIds();
 
     /**
      * Obtains a list of all usernames.
      *
      * @return A list of all usernames.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<String> getUsernames() throws SQLException;
+    List<String> getUsernames();
 
     /**
      * Obtains a list of all ids.
      *
      * @return A list of all ids.
-     * @throws SQLException If an SQL error occurs.
      */
-    List<Integer> getIds() throws SQLException;
+    List<Integer> getIds();
 
     /**
      * Join a user to the server.
@@ -144,16 +129,13 @@ public sealed interface User permits UserProvider {
      *
      * @param uuid     The unique id of the user.
      * @param username The username of the user.
-     * @throws SQLException If an SQL error occurs.
      */
-    void joinUser(UUID uuid, String username) throws SQLException;
+    void joinUser(UUID uuid, String username);
 
     /**
      * Load all expired things.
-     *
-     * @throws SQLException If an SQL error occurs.
      */
-    void loadExpired() throws SQLException;
+    void loadExpired();
 
     /**
      * Obtains the settings of a user.
