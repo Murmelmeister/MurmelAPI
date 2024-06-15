@@ -102,7 +102,7 @@ public final class Database {
     private static <T> void retrieveValuesFromDatabase(List<T> values, Class<T> type, String value, String sql, Object... objects) throws SQLException {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection()) {
-            try (PreparedStatement statement = connection.prepareStatement(String.format(sql, StringUtil.checkArgumentSQL(objects)))) {
+            try (PreparedStatement statement = connection.prepareStatement(String.format(sql, StringUtil.checkAllObjects(objects)))) {
                 ResultSet resultSet = statement.executeQuery();
                 while (resultSet.next()) values.add(resultSet.getObject(value, type));
             }
@@ -164,7 +164,7 @@ public final class Database {
         READ_LOCK.lock();
         T val = defaultValue;
         try (Connection connection = DATA_SOURCE.getConnection()) {
-            try (PreparedStatement statement = connection.prepareStatement(String.format(sql, StringUtil.checkArgumentSQL(objects)))) {
+            try (PreparedStatement statement = connection.prepareStatement(String.format(sql, StringUtil.checkAllObjects(objects)))) {
                 ResultSet resultSet = statement.executeQuery();
                 while (resultSet.next()) val = resultSet.getObject(value, type);
             }
@@ -187,7 +187,7 @@ public final class Database {
         READ_LOCK.lock();
         boolean b = false;
         try (Connection connection = DATA_SOURCE.getConnection()) {
-            try (PreparedStatement statement = connection.prepareStatement(String.format(sql, StringUtil.checkArgumentSQL(objects)))) {
+            try (PreparedStatement statement = connection.prepareStatement(String.format(sql, StringUtil.checkAllObjects(objects)))) {
                 ResultSet resultSet = statement.executeQuery();
                 while (resultSet.next()) b = true;
             }
