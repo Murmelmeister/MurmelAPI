@@ -104,7 +104,7 @@ public final class GroupProvider implements Group {
         var creatorId = -1;
         var team = 9999 + getName(id);
         settings.createGroup(id, creatorId, 0, team);
-        colorSettings.createGroup(id, creatorId, "&7", "", "", "", "", "&7", "", "", "&7");
+        colorSettings.createGroup(id, creatorId, "<gray>", "", "", "", "", "<gray>", "", "", "7");
         return id;
     }
 
