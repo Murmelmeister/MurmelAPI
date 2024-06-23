@@ -90,6 +90,23 @@ public final class TimeUtil {
                + (seconds != 0 ? getTimeValue(seconds, PlayTimeType.SECONDS) : "");
     }
 
+    /**
+     * Formats the given play time into a scoreboard time string.
+     *
+     * @param playTime The PlayTime object to get the time from.
+     * @param userId   The ID of the user.
+     * @return The formatted time value as a string representing the time in days, hours, and years.
+     */
+    public static String formatScoreboardTime(PlayTime playTime, int userId) {
+        long hours = playTime.getTime(userId, PlayTimeType.HOURS);
+        long days = playTime.getTime(userId, PlayTimeType.DAYS);
+        long years = playTime.getTime(userId, PlayTimeType.YEARS);
+
+        return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
+               + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
+               + (hours != 0 ? getTimeValue(hours, PlayTimeType.HOURS) : "0 ");
+    }
+
 
     /**
      * Returns the formatted time value based on the given time and PlayTimeType.
