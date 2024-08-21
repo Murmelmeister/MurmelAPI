@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.user.settings;
 
+import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.Database;
 
 import java.text.SimpleDateFormat;
@@ -7,9 +8,10 @@ import java.text.SimpleDateFormat;
 public final class UserSettingsProvider implements UserSettings {
     private static final String TABLE_NAME = "UserSettings";
 
-    public UserSettingsProvider() {
+    public UserSettingsProvider(User user) {
         this.createTable();
         Procedure.loadAll();
+        loadTablesIfNotCreated(user);
     }
 
     private void createTable() {
@@ -65,6 +67,11 @@ public final class UserSettingsProvider implements UserSettings {
     @Override
     public int getOnline(int id) {
         return Database.getInt(0, "IsOnline", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
+    }
+
+    private void loadTablesIfNotCreated(User user) {
+        for (var userId : user.getIds())
+            createUser(userId);
     }
 
     private enum Procedure {
