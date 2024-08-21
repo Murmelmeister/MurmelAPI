@@ -24,7 +24,7 @@ public final class UserSettingsProvider implements UserSettings {
     @Override
     public void createUser(int id) {
         if (existsUser(id)) return;
-        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), id, System.currentTimeMillis(), System.currentTimeMillis(), 0);
+        Database.update("CALL %s('%s','%s','%s','%s')", Procedure.PROCEDURE_INSERT.getName(), id, System.currentTimeMillis(), System.currentTimeMillis(), 0);
     }
 
     @Override
