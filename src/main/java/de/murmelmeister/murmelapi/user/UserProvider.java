@@ -25,7 +25,7 @@ public final class UserProvider implements User {
     public UserProvider() {
         this.createTable();
         Procedure.loadAll();
-        this.settings = new UserSettingsProvider();
+        this.settings = new UserSettingsProvider(this);
         this.parent = new UserParentProvider();
         this.permission = new UserPermissionProvider();
         this.playTime = new PlayTimeProvider(this);
