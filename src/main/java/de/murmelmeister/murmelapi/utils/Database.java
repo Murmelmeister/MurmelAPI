@@ -89,6 +89,18 @@ public final class Database {
         }
     }
 
+    public static void updateCall(String name, Object... objects) {
+        WRITE_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection()) {
+            PreparedStatement statement = connection.prepareStatement(getQueryWithCall(name, objects));
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("An error occurred while updating the database.", e);
+        } finally {
+            WRITE_LOCK.unlock();
+        }
+    }
+
     /**
      * Retrieves values from the database based on the provided parameters.
      *
@@ -103,6 +115,18 @@ public final class Database {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(String.format(sql, StringUtil.checkAllObjects(objects)))) {
+                ResultSet resultSet = statement.executeQuery();
+                while (resultSet.next()) values.add(resultSet.getObject(value, type));
+            }
+        } finally {
+            READ_LOCK.unlock();
+        }
+    }
+
+    private static <T> void retrieveValuesFromDatabaseCall(List<T> values, Class<T> type, String value, String name, Object... objects) throws SQLException {
+        READ_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement(getQueryWithCall(name, StringUtil.checkAllObjects(objects)))) {
                 ResultSet resultSet = statement.executeQuery();
                 while (resultSet.next()) values.add(resultSet.getObject(value, type));
             }
@@ -133,6 +157,16 @@ public final class Database {
         return values;
     }
 
+    public static <T> List<T> getValuesWithDefaultListCall(List<T> list, Class<T> type, String value, String name, Object... objects) {
+        List<T> values = Collections.synchronizedList(list);
+        try {
+            retrieveValuesFromDatabaseCall(values, type, value, name, objects);
+        } catch (SQLException e) {
+            throw new RuntimeException("Database retrieval error", e);
+        }
+        return values;
+    }
+
     /**
      * Retrieves values of a specified type from a database based on the provided parameters.
      * Default list is a ArrayList.
@@ -146,6 +180,10 @@ public final class Database {
      */
     public static <T> List<T> getValues(Class<T> type, String value, String sql, Object... objects) {
         return getValuesWithDefaultList(new ArrayList<>(), type, value, sql, objects);
+    }
+
+    public static <T> List<T> getValuesCall(Class<T> type, String value, String name, Object... objects) {
+        return getValuesWithDefaultListCall(new ArrayList<>(), type, value, name, objects);
     }
 
     /**
@@ -165,6 +203,22 @@ public final class Database {
         T val = defaultValue;
         try (Connection connection = DATA_SOURCE.getConnection()) {
             try (PreparedStatement statement = connection.prepareStatement(String.format(sql, StringUtil.checkAllObjects(objects)))) {
+                ResultSet resultSet = statement.executeQuery();
+                while (resultSet.next()) val = resultSet.getObject(value, type);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Database retrieval error", e);
+        } finally {
+            READ_LOCK.unlock();
+        }
+        return val;
+    }
+
+    public static <T> T getValueCall(T defaultValue, Class<T> type, String value, String name, Object... objects) {
+        READ_LOCK.lock();
+        T val = defaultValue;
+        try (Connection connection = DATA_SOURCE.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement(getQueryWithCall(name, StringUtil.checkAllObjects(objects)))) {
                 ResultSet resultSet = statement.executeQuery();
                 while (resultSet.next()) val = resultSet.getObject(value, type);
             }
@@ -199,6 +253,22 @@ public final class Database {
         return b;
     }
 
+    public static boolean existsCall(String name, Object... objects) {
+        READ_LOCK.lock();
+        boolean b = false;
+        try (Connection connection = DATA_SOURCE.getConnection()) {
+            try (PreparedStatement statement = connection.prepareStatement(getQueryWithCall(name, StringUtil.checkAllObjects(objects)))) {
+                ResultSet resultSet = statement.executeQuery();
+                while (resultSet.next()) b = true;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Database retrieval error", e);
+        } finally {
+            READ_LOCK.unlock();
+        }
+        return b;
+    }
+
     /**
      * Retrieve a string value from a database using the provided SQL query, with a default value in case the query returns null or no results.
      *
@@ -210,6 +280,10 @@ public final class Database {
      */
     public static String getString(String defaultValue, String value, String sql, Object... objects) {
         return getValue(defaultValue, String.class, value, sql, objects);
+    }
+
+    public static String getStringCall(String defaultValue, String value, String name, Object... objects) {
+        return getValueCall(defaultValue, String.class, value, name, objects);
     }
 
     /**
@@ -225,6 +299,10 @@ public final class Database {
         return getValue(defaultValue, int.class, value, sql, objects);
     }
 
+    public static int getIntCall(int defaultValue, String value, String name, Object... objects) {
+        return getValueCall(defaultValue, int.class, value, name, objects);
+    }
+
     /**
      * Retrieves a long value based on the given parameters.
      *
@@ -236,6 +314,10 @@ public final class Database {
      */
     public static long getLong(long defaultValue, String value, String sql, Object... objects) {
         return getValue(defaultValue, long.class, value, sql, objects);
+    }
+
+    public static long getLongCall(long defaultValue, String value, String name, Object... objects) {
+        return getValueCall(defaultValue, long.class, value, name, objects);
     }
 
     /**
@@ -252,6 +334,10 @@ public final class Database {
         return getValue(defaultValue, float.class, value, sql, objects);
     }
 
+    public static float getFloatCall(float defaultValue, String value, String name, Object... objects) {
+        return getValueCall(defaultValue, float.class, value, name, objects);
+    }
+
     /**
      * Returns the value of the specified SQL query as a double. If the query does not
      * return a value, the method will return the provided defaultValue.
@@ -264,6 +350,10 @@ public final class Database {
      */
     public static double getDouble(double defaultValue, String value, String sql, Object... objects) {
         return getValue(defaultValue, double.class, value, sql, objects);
+    }
+
+    public static double getDoubleCall(double defaultValue, String value, String name, Object... objects) {
+        return getValueCall(defaultValue, double.class, value, name, objects);
     }
 
     /**
@@ -279,6 +369,10 @@ public final class Database {
         return getValue(defaultValue, UUID.class, value, sql, objects);
     }
 
+    public static UUID getUniqueIdCall(UUID defaultValue, String value, String name, Object... objects) {
+        return getValueCall(defaultValue, UUID.class, value, name, objects);
+    }
+
     /**
      * Retrieves a list of strings from the database based on the provided value and SQL query.
      *
@@ -289,6 +383,10 @@ public final class Database {
      */
     public static List<String> getStringList(String value, String sql, Object... objects) {
         return getValues(String.class, value, sql, objects);
+    }
+
+    public static List<String> getStringListCall(String value, String name, Object... objects) {
+        return getValuesCall(String.class, value, name, objects);
     }
 
     /**
@@ -303,6 +401,10 @@ public final class Database {
         return getValues(int.class, value, sql, objects);
     }
 
+    public static List<Integer> getIntListCall(String value, String name, Object... objects) {
+        return getValuesCall(int.class, value, name, objects);
+    }
+
     /**
      * Retrieves a list of unique IDs from the database based on the provided value and SQL query.
      *
@@ -313,6 +415,10 @@ public final class Database {
      */
     public static List<UUID> getUniqueIdList(String value, String sql, Object... objects) {
         return getValues(UUID.class, value, sql, objects);
+    }
+
+    public static List<UUID> getUniqueIdListCall(String value, String name, Object... objects) {
+        return getValuesCall(UUID.class, value, name, objects);
     }
 
     /**
@@ -330,5 +436,16 @@ public final class Database {
                 BEGIN
                     %s
                 END;""", name, input, String.format(query, objects));
+    }
+
+    private static String getQueryWithCall(String name, Object... objects) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < objects.length; i++) {
+            if (i != 0) builder.append(",");
+            builder.append("'").append(objects[i]).append("'");
+        }
+
+        String finalSql = builder.toString();
+        return String.format("CALL %s(%s)", name, finalSql);
     }
 }
