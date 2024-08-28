@@ -3,15 +3,16 @@ package de.murmelmeister.murmelapi.bansystem;
 import de.murmelmeister.murmelapi.utils.Database;
 
 public final class ReasonProvider implements Reason {
-    private static final String TABLE_NAME = "Reason";
+    private final String tableName;
 
-    public ReasonProvider() {
+    public ReasonProvider(String tableName) {
+        this.tableName = tableName;
         createTable();
-        Procedure.loadAll();
+        Procedure.loadAll(tableName);
     }
 
     private void createTable() {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (ReasonID INT PRIMARY KEY AUTO_INCREMENT, Reason VARCHAR(1000))", TABLE_NAME);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (ReasonID INT PRIMARY KEY AUTO_INCREMENT, Reason VARCHAR(1000))", tableName);
     }
 
     @Override
@@ -40,10 +41,10 @@ public final class ReasonProvider implements Reason {
     }
 
     private enum Procedure {
-        PROCEDURE_GET("Reason_Get", "rid INT", "SELECT * FROM %s WHERE ReasonID=rid;", TABLE_NAME),
-        PROCEDURE_INSERT("Reason_Insert", "message VARCHAR(1000)", "INSERT INTO %s (Reason) VALUES (message);", TABLE_NAME),
-        PROCEDURE_DELETE("Reason_Delete", "rid INT", "DELETE FROM %s WHERE ReasonID=rid;", TABLE_NAME),
-        PROCEDURE_UPDATE("Reason_Update", "rid INT, message VARCHAR(1000)", "UPDATE %s SET Reason=message WHERE ReasonID=rid;", TABLE_NAME);
+        PROCEDURE_GET("Reason_Get", "rid INT", "SELECT * FROM %s WHERE ReasonID=rid;"),
+        PROCEDURE_INSERT("Reason_Insert", "message VARCHAR(1000)", "INSERT INTO %s (Reason) VALUES (message);"),
+        PROCEDURE_DELETE("Reason_Delete", "rid INT", "DELETE FROM %s WHERE ReasonID=rid;"),
+        PROCEDURE_UPDATE("Reason_Update", "rid INT, message VARCHAR(1000)", "UPDATE %s SET Reason=message WHERE ReasonID=rid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
@@ -58,13 +59,13 @@ public final class ReasonProvider implements Reason {
             return name;
         }
 
-        public String getQuery() {
-            return query;
+        public String getQuery(String tableName) {
+            return String.format(query, tableName);
         }
 
-        public static void loadAll() {
+        public static void loadAll(String tableName) {
             for (Procedure procedure : VALUES)
-                Database.update(procedure.getQuery());
+                Database.update(procedure.getQuery(tableName));
         }
     }
 }
