@@ -1,5 +1,9 @@
 package de.murmelmeister.murmelapi;
 
+import de.murmelmeister.murmelapi.bansystem.ban.Ban;
+import de.murmelmeister.murmelapi.bansystem.ban.BanProvider;
+import de.murmelmeister.murmelapi.bansystem.mute.Mute;
+import de.murmelmeister.murmelapi.bansystem.mute.MuteProvider;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.permission.Permission;
@@ -17,11 +21,16 @@ public final class MurmelAPI {
     private static final Permission PERMISSION;
     private static final PlayTime PLAY_TIME;
 
+    private static final Mute MUTE;
+    private static final Ban BAN;
+
     static {
         GROUP = new GroupProvider();
         USER = new UserProvider();
         PERMISSION = new PermissionProvider(GROUP, USER);
         PLAY_TIME = USER.getPlayTime();
+        MUTE = new MuteProvider();
+        BAN = new BanProvider();
     }
 
     /**
@@ -58,5 +67,23 @@ public final class MurmelAPI {
      */
     public static PlayTime getPlayTime() {
         return PLAY_TIME;
+    }
+
+    /**
+     * Get the mute provider.
+     *
+     * @return the mute provider
+     */
+    public static Mute getMute() {
+        return MUTE;
+    }
+
+    /**
+     * Get the ban provider.
+     *
+     * @return the ban provider
+     */
+    public static Ban getBan() {
+        return BAN;
     }
 }
