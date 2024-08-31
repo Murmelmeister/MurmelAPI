@@ -19,7 +19,7 @@ public final class LogProvider implements Log {
     }
 
     public void createTable() {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (LogID INT AUTO_INCREMENT, UserID INT, CreatorID INT, ReasonID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", tableName);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (LogID INT PRIMARY KEY AUTO_INCREMENT, UserID INT, CreatorID INT, ReasonID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", tableName);
     }
 
     @Override
@@ -125,22 +125,22 @@ public final class LogProvider implements Log {
 
     private enum Procedure {
         PROCEDURE_LOG_ADD("Log_Add", "uid INT, cid INT, rid INT, created BIGINT(255), expired BIGINT(255)",
-                "INSERT INTO %s (UserID, CreatorID, ReasonID, CreatedTime, ExpiredTime) VALUES (uid, cid, rid, created, expired);"),
-        PROCEDURE_LOG_REMOVE("Log_Remove", "id INT", "DELETE FROM %s WHERE LogID=id;"),
-        PROCEDURE_LOG_DELETE("Log_Delete", "uid INT", "DELETE FROM %s WHERE UserID=uid;"),
-        PROCEDURE_LOG_ID("Log_ID", "uid INT", "SELECT * FROM %s WHERE UserID=uid;"),
-        PROCEDURE_LOG_GET("Log_Get", "id INT", "SELECT * FROM %s WHERE LogID=id;"),
-        PROCEDURE_LOG_EXPIRED("Log_Expired", "id INT, expired BIGINT(255)", "UPDATE %s SET ExpiredTime=expired WHERE LogID=id;"),
-        PROCEDURE_LOG_REASON_UPDATE("Log_Reason_Update", "id INT, rid INT", "UPDATE %s SET ReasonID=rid WHERE LogID=id;"),
+                "INSERT INTO [TABLE] (UserID, CreatorID, ReasonID, CreatedTime, ExpiredTime) VALUES (uid, cid, rid, created, expired);"),
+        PROCEDURE_LOG_REMOVE("Log_Remove", "id INT", "DELETE FROM [TABLE] WHERE LogID=id;"),
+        PROCEDURE_LOG_DELETE("Log_Delete", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
+        PROCEDURE_LOG_ID("Log_ID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
+        PROCEDURE_LOG_GET("Log_Get", "id INT", "SELECT * FROM [TABLE] WHERE LogID=id;"),
+        PROCEDURE_LOG_EXPIRED("Log_Expired", "id INT, expired BIGINT(255)", "UPDATE [TABLE] SET ExpiredTime=expired WHERE LogID=id;"),
+        PROCEDURE_LOG_REASON_UPDATE("Log_Reason_Update", "id INT, rid INT", "UPDATE [TABLE] SET ReasonID=rid WHERE LogID=id;"),
         ;
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query, Object... objects) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = Database.getProcedureQuery(name, input, query, objects);
+            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
 
         public String getName() {
@@ -148,7 +148,7 @@ public final class LogProvider implements Log {
         }
 
         public String getQuery(String tableName) {
-            return String.format(query, tableName);
+            return query.replace("[TABLE]", tableName);
         }
 
         public static void loadAll(String tableName) {

@@ -55,9 +55,9 @@ public final class MuteProvider implements Mute {
     }
 
     private enum Procedure {
-        PROCEDURE_MUTE_ADD("Mute_Add", "uid INT, expired BIGINT(255)", "INSERT INTO %s VALUES (uid, expired);"),
-        PROCEDURE_MUTE_REMOVE("Mute_Remove", "uid INT", "DELETE FROM %s WHERE UserID=uid;"),
-        PROCEDURE_MUTE_GET("Mute_Get", "uid INT", "SELECT * FROM %s WHERE UserID=uid;"),
+        PROCEDURE_MUTE_ADD("Mute_Add", "uid INT, expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, expired);"),
+        PROCEDURE_MUTE_REMOVE("Mute_Remove", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
+        PROCEDURE_MUTE_GET("Mute_Get", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
         ;
         private static final Procedure[] VALUES = values();
 
@@ -74,7 +74,7 @@ public final class MuteProvider implements Mute {
         }
 
         public String getQuery(String tableName) {
-            return String.format(query, tableName);
+            return query.replace("[TABLE]", tableName);
         }
 
         public static void loadAll(String tableName) {
