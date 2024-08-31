@@ -19,7 +19,7 @@ public final class BanProvider implements Ban {
     }
 
     private void createTable() {
-        Database.update("CREATE TABLE IF NOT EXIST %s (UserID INT, ExpiredTime BIGINT(255))", tableName);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (UserID INT, ExpiredTime BIGINT(255))", tableName);
     }
 
     @Override
@@ -55,18 +55,18 @@ public final class BanProvider implements Ban {
     }
 
     private enum Procedure {
-        PROCEDURE_BAN_ADD("Ban_Add", "uid INT, expired BIGINT(255)", "INSERT INTO %s VALUES (uid, expired);"),
-        PROCEDURE_BAN_REMOVE("Ban_Remove", "uid INT", "DELETE FROM %s WHERE UserID=uid;"),
-        PROCEDURE_BAN_GET("Ban_Get", "uid INT", "SELECT * FROM %s WHERE UserID=uid;"),
+        PROCEDURE_BAN_ADD("Ban_Add", "uid INT, expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, expired);"),
+        PROCEDURE_BAN_REMOVE("Ban_Remove", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
+        PROCEDURE_BAN_GET("Ban_Get", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
         ;
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query, Object... objects) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = Database.getProcedureQuery(name, input, query, objects);
+            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
 
         public String getName() {
@@ -74,7 +74,7 @@ public final class BanProvider implements Ban {
         }
 
         public String getQuery(String tableName) {
-            return String.format(query, tableName);
+            return query.replace("[TABLE]", tableName);
         }
 
         public static void loadAll(String tableName) {

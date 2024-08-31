@@ -12,7 +12,7 @@ public final class ReasonProvider implements Reason {
     }
 
     private void createTable() {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (ReasonID INT AUTO_INCREMENT, Reason VARCHAR(1000))", tableName);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (ReasonID INT PRIMARY KEY AUTO_INCREMENT, Reason VARCHAR(1000))", tableName);
     }
 
     @Override
@@ -41,18 +41,18 @@ public final class ReasonProvider implements Reason {
     }
 
     private enum Procedure {
-        PROCEDURE_GET("Reason_Get", "rid INT", "SELECT * FROM %s WHERE ReasonID=rid;"),
-        PROCEDURE_INSERT("Reason_Insert", "message VARCHAR(1000)", "INSERT INTO %s (Reason) VALUES (message);"),
-        PROCEDURE_DELETE("Reason_Delete", "rid INT", "DELETE FROM %s WHERE ReasonID=rid;"),
-        PROCEDURE_UPDATE("Reason_Update", "rid INT, message VARCHAR(1000)", "UPDATE %s SET Reason=message WHERE ReasonID=rid;");
+        PROCEDURE_GET("Reason_Get", "rid INT", "SELECT * FROM [TABLE] WHERE ReasonID=rid;"),
+        PROCEDURE_INSERT("Reason_Insert", "message VARCHAR(1000)", "INSERT INTO [TABLE] (Reason) VALUES (message);"),
+        PROCEDURE_DELETE("Reason_Delete", "rid INT", "DELETE FROM [TABLE] WHERE ReasonID=rid;"),
+        PROCEDURE_UPDATE("Reason_Update", "rid INT, message VARCHAR(1000)", "UPDATE [TABLE] SET Reason=message WHERE ReasonID=rid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query, Object... objects) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = Database.getProcedureQuery(name, input, query, objects);
+            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
 
         public String getName() {
@@ -60,7 +60,7 @@ public final class ReasonProvider implements Reason {
         }
 
         public String getQuery(String tableName) {
-            return String.format(query, tableName);
+            return query.replace("[TABLE]", tableName);
         }
 
         public static void loadAll(String tableName) {
