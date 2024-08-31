@@ -64,9 +64,9 @@ public final class MuteProvider implements Mute {
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query, Object... objects) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = Database.getProcedureQuery(name, input, query, objects);
+            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
 
         public String getName() {

@@ -57,12 +57,12 @@ public final class LogProvider implements Log {
 
     @Override
     public int getUserId(int logId) {
-        return Database.getIntCall(-1, "UserID", Procedure.PROCEDURE_LOG_ID.getName(), logId);
+        return Database.getIntCall(-2, "UserID", Procedure.PROCEDURE_LOG_ID.getName(), logId);
     }
 
     @Override
     public int getCreatorId(int logId) {
-        return Database.getIntCall(-1, "CreatorID", Procedure.PROCEDURE_LOG_ID.getName(), logId);
+        return Database.getIntCall(-2, "CreatorID", Procedure.PROCEDURE_LOG_ID.getName(), logId);
     }
 
     @Override
