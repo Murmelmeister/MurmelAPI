@@ -1,4 +1,4 @@
-package de.murmelmeister.murmelapi.bansystem;
+package de.murmelmeister.murmelapi.bansystem.log;
 
 import java.util.List;
 
@@ -19,11 +19,11 @@ public sealed interface Log permits LogProvider {
      *
      * @param userId    The ID of the user associated with the log entry.
      * @param creatorId The ID of the user who created the log entry.
-     * @param time      The timestamp of the log entry in milliseconds.
      * @param reasonId  The ID of the reason for the log entry.
+     * @param time      The timestamp of the log entry in milliseconds.
      * @return The ID of the newly added log entry.
      */
-    int addLog(int userId, int creatorId, long time, int reasonId);
+    int addLog(int userId, int creatorId, int reasonId, long time); // int userId, int creatorId, int reasonId, long time, String tag
 
     /**
      * Removes a log entry from the logger.
@@ -38,6 +38,14 @@ public sealed interface Log permits LogProvider {
      * @param userId The ID of the user for whom the logs will be deleted.
      */
     void deleteLog(int userId);
+
+    /**
+     * Retrieves the log ID associated with the specified user ID.
+     *
+     * @param userId The ID of the user for whom the log ID will be retrieved.
+     * @return The log ID associated with the specified user ID.
+     */
+    int getLogId(int userId);
 
     /**
      * Retrieves the logs associated with the specified user ID.

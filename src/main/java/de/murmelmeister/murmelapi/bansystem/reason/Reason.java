@@ -1,4 +1,4 @@
-package de.murmelmeister.murmelapi.bansystem;
+package de.murmelmeister.murmelapi.bansystem.reason;
 
 /**
  * The Reason interface provides methods to give Reason for the ban/mute system.

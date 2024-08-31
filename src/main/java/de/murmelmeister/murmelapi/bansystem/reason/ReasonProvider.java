@@ -1,4 +1,4 @@
-package de.murmelmeister.murmelapi.bansystem;
+package de.murmelmeister.murmelapi.bansystem.reason;
 
 import de.murmelmeister.murmelapi.utils.Database;
 
@@ -12,7 +12,7 @@ public final class ReasonProvider implements Reason {
     }
 
     private void createTable() {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (ReasonID INT PRIMARY KEY AUTO_INCREMENT, Reason VARCHAR(1000))", tableName);
+        Database.update("CREATE TABLE IF NOT EXISTS %s (ReasonID INT AUTO_INCREMENT, Reason VARCHAR(1000))", tableName);
     }
 
     @Override
