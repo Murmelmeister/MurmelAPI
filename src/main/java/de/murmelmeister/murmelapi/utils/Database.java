@@ -438,6 +438,16 @@ public final class Database {
                 END;""", name, input, String.format(query, objects));
     }
 
+    public static String getProcedureQueryWithoutObjects(String name, String input, String query) {
+        return "CREATE PROCEDURE IF NOT EXISTS " +
+               name +
+               '(' +
+               input +
+               ")\nBEGIN\n    " +
+               query +
+               "\nEND;";
+    }
+
     private static String getQueryWithCall(String name, Object... objects) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < objects.length; i++) {
