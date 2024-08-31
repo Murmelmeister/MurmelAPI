@@ -42,19 +42,19 @@ public final class FileUtil {
      * @see FileUtil#getLockForFile(String)
      */
     public static File createFile(Logger logger, String path, String fileName) {
-        var lock = getLockForFile(fileName);
+        ReentrantLock lock = getLockForFile(fileName);
         lock.lock();
         try {
-            var file = new File(path, fileName);
-            var parent = file.getParentFile();
+            File file = new File(path, fileName);
+            File parent = file.getParentFile();
             if (!parent.exists()) {
-                var exist = parent.mkdirs();
+                boolean exist = parent.mkdirs();
                 if (!exist) logger.warn("Cloud not create the directory: {}", parent);
             }
 
             if (!file.exists()) {
                 try {
-                    var exist = file.createNewFile();
+                    boolean exist = file.createNewFile();
                     if (!exist) logger.error("Cloud not create the file: {}", file);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -73,8 +73,8 @@ public final class FileUtil {
      * @return Properties
      */
     public static Properties loadProperties(File file) {
-        var properties = new Properties(System.getProperties());
-        try (var stream = new FileInputStream(file)) {
+        Properties properties = new Properties(System.getProperties());
+        try (FileInputStream stream = new FileInputStream(file)) {
             properties.load(stream);
         } catch (IOException e) {
             throw new RuntimeException("Unable to load properties from file: " + file.getName(), e);

@@ -9,47 +9,48 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public final class UserParentProvider implements UserParent {
-    private static final String TABLE_NAME = "UserParent";
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
     public UserParentProvider() {
-        createTable();
-        Procedure.loadAll();
+        String tableName = "UserParent";
+        createTable(tableName);
+        Procedure.loadAll(tableName);
     }
 
-    private void createTable() {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (UserID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255))", TABLE_NAME);
+    private void createTable(String tableName) {
+        Database.createTable("UserID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255)", tableName);
     }
 
     @Override
     public boolean existsParent(int userId, int parentId) {
-        return Database.exists("CALL %s('%s','%s')", Procedure.PROCEDURE_PARENT.getName(), userId, parentId);
+        return Database.existsCall(Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
     }
 
     @Override
     public void addParent(int userId, int creatorId, int parentId, long time) {
         if (existsParent(userId, parentId)) return;
-        var expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.update("CALL %s('%s','%s','%s','%s','%s')", Procedure.PROCEDURE_ADD.getName(), userId, creatorId, parentId, System.currentTimeMillis(), expired);
+        long expired = time == -1 ? time : System.currentTimeMillis() + time;
+        Database.updateCall(Procedure.USER_PARENT_ADD.getName(), userId, creatorId, parentId, System.currentTimeMillis(), expired);
     }
 
     @Override
     public void removeParent(int userId, int parentId) {
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_REMOVE.getName(), userId, parentId);
+        Database.updateCall(Procedure.USER_PARENT_REMOVE.getName(), userId, parentId);
     }
 
     @Override
     public void clearParent(int userId) {
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_CLEAR.getName(), userId);
+        Database.updateCall(Procedure.USER_PARENT_CLEAR.getName(), userId);
     }
 
     @Override
     public int getParentId(int userId) {
-        return Database.getInt(-1, "ParentID", "CALL %s('%s')", Procedure.PROCEDURE_USER_ID.getName(), userId);
+        return Database.getIntCall(-1, "ParentID", Procedure.USER_PARENT_USER_ID.getName(), userId);
     }
 
     @Override
     public List<Integer> getParentIds(int userId) {
-        return Database.getIntList("ParentID", "CALL %s('%s')", Procedure.PROCEDURE_USER_ID.getName(), userId);
+        return Database.getIntListCall("ParentID", Procedure.USER_PARENT_USER_ID.getName(), userId);
     }
 
     @Override
@@ -59,91 +60,91 @@ public final class UserParentProvider implements UserParent {
 
     @Override
     public int getCreatorId(int userId, int parentId) {
-        return Database.getInt(-2, "CreatorID", "CALL %s('%s','%s')", Procedure.PROCEDURE_PARENT.getName(), userId, parentId);
+        return Database.getIntCall(-2, "CreatorID", Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
     }
 
     @Override
     public long getCreatedTime(int userId, int parentId) {
-        return Database.getLong(-1, "CreatedTime", "CALL %s('%s','%s')", Procedure.PROCEDURE_PARENT.getName(), userId, parentId);
+        return Database.getLongCall(-1, "CreatedTime", Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
     }
 
     @Override
     public String getCreatedDate(int userId, int parentId) {
-        return new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(getCreatedTime(userId, parentId));
+        return dateFormat.format(getCreatedTime(userId, parentId));
     }
 
     @Override
     public long getExpiredTime(int userId, int parentId) {
-        return Database.getLong(-2, "ExpiredTime", "CALL %s('%s','%s')", Procedure.PROCEDURE_PARENT.getName(), userId, parentId);
+        return Database.getLongCall(-2, "ExpiredTime", Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
     }
 
     @Override
     public String getExpiredDate(int userId, int parentId) {
-        var time = getExpiredTime(userId, parentId);
-        return time == -1 ? "never" : new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(time);
+        long time = getExpiredTime(userId, parentId);
+        return time == -1 ? "never" : dateFormat.format(time);
     }
 
     @Override
     public String setExpiredTime(int userId, int parentId, long time) {
-        var expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), userId, parentId, expired);
+        long expired = time == -1 ? time : System.currentTimeMillis() + time;
+        Database.updateCall(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
         return getExpiredDate(userId, parentId);
     }
 
     @Override
     public String addExpiredTime(int userId, int parentId, long time) {
-        var current = getExpiredTime(userId, parentId);
-        var expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), userId, parentId, expired);
+        long current = getExpiredTime(userId, parentId);
+        long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
+        Database.updateCall(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
         return getExpiredDate(userId, parentId);
     }
 
     @Override
     public String removeExpiredTime(int userId, int parentId, long time) {
-        var current = getExpiredTime(userId, parentId);
-        var expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.update("CALL %s('%s','%s','%s')", Procedure.PROCEDURE_EXPIRED.getName(), userId, parentId, expired);
+        long current = getExpiredTime(userId, parentId);
+        long expired = current == -1 ? System.currentTimeMillis() : current - time;
+        Database.updateCall(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
         return getExpiredDate(userId, parentId);
     }
 
     @Override
     public void loadExpired(User user) {
-        for (var userId : user.getIds())
-            for (var parentId : getParentIds(userId)) {
-                var time = getExpiredTime(userId, parentId);
+        for (int userId : user.getIds())
+            for (int parentId : getParentIds(userId)) {
+                long time = getExpiredTime(userId, parentId);
                 if (time == -1) continue;
                 if (time <= System.currentTimeMillis()) removeParent(userId, parentId);
             }
     }
 
     private enum Procedure {
-        PROCEDURE_USER_ID("UserParent_UserID", Database.getProcedureQuery("UserParent_UserID", "uid INT", "SELECT * FROM %s WHERE UserID=uid;", TABLE_NAME)),
-        PROCEDURE_PARENT("UserParent_Parent", Database.getProcedureQuery("UserParent_Parent", "uid INT, pid INT", "SELECT * FROM %s WHERE UserID=uid AND ParentID=pid;", TABLE_NAME)),
-        PROCEDURE_ADD("UserParent_Add", Database.getProcedureQuery("UserParent_Add", "uid INT, creator INT, pid INT, created BIGINT(255), expired BIGINT(255)", "INSERT INTO %s VALUES (uid, creator, pid, created, expired);", TABLE_NAME)),
-        PROCEDURE_REMOVE("UserParent_Remove", Database.getProcedureQuery("UserParent_Remove", "uid INT, pid INT", "DELETE FROM %s WHERE UserID=uid AND ParentID=pid;", TABLE_NAME)),
-        PROCEDURE_CLEAR("UserParent_Clear", Database.getProcedureQuery("UserParent_Clear", "uid INT", "DELETE FROM %s WHERE UserID=uid;", TABLE_NAME)),
-        PROCEDURE_EXPIRED("UserParent_Expired", Database.getProcedureQuery("UserParent_Expired", "uid INT, pid INT, expired BIGINT(255)", "UPDATE %s SET ExpiredTime=expired WHERE UserID=uid AND ParentID=pid;", TABLE_NAME));
+        USER_PARENT_USER_ID("UserParent_UserID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
+        USER_PARENT_PARENT("UserParent_Parent", "uid INT, pid INT", "SELECT * FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
+        USER_PARENT_ADD("UserParent_Add", "uid INT, creator INT, pid INT, created BIGINT(255), expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, creator, pid, created, expired);"),
+        USER_PARENT_REMOVE("UserParent_Remove", "uid INT, pid INT", "DELETE FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
+        USER_PARENT_CLEAR("UserParent_Clear", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
+        USER_PARENT_EXPIRED("UserParent_Expired", "uid INT, pid INT, expired BIGINT(255)", "UPDATE [TABLE] SET ExpiredTime=expired WHERE UserID=uid AND ParentID=pid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(String name, String query) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = query;
+            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
 
         public String getName() {
             return name;
         }
 
-        public String getQuery() {
-            return query;
+        public String getQuery(String tableName) {
+            return query.replace("[TABLE]", tableName);
         }
 
-        public static void loadAll() {
-            for (var procedure : VALUES)
-                Database.update(procedure.getQuery());
+        public static void loadAll(String tableName) {
+            for (Procedure procedure : VALUES)
+                Database.update(procedure.getQuery(tableName));
         }
     }
 }

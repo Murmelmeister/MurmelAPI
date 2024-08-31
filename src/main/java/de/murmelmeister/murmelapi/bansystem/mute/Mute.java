@@ -35,6 +35,14 @@ public sealed interface Mute permits MuteProvider {
     long getExpiredTime(int userId);
 
     /**
+     * Retrieves the expiration date of the mute for the specified user.
+     *
+     * @param userId The ID of the user whose mute expiration date is to be retrieved.
+     * @return The expiration date of the mute as a string.
+     */
+    String getExpiredDate(int userId);
+
+    /**
      * Checks if a user is currently muted.
      *
      * @param userId The ID of the user to be checked.

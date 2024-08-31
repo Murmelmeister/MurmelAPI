@@ -33,6 +33,14 @@ public sealed interface Ban permits BanProvider {
     long getExpiredTime(int userId);
 
     /**
+     * Retrieves the expiration date for the ban of the user with the specified ID in a human-readable format.
+     *
+     * @param userId The ID of the user whose ban expiration date is to be retrieved.
+     * @return The expiration date of the ban as a string, or "Not Banned" if the user is not banned.
+     */
+    String getExpiredDate(int userId);
+
+    /**
      * Checks whether a user is currently banned.
      *
      * @param userId The ID of the user to check.

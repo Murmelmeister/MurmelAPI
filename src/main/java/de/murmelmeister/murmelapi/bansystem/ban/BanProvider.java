@@ -6,41 +6,49 @@ import de.murmelmeister.murmelapi.bansystem.reason.Reason;
 import de.murmelmeister.murmelapi.bansystem.reason.ReasonProvider;
 import de.murmelmeister.murmelapi.utils.Database;
 
+import java.text.SimpleDateFormat;
+
 public final class BanProvider implements Ban {
-    private final String tableName = "Ban_List";
     private final Reason reason;
     private final Log log;
 
     public BanProvider() {
         this.reason = new ReasonProvider("Ban_Reason");
         this.log = new LogProvider("Ban_Log", reason);
-        createTable();
+        String tableName = "Ban_List";
+        createTable(tableName);
         Procedure.loadAll(tableName);
     }
 
-    private void createTable() {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (UserID INT, ExpiredTime BIGINT(255))", tableName);
+    private void createTable(String tableName) {
+        Database.createTable("UserID INT, ExpiredTime BIGINT(255)", tableName);
     }
 
     @Override
     public void ban(int userId, int creatorId, int reasonId, long time) {
         int logId = log.addLog(userId, creatorId, reasonId, time);
-        Database.updateCall(Procedure.PROCEDURE_BAN_ADD.getName(), userId, log.getExpiredTime(logId));
+        Database.updateCall(Procedure.BAN_ADD.getName(), userId, log.getExpiredTime(logId));
     }
 
     @Override
     public void unban(int userId) {
-        Database.updateCall(Procedure.PROCEDURE_BAN_REMOVE.getName(), userId);
+        Database.updateCall(Procedure.BAN_REMOVE.getName(), userId);
     }
 
     @Override
     public long getExpiredTime(int userId) {
-        return Database.getLongCall(-2, "ExpiredTime", Procedure.PROCEDURE_BAN_GET.getName(), userId);
+        return Database.getLongCall(-2, "ExpiredTime", Procedure.BAN_GET.getName(), userId);
+    }
+
+    @Override
+    public String getExpiredDate(int userId) {
+        long time = getExpiredTime(userId);
+        return time == -1 ? "never" : new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(time);
     }
 
     @Override
     public boolean isBanned(int userId) {
-        long time = this.getExpiredTime(userId);
+        long time = getExpiredTime(userId);
         return time == -1 || time >= System.currentTimeMillis();
     }
 
@@ -55,10 +63,9 @@ public final class BanProvider implements Ban {
     }
 
     private enum Procedure {
-        PROCEDURE_BAN_ADD("Ban_Add", "uid INT, expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, expired);"),
-        PROCEDURE_BAN_REMOVE("Ban_Remove", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
-        PROCEDURE_BAN_GET("Ban_Get", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
-        ;
+        BAN_ADD("Ban_Add", "uid INT, expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, expired);"),
+        BAN_REMOVE("Ban_Remove", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
+        BAN_GET("Ban_Get", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;

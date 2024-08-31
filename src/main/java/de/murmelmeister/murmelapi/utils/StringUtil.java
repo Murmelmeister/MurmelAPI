@@ -44,8 +44,8 @@ public final class StringUtil {
      * @throws IllegalArgumentException if any of the objects contains invalid characters. Only alphanumerics and -_.?!*<>:/ are allowed.
      */
     public static Object[] checkAllObjects(Object[] objects) {
-        var cleanedValues = new String[objects.length];
-        for (var i = 0; i < objects.length; i++)
+        String[] cleanedValues = new String[objects.length];
+        for (int i = 0; i < objects.length; i++)
             cleanedValues[i] = checkArgumentSQL(objects[i].toString());
         return cleanedValues;
     }
