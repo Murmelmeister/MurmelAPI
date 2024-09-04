@@ -9,32 +9,32 @@ public final class ReasonProvider implements Reason {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("ReasonID INT PRIMARY KEY AUTO_INCREMENT, Reason VARCHAR(1000)", tableName);
+        Database.createTable(tableName, "ReasonID INT PRIMARY KEY AUTO_INCREMENT, Reason VARCHAR(1000)");
     }
 
     @Override
     public boolean exists(int id) {
-        return Database.existsCall(Procedure.REASON_GET.getName(), id);
+        return Database.callExists(Procedure.REASON_GET.getName(), id);
     }
 
     @Override
     public void add(String reason) {
-        Database.updateCall(Procedure.REASON_INSERT.getName(), reason);
+        Database.callUpdate(Procedure.REASON_INSERT.getName(), reason);
     }
 
     @Override
     public void remove(int id) {
-        Database.updateCall(Procedure.REASON_DELETE.getName(), id);
+        Database.callUpdate(Procedure.REASON_DELETE.getName(), id);
     }
 
     @Override
     public void update(int id, String reason) {
-        Database.updateCall(Procedure.REASON_UPDATE.getName(), id, reason);
+        Database.callUpdate(Procedure.REASON_UPDATE.getName(), id, reason);
     }
 
     @Override
     public String get(int id) {
-        return Database.getStringCall(null, "Reason", Procedure.REASON_GET.getName(), id);
+        return Database.callQuery(null, "Reason", String.class, Procedure.REASON_GET.getName(), id);
     }
 
     private enum Procedure {

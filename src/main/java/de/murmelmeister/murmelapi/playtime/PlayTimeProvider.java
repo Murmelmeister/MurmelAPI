@@ -12,23 +12,23 @@ public final class PlayTimeProvider implements PlayTime {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("UserID INT PRIMARY KEY, Seconds BIGINT(255), Minutes BIGINT(255), Hours BIGINT(255), Days BIGINT(255), Years BIGINT(255)", tableName);
+        Database.createTable(tableName, "UserID INT PRIMARY KEY, Seconds BIGINT(255), Minutes BIGINT(255), Hours BIGINT(255), Days BIGINT(255), Years BIGINT(255)");
     }
 
     @Override
     public boolean existsUser(int userId) {
-        return Database.existsCall(Procedure.PLAY_TIME_USER_ID.getName(), userId);
+        return Database.callExists(Procedure.PLAY_TIME_USER_ID.getName(), userId);
     }
 
     @Override
     public void createUser(int userId) {
         if (existsUser(userId)) return;
-        Database.updateCall(Procedure.PLAY_TIME_INSERT.getName(), userId, 0L, 0L, 0L, 0L, 0L);
+        Database.callUpdate(Procedure.PLAY_TIME_INSERT.getName(), userId, 0L, 0L, 0L, 0L, 0L);
     }
 
     @Override
     public void deleteUser(int userId) {
-        Database.updateCall(Procedure.PLAY_TIME_DELETE.getName(), userId);
+        Database.callUpdate(Procedure.PLAY_TIME_DELETE.getName(), userId);
     }
 
     @Override
@@ -40,7 +40,7 @@ public final class PlayTimeProvider implements PlayTime {
             case DAYS -> PlayTimeType.DAYS.getName();
             case YEARS -> PlayTimeType.YEARS.getName();
         };
-        return Database.getLongCall(-1, value, Procedure.PLAY_TIME_USER_ID.getName(), userId);
+        return Database.callQuery(-1L, value, long.class, Procedure.PLAY_TIME_USER_ID.getName(), userId);
     }
 
     @Override
@@ -52,7 +52,7 @@ public final class PlayTimeProvider implements PlayTime {
             case DAYS -> Procedure.PLAY_TIME_UPDATE_DAYS.getName();
             case YEARS -> Procedure.PLAY_TIME_UPDATE_YEARS.getName();
         };
-        Database.updateCall(name, userId, time);
+        Database.callUpdate(name, userId, time);
     }
 
     @Override

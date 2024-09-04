@@ -18,39 +18,39 @@ public final class UserParentProvider implements UserParent {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("UserID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255)", tableName);
+        Database.createTable(tableName, "UserID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
     }
 
     @Override
     public boolean existsParent(int userId, int parentId) {
-        return Database.existsCall(Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+        return Database.callExists(Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
     }
 
     @Override
     public void addParent(int userId, int creatorId, int parentId, long time) {
         if (existsParent(userId, parentId)) return;
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.updateCall(Procedure.USER_PARENT_ADD.getName(), userId, creatorId, parentId, System.currentTimeMillis(), expired);
+        Database.callUpdate(Procedure.USER_PARENT_ADD.getName(), userId, creatorId, parentId, System.currentTimeMillis(), expired);
     }
 
     @Override
     public void removeParent(int userId, int parentId) {
-        Database.updateCall(Procedure.USER_PARENT_REMOVE.getName(), userId, parentId);
+        Database.callUpdate(Procedure.USER_PARENT_REMOVE.getName(), userId, parentId);
     }
 
     @Override
     public void clearParent(int userId) {
-        Database.updateCall(Procedure.USER_PARENT_CLEAR.getName(), userId);
+        Database.callUpdate(Procedure.USER_PARENT_CLEAR.getName(), userId);
     }
 
     @Override
     public int getParentId(int userId) {
-        return Database.getIntCall(-1, "ParentID", Procedure.USER_PARENT_USER_ID.getName(), userId);
+        return Database.callQuery(-1, "ParentID", int.class, Procedure.USER_PARENT_USER_ID.getName(), userId);
     }
 
     @Override
     public List<Integer> getParentIds(int userId) {
-        return Database.getIntListCall("ParentID", Procedure.USER_PARENT_USER_ID.getName(), userId);
+        return Database.callQueryList("ParentID", int.class, Procedure.USER_PARENT_USER_ID.getName(), userId);
     }
 
     @Override
@@ -60,12 +60,12 @@ public final class UserParentProvider implements UserParent {
 
     @Override
     public int getCreatorId(int userId, int parentId) {
-        return Database.getIntCall(-2, "CreatorID", Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+        return Database.callQuery(-2, "CreatorID", int.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
     }
 
     @Override
     public long getCreatedTime(int userId, int parentId) {
-        return Database.getLongCall(-1, "CreatedTime", Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
     }
 
     @Override
@@ -75,7 +75,7 @@ public final class UserParentProvider implements UserParent {
 
     @Override
     public long getExpiredTime(int userId, int parentId) {
-        return Database.getLongCall(-2, "ExpiredTime", Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
     }
 
     @Override
@@ -87,7 +87,7 @@ public final class UserParentProvider implements UserParent {
     @Override
     public String setExpiredTime(int userId, int parentId, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.updateCall(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
+        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
         return getExpiredDate(userId, parentId);
     }
 
@@ -95,7 +95,7 @@ public final class UserParentProvider implements UserParent {
     public String addExpiredTime(int userId, int parentId, long time) {
         long current = getExpiredTime(userId, parentId);
         long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.updateCall(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
+        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
         return getExpiredDate(userId, parentId);
     }
 
@@ -103,7 +103,7 @@ public final class UserParentProvider implements UserParent {
     public String removeExpiredTime(int userId, int parentId, long time) {
         long current = getExpiredTime(userId, parentId);
         long expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.updateCall(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
+        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
         return getExpiredDate(userId, parentId);
     }
 

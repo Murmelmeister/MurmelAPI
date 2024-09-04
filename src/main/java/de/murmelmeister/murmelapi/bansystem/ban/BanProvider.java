@@ -21,23 +21,23 @@ public final class BanProvider implements Ban {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("UserID INT, ExpiredTime BIGINT(255)", tableName);
+        Database.createTable(tableName, "UserID INT, ExpiredTime BIGINT(255)");
     }
 
     @Override
     public void ban(int userId, int creatorId, int reasonId, long time) {
         int logId = log.addLog(userId, creatorId, reasonId, time);
-        Database.updateCall(Procedure.BAN_ADD.getName(), userId, log.getExpiredTime(logId));
+        Database.callUpdate(Procedure.BAN_ADD.getName(), userId, log.getExpiredTime(logId));
     }
 
     @Override
     public void unban(int userId) {
-        Database.updateCall(Procedure.BAN_REMOVE.getName(), userId);
+        Database.callUpdate(Procedure.BAN_REMOVE.getName(), userId);
     }
 
     @Override
     public long getExpiredTime(int userId) {
-        return Database.getLongCall(-2, "ExpiredTime", Procedure.BAN_GET.getName(), userId);
+        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.BAN_GET.getName(), userId);
     }
 
     @Override

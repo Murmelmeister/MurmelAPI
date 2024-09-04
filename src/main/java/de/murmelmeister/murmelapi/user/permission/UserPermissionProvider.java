@@ -16,44 +16,44 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("UserID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255)", tableName);
+        Database.createTable(tableName, "UserID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
     }
 
     @Override
     public boolean existsPermission(int userId, String permission) {
-        return Database.existsCall(Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
+        return Database.callExists(Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
     }
 
     @Override
     public void addPermission(int userId, int creatorId, String permission, long time) {
         if (existsPermission(userId, permission)) return;
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.updateCall(Procedure.USER_PERMISSION_ADD.getName(), userId, creatorId, permission, System.currentTimeMillis(), expired);
+        Database.callUpdate(Procedure.USER_PERMISSION_ADD.getName(), userId, creatorId, permission, System.currentTimeMillis(), expired);
     }
 
     @Override
     public void removePermission(int userId, String permission) {
-        Database.updateCall(Procedure.USER_PERMISSION_REMOVE.getName(), userId, permission);
+        Database.callUpdate(Procedure.USER_PERMISSION_REMOVE.getName(), userId, permission);
     }
 
     @Override
     public void clearPermission(int userId) {
-        Database.updateCall(Procedure.USER_PERMISSION_CLEAR.getName(), userId);
+        Database.callUpdate(Procedure.USER_PERMISSION_CLEAR.getName(), userId);
     }
 
     @Override
     public List<String> getPermissions(int userId) {
-        return Database.getStringListCall("Permission", Procedure.USER_PERMISSION_USER_ID.getName(), userId);
+        return Database.callQueryList("Permission", String.class, Procedure.USER_PERMISSION_USER_ID.getName(), userId);
     }
 
     @Override
     public int getCreatorId(int userId, String permission) {
-        return Database.getIntCall(-2, "CreatorID", Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
+        return Database.callQuery(-2, "CreatorID", int.class, Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
     }
 
     @Override
     public long getCreatedTime(int userId, String permission) {
-        return Database.getLongCall(-1, "CreatedTime", Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
+        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
     }
 
     @Override
@@ -63,7 +63,7 @@ public final class UserPermissionProvider implements UserPermission {
 
     @Override
     public long getExpiredTime(int userId, String permission) {
-        return Database.getLongCall(-2, "ExpiredTime", Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
+        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
     }
 
     @Override
@@ -75,7 +75,7 @@ public final class UserPermissionProvider implements UserPermission {
     @Override
     public String setExpiredTime(int userId, String permission, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.updateCall(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
+        Database.callUpdate(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
         return getExpiredDate(userId, permission);
     }
 
@@ -83,7 +83,7 @@ public final class UserPermissionProvider implements UserPermission {
     public String addExpiredTime(int userId, String permission, long time) {
         long current = getExpiredTime(userId, permission);
         long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.updateCall(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
+        Database.callUpdate(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
         return getExpiredDate(userId, permission);
     }
 
@@ -91,7 +91,7 @@ public final class UserPermissionProvider implements UserPermission {
     public String removeExpiredTime(int userId, String permission, long time) {
         long current = getExpiredTime(userId, permission);
         long expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.updateCall(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
+        Database.callUpdate(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
         return getExpiredDate(userId, permission);
     }
 

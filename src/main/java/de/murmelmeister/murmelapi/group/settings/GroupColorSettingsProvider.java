@@ -12,15 +12,15 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("GroupID INT PRIMARY KEY, CreatorID INT, EditedTime BIGINT(255), " +
-                             "ChatPrefix VARCHAR(300), ChatSuffix VARCHAR(300), ChatColor VARCHAR(30), " +
-                             "TabPrefix VARCHAR(300), TabSuffix VARCHAR(300), TabColor VARCHAR(30), " +
-                             "TagPrefix VARCHAR(300), TagSuffix VARCHAR(300), TagColor VARCHAR(30)", tableName);
+        Database.createTable(tableName, "GroupID INT PRIMARY KEY, CreatorID INT, EditedTime BIGINT(255), " +
+                                        "ChatPrefix VARCHAR(300), ChatSuffix VARCHAR(300), ChatColor VARCHAR(30), " +
+                                        "TabPrefix VARCHAR(300), TabSuffix VARCHAR(300), TabColor VARCHAR(30), " +
+                                        "TagPrefix VARCHAR(300), TagSuffix VARCHAR(300), TagColor VARCHAR(30)");
     }
 
     @Override
     public boolean existsGroup(int groupId) {
-        return Database.existsCall(Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
+        return Database.callExists(Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
     }
 
     @Override
@@ -31,23 +31,23 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
     @Override
     public void createGroup(int groupId, int creatorId, String chatPrefix, String chatSuffix, String chatColor, String tabPrefix, String tabSuffix, String tabColor, String tagPrefix, String tagSuffix, String tagColor) {
         if (existsGroup(groupId)) return;
-        Database.updateCall(Procedure.GROUP_COLOR_SETTINGS_INSERT.getName(), groupId, creatorId, System.currentTimeMillis(),
+        Database.callUpdate(Procedure.GROUP_COLOR_SETTINGS_INSERT.getName(), groupId, creatorId, System.currentTimeMillis(),
                 chatPrefix, chatSuffix, chatColor, tabPrefix, tabSuffix, tabColor, tagPrefix, tagSuffix, tagColor);
     }
 
     @Override
     public void deleteGroup(int groupId) {
-        Database.updateCall(Procedure.GROUP_COLOR_SETTINGS_DELETE.getName(), groupId);
+        Database.callUpdate(Procedure.GROUP_COLOR_SETTINGS_DELETE.getName(), groupId);
     }
 
     @Override
     public int getCreatorId(int groupId) {
-        return Database.getIntCall(-2, "CreatorID", Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
+        return Database.callQuery(-2, "CreatorID", int.class, Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
     }
 
     @Override
     public long getEditedTime(int groupId) {
-        return Database.getLongCall(-1, "EditedTime", Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
+        return Database.callQuery(-1L, "EditedTime", long.class, Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
     }
 
     @Override
@@ -57,17 +57,17 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
 
     @Override
     public String getPrefix(GroupColorType type, int groupId) {
-        return Database.getStringCall(null, type.getName() + "Prefix", Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
+        return Database.callQuery(null, type.getName() + "Prefix", String.class, Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
     }
 
     @Override
     public String getSuffix(GroupColorType type, int groupId) {
-        return Database.getStringCall(null, type.getName() + "Suffix", Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
+        return Database.callQuery(null, type.getName() + "Suffix", String.class, Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
     }
 
     @Override
     public String getColor(GroupColorType type, int groupId) {
-        return Database.getStringCall(null, type.getName() + "Color", Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
+        return Database.callQuery(null, type.getName() + "Color", String.class, Procedure.GROUP_COLOR_SETTINGS_GROUP_ID.getName(), groupId);
     }
 
     @Override
@@ -77,7 +77,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
             case TAB -> Procedure.GROUP_COLOR_SETTINGS_UPDATE_TAB_PREFIX.getName();
             case TAG -> Procedure.GROUP_COLOR_SETTINGS_UPDATE_TAG_PREFIX.getName();
         };
-        Database.updateCall(name, groupId, creatorId, System.currentTimeMillis(), prefix);
+        Database.callUpdate(name, groupId, creatorId, System.currentTimeMillis(), prefix);
     }
 
     @Override
@@ -87,7 +87,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
             case TAB -> Procedure.GROUP_COLOR_SETTINGS_UPDATE_TAB_SUFFIX.getName();
             case TAG -> Procedure.GROUP_COLOR_SETTINGS_UPDATE_TAG_SUFFIX.getName();
         };
-        Database.updateCall(name, groupId, creatorId, System.currentTimeMillis(), suffix);
+        Database.callUpdate(name, groupId, creatorId, System.currentTimeMillis(), suffix);
     }
 
     @Override
@@ -97,7 +97,7 @@ public final class GroupColorSettingsProvider implements GroupColorSettings {
             case TAB -> Procedure.GROUP_COLOR_SETTINGS_UPDATE_TAB_COLOR.getName();
             case TAG -> Procedure.GROUP_COLOR_SETTINGS_UPDATE_TAG_COLOR.getName();
         };
-        Database.updateCall(name, groupId, creatorId, System.currentTimeMillis(), color);
+        Database.callUpdate(name, groupId, creatorId, System.currentTimeMillis(), color);
     }
 
     private enum Procedure {

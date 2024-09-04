@@ -17,34 +17,34 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("GroupID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255)", tableName);
+        Database.createTable(tableName, "GroupID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
     }
 
     @Override
     public boolean existsPermission(int groupId, String permission) {
-        return Database.existsCall(Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
+        return Database.callExists(Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
     }
 
     @Override
     public void addPermission(int groupId, int creatorId, String permission, long time) {
         if (existsPermission(groupId, permission)) return;
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.updateCall(Procedure.GROUP_PERMISSION_ADD.getName(), groupId, creatorId, permission, System.currentTimeMillis(), expired);
+        Database.callUpdate(Procedure.GROUP_PERMISSION_ADD.getName(), groupId, creatorId, permission, System.currentTimeMillis(), expired);
     }
 
     @Override
     public void removePermission(int groupId, String permission) {
-        Database.updateCall(Procedure.GROUP_PERMISSION_REMOVE.getName(), groupId, permission);
+        Database.callUpdate(Procedure.GROUP_PERMISSION_REMOVE.getName(), groupId, permission);
     }
 
     @Override
     public void clearPermission(int groupId) {
-        Database.updateCall(Procedure.GROUP_PERMISSION_CLEAR.getName(), groupId);
+        Database.callUpdate(Procedure.GROUP_PERMISSION_CLEAR.getName(), groupId);
     }
 
     @Override
     public List<String> getPermissions(int groupId) {
-        return Database.getStringListCall("Permission", Procedure.GROUP_PERMISSION_GROUP_ID.getName(), groupId);
+        return Database.callQueryList("Permission", String.class, Procedure.GROUP_PERMISSION_GROUP_ID.getName(), groupId);
     }
 
     @Override
@@ -56,12 +56,12 @@ public final class GroupPermissionProvider implements GroupPermission {
 
     @Override
     public int getCreatorId(int groupId, String permission) {
-        return Database.getIntCall(-2, "CreatorID", Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
+        return Database.callQuery(-2, "CreatorID", int.class, Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
     }
 
     @Override
     public long getCreatedTime(int groupId, String permission) {
-        return Database.getLongCall(-1, "CreatedTime", Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
+        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
     }
 
     @Override
@@ -71,7 +71,7 @@ public final class GroupPermissionProvider implements GroupPermission {
 
     @Override
     public long getExpiredTime(int groupId, String permission) {
-        return Database.getLongCall(-2, "ExpiredTime", Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
+        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
     }
 
     @Override
@@ -83,7 +83,7 @@ public final class GroupPermissionProvider implements GroupPermission {
     @Override
     public String setExpiredTime(int groupId, String permission, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.updateCall(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
+        Database.callUpdate(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
         return getExpiredDate(groupId, permission);
     }
 
@@ -91,7 +91,7 @@ public final class GroupPermissionProvider implements GroupPermission {
     public String addExpiredTime(int groupId, String permission, long time) {
         long current = getExpiredTime(groupId, permission);
         long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.updateCall(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
+        Database.callUpdate(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
         return getExpiredDate(groupId, permission);
     }
 
@@ -99,7 +99,7 @@ public final class GroupPermissionProvider implements GroupPermission {
     public String removeExpiredTime(int groupId, String permission, long time) {
         long current = getExpiredTime(groupId, permission);
         long expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.updateCall(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
+        Database.callUpdate(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
         return getExpiredDate(groupId, permission);
     }
 

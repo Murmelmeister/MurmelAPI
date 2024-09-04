@@ -17,55 +17,55 @@ public final class LogProvider implements Log {
     }
 
     public void createTable(String tableName) {
-        Database.createTable("LogID INT PRIMARY KEY AUTO_INCREMENT, UserID INT, CreatorID INT, ReasonID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255)", tableName);
+        Database.createTable(tableName, "LogID INT PRIMARY KEY AUTO_INCREMENT, UserID INT, CreatorID INT, ReasonID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
     }
 
     @Override
     public boolean existsLog(int logId) {
-        return Database.existsCall(Procedure.LOG_GET.getName(), logId);
+        return Database.callExists(Procedure.LOG_GET.getName(), logId);
     }
 
     @Override
     public int addLog(int userId, int creatorId, int reasonId, long time) {
         if (!this.reason.exists(reasonId)) throw new IllegalArgumentException("Reason does not exist");
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.updateCall(Procedure.LOG_ADD.getName(), userId, creatorId, reasonId, System.currentTimeMillis(), expired);
+        Database.callUpdate(Procedure.LOG_ADD.getName(), userId, creatorId, reasonId, System.currentTimeMillis(), expired);
         return getLogId(userId);
     }
 
     @Override
     public void removeLog(int logId) {
-        Database.updateCall(Procedure.LOG_REMOVE.getName(), logId);
+        Database.callUpdate(Procedure.LOG_REMOVE.getName(), logId);
     }
 
     @Override
     public void deleteLog(int userId) {
-        Database.updateCall(Procedure.LOG_DELETE.getName(), userId);
+        Database.callUpdate(Procedure.LOG_DELETE.getName(), userId);
     }
 
     @Override
     public int getLogId(int userId) {
-        return Database.getIntCall(-1, "LogID", Procedure.LOG_ID.getName(), userId);
+        return Database.callQuery(-1, "LogID", int.class, Procedure.LOG_ID.getName(), userId);
     }
 
     @Override
     public List<Integer> getLogs(int userId) {
-        return Database.getIntListCall("LogID", Procedure.LOG_ID.getName(), userId);
+        return Database.callQueryList("LogID", int.class, Procedure.LOG_ID.getName(), userId);
     }
 
     @Override
     public int getUserId(int logId) {
-        return Database.getIntCall(-2, "UserID", Procedure.LOG_ID.getName(), logId);
+        return Database.callQuery(-2, "UserID", int.class, Procedure.LOG_ID.getName(), logId);
     }
 
     @Override
     public int getCreatorId(int logId) {
-        return Database.getIntCall(-2, "CreatorID", Procedure.LOG_ID.getName(), logId);
+        return Database.callQuery(-2, "CreatorID", int.class, Procedure.LOG_ID.getName(), logId);
     }
 
     @Override
     public long getCreatedTime(int logId) {
-        return Database.getLongCall(-1, "CreatedTime", Procedure.LOG_ID.getName(), logId);
+        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.LOG_ID.getName(), logId);
     }
 
     @Override
@@ -75,7 +75,7 @@ public final class LogProvider implements Log {
 
     @Override
     public long getExpiredTime(int logId) {
-        return Database.getLongCall(-2, "ExpiredTime", Procedure.LOG_ID.getName(), logId);
+        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.LOG_ID.getName(), logId);
     }
 
     @Override
@@ -87,7 +87,7 @@ public final class LogProvider implements Log {
     @Override
     public String setExpiredTime(int logId, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.updateCall(Procedure.LOG_EXPIRED.getName(), logId, expired);
+        Database.callUpdate(Procedure.LOG_EXPIRED.getName(), logId, expired);
         return getExpiredDate(logId);
     }
 
@@ -95,7 +95,7 @@ public final class LogProvider implements Log {
     public String addExpiredTime(int logId, long time) {
         long current = getExpiredTime(logId);
         long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.updateCall(Procedure.LOG_EXPIRED.getName(), logId, expired);
+        Database.callUpdate(Procedure.LOG_EXPIRED.getName(), logId, expired);
         return getExpiredDate(logId);
     }
 
@@ -103,18 +103,18 @@ public final class LogProvider implements Log {
     public String removeExpiredTime(int logId, long time) {
         long current = getExpiredTime(logId);
         long expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.updateCall(Procedure.LOG_EXPIRED.getName(), logId, expired);
+        Database.callUpdate(Procedure.LOG_EXPIRED.getName(), logId, expired);
         return getExpiredDate(logId);
     }
 
     @Override
     public int getReasonId(int logId) {
-        return Database.getIntCall(-1, "ReasonID", Procedure.LOG_ID.getName(), logId);
+        return Database.callQuery(-1, "ReasonID", int.class, Procedure.LOG_ID.getName(), logId);
     }
 
     @Override
     public void setReasonId(int logId, int reasonId) {
-        Database.updateCall(Procedure.LOG_REASON_UPDATE.getName(), logId, reasonId);
+        Database.callUpdate(Procedure.LOG_REASON_UPDATE.getName(), logId, reasonId);
     }
 
     @Override

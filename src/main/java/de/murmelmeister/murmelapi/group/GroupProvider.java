@@ -27,23 +27,23 @@ public final class GroupProvider implements Group {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("ID INT PRIMARY KEY AUTO_INCREMENT, GroupName VARCHAR(100)", tableName);
+        Database.createTable(tableName, "ID INT PRIMARY KEY AUTO_INCREMENT, GroupName VARCHAR(100)");
     }
 
     @Override
     public boolean existsGroup(int id) {
-        return Database.existsCall(Procedure.GROUP_ID.getName(), id);
+        return Database.callExists(Procedure.GROUP_ID.getName(), id);
     }
 
     @Override
     public boolean existsGroup(String name) {
-        return Database.existsCall(Procedure.GROUP_NAME.getName(), name);
+        return Database.callExists(Procedure.GROUP_NAME.getName(), name);
     }
 
     @Override
     public void createNewGroup(String name, int creatorId, int sortId, String teamId) {
         if (existsGroup(name)) return;
-        Database.updateCall(Procedure.GROUP_INSERT.getName(), name);
+        Database.callUpdate(Procedure.GROUP_INSERT.getName(), name);
         int id = getUniqueId(name);
         String team = teamId + getName(id);
         settings.createGroup(id, creatorId, sortId, team);
@@ -56,37 +56,37 @@ public final class GroupProvider implements Group {
         parent.clearParent(id);
         colorSettings.deleteGroup(id);
         settings.deleteGroup(id);
-        Database.updateCall(Procedure.GROUP_DELETE.getName(), id);
+        Database.callUpdate(Procedure.GROUP_DELETE.getName(), id);
     }
 
     @Override
     public int getUniqueId(String name) {
-        return Database.getIntCall(-1, "ID", Procedure.GROUP_NAME.getName(), name);
+        return Database.callQuery(-1, "ID", int.class, Procedure.GROUP_NAME.getName(), name);
     }
 
     @Override
     public String getName(int id) {
-        return Database.getStringCall(null, "GroupName", Procedure.GROUP_ID.getName(), id);
+        return Database.callQuery(null, "GroupName", String.class, Procedure.GROUP_ID.getName(), id);
     }
 
     @Override
     public void rename(int id, String newName) {
-        Database.updateCall(Procedure.GROUP_RENAME_BY_ID.getName(), id, newName);
+        Database.callUpdate(Procedure.GROUP_RENAME_BY_ID.getName(), id, newName);
     }
 
     @Override
     public void rename(String oldName, String newName) {
-        Database.updateCall(Procedure.GROUP_RENAME_BY_NAME.getName(), oldName, newName);
+        Database.callUpdate(Procedure.GROUP_RENAME_BY_NAME.getName(), oldName, newName);
     }
 
     @Override
     public List<Integer> getUniqueIds() {
-        return Database.getIntListCall("ID", Procedure.GROUP_ALL.getName());
+        return Database.callQueryList("ID", int.class, Procedure.GROUP_ALL.getName());
     }
 
     @Override
     public List<String> getNames() {
-        return Database.getStringListCall("GroupName", Procedure.GROUP_ALL.getName());
+        return Database.callQueryList("GroupName", String.class, Procedure.GROUP_ALL.getName());
     }
 
     @Override
@@ -99,7 +99,7 @@ public final class GroupProvider implements Group {
         int id = 1;
         if (existsGroup(id)) return id;
         String name = "default";
-        Database.updateCall(Procedure.GROUP_INSERT.getName(), name);
+        Database.callUpdate(Procedure.GROUP_INSERT.getName(), name);
         int creatorId = -1;
         String team = 9999 + getName(id);
         settings.createGroup(id, creatorId, 0, team);

@@ -12,33 +12,33 @@ public final class GroupSettingsProvider implements GroupSettings {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("GroupID INT PRIMARY KEY, CreatorID INT, CreatedTime BIGINT(255), SortID INT, TeamID VARCHAR(100)", tableName);
+        Database.createTable(tableName, "GroupID INT PRIMARY KEY, CreatorID INT, CreatedTime BIGINT(255), SortID INT, TeamID VARCHAR(100)");
     }
 
     @Override
     public boolean existsGroup(int groupId) {
-        return Database.existsCall(Procedure.GROUP_SETTINGS_ID.getName(), groupId);
+        return Database.callExists(Procedure.GROUP_SETTINGS_ID.getName(), groupId);
     }
 
     @Override
     public void createGroup(int groupId, int creatorId, int sortId, String teamId) {
         if (existsGroup(groupId)) return;
-        Database.updateCall(Procedure.GROUP_SETTINGS_INSERT.getName(), groupId, creatorId, System.currentTimeMillis(), sortId, teamId);
+        Database.callUpdate(Procedure.GROUP_SETTINGS_INSERT.getName(), groupId, creatorId, System.currentTimeMillis(), sortId, teamId);
     }
 
     @Override
     public void deleteGroup(int groupId) {
-        Database.updateCall(Procedure.GROUP_SETTINGS_DELETE.getName(), groupId);
+        Database.callUpdate(Procedure.GROUP_SETTINGS_DELETE.getName(), groupId);
     }
 
     @Override
     public int getCreatorId(int groupId) {
-        return Database.getIntCall(-2, "CreatorID", Procedure.GROUP_SETTINGS_ID.getName(), groupId);
+        return Database.callQuery(-2, "CreatorID", int.class, Procedure.GROUP_SETTINGS_ID.getName(), groupId);
     }
 
     @Override
     public long getCreatedTime(int groupId) {
-        return Database.getLongCall(-1, "CreatedTime", Procedure.GROUP_SETTINGS_ID.getName(), groupId);
+        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.GROUP_SETTINGS_ID.getName(), groupId);
     }
 
     @Override
@@ -48,22 +48,22 @@ public final class GroupSettingsProvider implements GroupSettings {
 
     @Override
     public int getSortId(int groupId) {
-        return Database.getIntCall(-1, "SortID", Procedure.GROUP_SETTINGS_ID.getName(), groupId);
+        return Database.callQuery(-1, "SortID", int.class, Procedure.GROUP_SETTINGS_ID.getName(), groupId);
     }
 
     @Override
     public void setSortId(int groupId, int sortId) {
-        Database.updateCall(Procedure.GROUP_SETTINGS_UPDATE_SORT.getName(), groupId, sortId);
+        Database.callUpdate(Procedure.GROUP_SETTINGS_UPDATE_SORT.getName(), groupId, sortId);
     }
 
     @Override
     public String getTeamId(int groupId) {
-        return Database.getStringCall(null, "TeamID", Procedure.GROUP_SETTINGS_ID.getName(), groupId);
+        return Database.callQuery(null, "TeamID", String.class, Procedure.GROUP_SETTINGS_ID.getName(), groupId);
     }
 
     @Override
     public void setTeamId(int groupId, String teamId) {
-        Database.updateCall(Procedure.GROUP_SETTINGS_UPDATE_TEAM.getName(), groupId, teamId);
+        Database.callUpdate(Procedure.GROUP_SETTINGS_UPDATE_TEAM.getName(), groupId, teamId);
     }
 
     private enum Procedure {

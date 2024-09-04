@@ -31,23 +31,23 @@ public final class UserProvider implements User {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("ID INT PRIMARY KEY AUTO_INCREMENT, UUID VARCHAR(36), Username VARCHAR(100)", tableName);
+        Database.createTable(tableName, "ID INT PRIMARY KEY AUTO_INCREMENT, UUID VARCHAR(36), Username VARCHAR(100)");
     }
 
     @Override
     public boolean existsUser(UUID uuid) {
-        return Database.existsCall(Procedure.USER_UNIQUE_ID.getName(), uuid);
+        return Database.callExists(Procedure.USER_UNIQUE_ID.getName(), uuid);
     }
 
     @Override
     public boolean existsUser(String username) {
-        return Database.existsCall(Procedure.USER_USERNAME.getName(), username);
+        return Database.callExists(Procedure.USER_USERNAME.getName(), username);
     }
 
     @Override
     public void createNewUser(UUID uuid, String username) {
         if (existsUser(uuid)) return;
-        Database.updateCall(Procedure.USER_INSERT.getName(), uuid, username);
+        Database.callUpdate(Procedure.USER_INSERT.getName(), uuid, username);
         int id = getId(uuid);
         settings.createUser(id);
         playTime.createUser(id);
@@ -60,60 +60,60 @@ public final class UserProvider implements User {
         permission.clearPermission(id);
         parent.clearParent(id);
         settings.deleteUser(id);
-        Database.updateCall(Procedure.USER_DELETE.getName(), id);
+        Database.callUpdate(Procedure.USER_DELETE.getName(), id);
     }
 
     @Override
     public int getId(UUID uuid) {
-        return Database.getIntCall(-2, "ID", Procedure.USER_UNIQUE_ID.getName(), uuid);
+        return Database.callQuery(-2, "ID", int.class, Procedure.USER_UNIQUE_ID.getName(), uuid);
     }
 
     @Override
     public int getId(String username) {
-        return Database.getIntCall(-2, "ID", Procedure.USER_USERNAME.getName(), username);
+        return Database.callQuery(-2, "ID", int.class, Procedure.USER_USERNAME.getName(), username);
     }
 
     @Override
     public UUID getUniqueId(String username) {
         int id = getId(username);
-        return Database.getUniqueIdCall(null, "UUID", Procedure.USER_ID.getName(), id);
+        return Database.callQuery(null, "UUID", UUID.class, Procedure.USER_ID.getName(), id);
     }
 
     @Override
     public UUID getUniqueId(int id) {
-        return id == -1 ? null : UUID.fromString(Database.getStringCall(null, "UUID", Procedure.USER_ID.getName(), id));
+        return id == -1 ? null : Database.callQuery(null, "UUID", UUID.class, Procedure.USER_ID.getName(), id);
     }
 
     @Override
     public String getUsername(UUID uuid) {
         int id = getId(uuid);
-        return Database.getStringCall(null, "Username", Procedure.USER_ID.getName(), id);
+        return Database.callQuery(null, "Username", String.class, Procedure.USER_ID.getName(), id);
     }
 
     @Override
     public String getUsername(int id) {
-        return id == -1 ? "CONSOLE" : Database.getStringCall(null, "Username", Procedure.USER_ID.getName(), id);
+        return id == -1 ? "CONSOLE" : Database.callQuery(null, "Username", String.class, Procedure.USER_ID.getName(), id);
     }
 
     @Override
     public void rename(UUID uuid, String newName) {
         int id = getId(uuid);
-        Database.updateCall(Procedure.USER_RENAME.getName(), id, newName);
+        Database.callUpdate(Procedure.USER_RENAME.getName(), id, newName);
     }
 
     @Override
     public List<UUID> getUniqueIds() {
-        return Database.getUniqueIdListCall("UUID", Procedure.USER_ALL.getName());
+        return Database.callQueryList("UUID", UUID.class, Procedure.USER_ALL.getName());
     }
 
     @Override
     public List<String> getUsernames() {
-        return Database.getStringListCall("Username", Procedure.USER_ALL.getName());
+        return Database.callQueryList("Username", String.class, Procedure.USER_ALL.getName());
     }
 
     @Override
     public List<Integer> getIds() {
-        return Database.getIntListCall("ID", Procedure.USER_ALL.getName());
+        return Database.callQueryList("ID", int.class, Procedure.USER_ALL.getName());
     }
 
     @Override

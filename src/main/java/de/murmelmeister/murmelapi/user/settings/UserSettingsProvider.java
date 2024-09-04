@@ -16,28 +16,28 @@ public final class UserSettingsProvider implements UserSettings {
     }
 
     private void createTable(String tableName) {
-        Database.createTable("ID INT PRIMARY KEY, FirstJoin BIGINT(255), LastQuit BIGINT(255), IsOnline BOOL", tableName);
+        Database.createTable(tableName, "ID INT PRIMARY KEY, FirstJoin BIGINT(255), LastQuit BIGINT(255), IsOnline BOOL");
     }
 
     @Override
     public boolean existsUser(int id) {
-        return Database.existsCall(Procedure.USER_SETTINGS_ID.getName(), id);
+        return Database.callExists(Procedure.USER_SETTINGS_ID.getName(), id);
     }
 
     @Override
     public void createUser(int id) {
         if (existsUser(id)) return;
-        Database.updateCall(Procedure.USER_SETTINGS_INSERT.getName(), id, System.currentTimeMillis(), System.currentTimeMillis(), 0);
+        Database.callUpdate(Procedure.USER_SETTINGS_INSERT.getName(), id, System.currentTimeMillis(), System.currentTimeMillis(), 0);
     }
 
     @Override
     public void deleteUser(int id) {
-        Database.updateCall(Procedure.USER_SETTINGS_DELETE.getName(), id);
+        Database.callUpdate(Procedure.USER_SETTINGS_DELETE.getName(), id);
     }
 
     @Override
     public long getFirstJoinTime(int id) {
-        return Database.getLongCall(-1, "FirstJoin", Procedure.USER_SETTINGS_ID.getName(), id);
+        return Database.callQuery(-1L, "FirstJoin", long.class, Procedure.USER_SETTINGS_ID.getName(), id);
     }
 
     @Override
@@ -47,12 +47,12 @@ public final class UserSettingsProvider implements UserSettings {
 
     @Override
     public void setLastQuitTime(int id, long time) {
-        Database.updateCall(Procedure.USER_SETTINGS_UPDATE_LAST_QUIT.getName(), id, time);
+        Database.callUpdate(Procedure.USER_SETTINGS_UPDATE_LAST_QUIT.getName(), id, time);
     }
 
     @Override
     public long getLastQuitTime(int id) {
-        return Database.getLongCall(-1, "LastQuit", Procedure.USER_SETTINGS_ID.getName(), id);
+        return Database.callQuery(-1L, "LastQuit", long.class, Procedure.USER_SETTINGS_ID.getName(), id);
     }
 
     @Override
@@ -62,12 +62,12 @@ public final class UserSettingsProvider implements UserSettings {
 
     @Override
     public void setOnline(int id, int online) {
-        Database.updateCall(Procedure.USER_SETTINGS_UPDATE_ONLINE.getName(), id, online);
+        Database.callUpdate(Procedure.USER_SETTINGS_UPDATE_ONLINE.getName(), id, online);
     }
 
     @Override
     public int getOnline(int id) {
-        return Database.getIntCall(0, "IsOnline", Procedure.USER_SETTINGS_ID.getName(), id);
+        return Database.callQuery(0, "IsOnline", int.class, Procedure.USER_SETTINGS_ID.getName(), id);
     }
 
     private void loadTablesIfNotCreated(User user) {
