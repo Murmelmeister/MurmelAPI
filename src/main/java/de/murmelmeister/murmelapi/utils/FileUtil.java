@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.utils;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 
 import java.io.*;
@@ -16,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public final class FileUtil {
     private static final Map<String, ReentrantLock> FILE_LOCKS = new ConcurrentHashMap<>();
     private static final Map<String, File> FILES = new ConcurrentHashMap<>();
-    private static final Gson GSON = new Gson().newBuilder().setPrettyPrinting().create();
+    private static final Gson GSON = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().setPrettyPrinting().create();
 
     /**
      * Returns the lock associated with the specified file name. If a lock does not exist for the file name, a new lock is created and associated with the file name.
