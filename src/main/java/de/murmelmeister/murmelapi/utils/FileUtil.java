@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.utils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import de.murmelmeister.murmelapi.configuration.MurmelConfiguration;
 import org.slf4j.Logger;
 
 import java.io.*;
@@ -70,6 +71,28 @@ public final class FileUtil {
     }
 
     /**
+     * Checks whether a file with the specified path and file name exists.
+     * This method ensures thread-safe access to the file by acquiring a lock associated with the file name.
+     *
+     * @param path the path to the directory where the file is expected to be located
+     * @param fileName the name of the file to check for existence
+     * @return {@code true} if the file exists, {@code false} otherwise
+     */
+    public static boolean existsFile(String path, String fileName) {
+        ReentrantLock lock = getLockForFile(fileName);
+        lock.lock();
+        try {
+            if (!FILES.containsKey(fileName)) {
+                File file = new File(path, fileName);
+                return file.exists();
+            }
+            return FILES.get(fileName).exists();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
      * Loads JSON data from a specified file and deserializes it into an object of the given class.
      * This method ensures thread-safe access to the file using a unique lock associated with the file name.
      *
@@ -120,25 +143,71 @@ public final class FileUtil {
     }
 
     /**
-     * Checks if a JSON file with the specified name exists at the given path.
-     * This method ensures thread-safe access by using a lock associated with the file name.
+     * Loads the configuration for a given file. This method ensures thread-safe access
+     * by acquiring a lock associated with the file name.
      *
-     * @param path the path to the directory containing the file
-     * @param fileName the name of the file to check for existence
-     * @return true if the file exists, false otherwise
+     * @param logger  the logger to log warning and error messages
+     * @param path    the path to the directory where the configuration file is located
+     * @param fileName the name of the configuration file
+     * @return a MurmelConfiguration object with the loaded configuration data
      */
-    public static boolean existsJson(String path, String fileName) {
+    public static MurmelConfiguration loadConfiguration(Logger logger, String path, String fileName) {
+        ReentrantLock lock = getLockForFile(fileName);
+        lock.lock();
+        try {
+            File file;
+            if (!FILES.containsKey(fileName))
+                file = createFile(logger, path, fileName);
+            else file = FILES.get(fileName);
+            return MurmelConfiguration.loadConfiguration(file);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Loads the configuration for a given file.
+     *
+     * @param logger the logger to log warning and error messages
+     * @param file the configuration file
+     * @return a MurmelConfiguration object with the loaded configuration data
+     */
+    public static MurmelConfiguration loadConfiguration(Logger logger, File file) {
+        return loadConfiguration(logger, file.getPath(), file.getName());
+    }
+
+    /**
+     * Saves the given configuration to a file. This method ensures thread-safe access by acquiring a lock associated with the file name.
+     *
+     * @param logger the logger to log error messages
+     * @param config the configuration object to be saved
+     * @param fileName the name of the file to which the configuration will be saved
+     */
+    public static void saveConfiguration(Logger logger, MurmelConfiguration config, String fileName) {
         ReentrantLock lock = getLockForFile(fileName);
         lock.lock();
         try {
             if (!FILES.containsKey(fileName)) {
-                File file = new File(path, fileName);
-                return file.exists();
+                logger.error("No such file loaded: {}", fileName);
+                return;
             }
-            return FILES.get(fileName).exists();
+            File file = FILES.get(fileName);
+            config.save(file);
         } finally {
             lock.unlock();
         }
+    }
+
+    /**
+     * Saves the given configuration to a specified file. This method ensures thread-safe access
+     * by acquiring a lock associated with the file name.
+     *
+     * @param logger the logger to log error messages
+     * @param config the configuration object to be saved
+     * @param file the file to which the configuration will be saved
+     */
+    public static void saveConfiguration(Logger logger, MurmelConfiguration config, File file) {
+        saveConfiguration(logger, config, file.getPath());
     }
 
     /**
