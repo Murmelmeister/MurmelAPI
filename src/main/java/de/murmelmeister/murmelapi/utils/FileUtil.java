@@ -207,7 +207,7 @@ public final class FileUtil {
      * @param file the file to which the configuration will be saved
      */
     public static void saveConfiguration(Logger logger, MurmelConfiguration config, File file) {
-        saveConfiguration(logger, config, file.getPath());
+        saveConfiguration(logger, config, file.getName());
     }
 
     /**
