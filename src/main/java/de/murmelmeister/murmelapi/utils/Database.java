@@ -2,10 +2,7 @@ package de.murmelmeister.murmelapi.utils;
 
 import com.zaxxer.hikari.HikariDataSource;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -126,7 +123,7 @@ public final class Database {
     public static void callUpdate(String name, Object... objects) {
         WRITE_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = connection.prepareStatement(getQueryWithCall(name, objects))) {
+             PreparedStatement statement = getCallableStatement(connection, name, objects)) {
             statement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Database calling update error", e);
@@ -159,7 +156,7 @@ public final class Database {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
-            setParameters(statement, StringUtil.checkAllObjects(objects));
+            setParameters(statement, objects);
             T value = defaultValue;
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) value = resultSet.getObject(label, type);
@@ -187,7 +184,7 @@ public final class Database {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
-            setParameters(statement, StringUtil.checkAllObjects(objects));
+            setParameters(statement, objects);
             List<T> value = Collections.synchronizedList(new ArrayList<>());
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) value.add(resultSet.getObject(label, type));
@@ -214,7 +211,7 @@ public final class Database {
     public static <T> T callQuery(T defaultValue, String label, Class<T> type, String name, Object... objects) {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = connection.prepareStatement(getQueryWithCall(name, StringUtil.checkAllObjects(objects)))) {
+             PreparedStatement statement = getCallableStatement(connection, name, objects)) {
             T value = defaultValue;
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) value = resultSet.getObject(label, type);
@@ -239,7 +236,7 @@ public final class Database {
     public static <T> List<T> callQueryList(String label, Class<T> type, String name, Object... objects) {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = connection.prepareStatement(getQueryWithCall(name, StringUtil.checkAllObjects(objects)))) {
+             PreparedStatement statement = getCallableStatement(connection, name, objects)) {
             List<T> value = Collections.synchronizedList(new ArrayList<>());
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) value.add(resultSet.getObject(label, type));
@@ -263,7 +260,7 @@ public final class Database {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
-            setParameters(statement, StringUtil.checkAllObjects(objects));
+            setParameters(statement, objects);
             boolean exist = false;
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) exist = true;
@@ -286,7 +283,7 @@ public final class Database {
     public static boolean callExists(String name, Object... objects) {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = connection.prepareStatement(getQueryWithCall(name, StringUtil.checkAllObjects(objects)))) {
+             CallableStatement statement = getCallableStatement(connection, name, objects)) {
             boolean exist = false;
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) exist = true;
@@ -343,6 +340,26 @@ public final class Database {
             builder.append("'").append(objects[i]).append("'");
         }
         return "CALL " + name + "(" + builder + ")";
+    }
+
+    /**
+     * Creates a CallableStatement for a stored procedure call with the given name and parameters.
+     *
+     * @param connection The database connection to be used for creating the CallableStatement.
+     * @param name       The name of the stored procedure to be called.
+     * @param objects    The parameters to be passed to the stored procedure.
+     * @return The created CallableStatement with parameters set.
+     * @throws SQLException If a database access error occurs or this method is called on a closed connection.
+     */
+    private static CallableStatement getCallableStatement(Connection connection, String name, Object... objects) throws SQLException {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < objects.length; i++) {
+            if (i != 0) builder.append(",");
+            builder.append("?");
+        }
+        CallableStatement statement = connection.prepareCall("{CALL " + name + "(" + builder + ")}");
+        setParameters(statement, objects);
+        return statement;
     }
 
     /**
