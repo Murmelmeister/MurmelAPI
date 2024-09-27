@@ -1,16 +1,12 @@
 package de.murmelmeister.murmelapi.configuration;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 /**
- * MurmelMemory class provides a thread-safe storage mechanism for key-value pairs.
+ * MurmelMemory class provides a storage mechanism for key-value pairs.
  */
 public abstract class MurmelMemory {
-    protected final Map<String, Object> data = new ConcurrentHashMap<>();
+    protected final Map<String, Object> data = new LinkedHashMap<>();
 
     /**
      * Stores a key-value pair in the data map.
