@@ -2,8 +2,13 @@ package de.murmelmeister.murmelapi.utils;
 
 import com.zaxxer.hikari.HikariDataSource;
 
+import java.math.BigDecimal;
+import java.net.URL;
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -103,8 +108,7 @@ public final class Database {
     public static void update(String sql, Object... objects) {
         WRITE_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            setParameters(statement, objects);
+             PreparedStatement statement = getPreparedStatement(connection, sql, objects)) {
             statement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Database updating error", e);
@@ -123,7 +127,7 @@ public final class Database {
     public static void callUpdate(String name, Object... objects) {
         WRITE_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = getCallableStatement(connection, name, objects)) {
+             CallableStatement statement = getCallableStatement(connection, name, objects)) {
             statement.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Database calling update error", e);
@@ -155,8 +159,7 @@ public final class Database {
     public static <T> T query(T defaultValue, String label, Class<T> type, String sql, Object... objects) {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            setParameters(statement, objects);
+             PreparedStatement statement = getPreparedStatement(connection, sql, objects)) {
             T value = defaultValue;
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) value = resultSet.getObject(label, type);
@@ -183,8 +186,7 @@ public final class Database {
     public static <T> List<T> queryList(String label, Class<T> type, String sql, Object... objects) {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            setParameters(statement, objects);
+             PreparedStatement statement = getPreparedStatement(connection, sql, objects)) {
             List<T> value = Collections.synchronizedList(new ArrayList<>());
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) value.add(resultSet.getObject(label, type));
@@ -211,7 +213,7 @@ public final class Database {
     public static <T> T callQuery(T defaultValue, String label, Class<T> type, String name, Object... objects) {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = getCallableStatement(connection, name, objects)) {
+             CallableStatement statement = getCallableStatement(connection, name, objects)) {
             T value = defaultValue;
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) value = resultSet.getObject(label, type);
@@ -236,7 +238,7 @@ public final class Database {
     public static <T> List<T> callQueryList(String label, Class<T> type, String name, Object... objects) {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = getCallableStatement(connection, name, objects)) {
+             CallableStatement statement = getCallableStatement(connection, name, objects)) {
             List<T> value = Collections.synchronizedList(new ArrayList<>());
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) value.add(resultSet.getObject(label, type));
@@ -259,8 +261,7 @@ public final class Database {
     public static boolean exists(String sql, Object... objects) {
         READ_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
-            setParameters(statement, objects);
+             PreparedStatement statement = getPreparedStatement(connection, sql, objects)) {
             boolean exist = false;
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) exist = true;
@@ -363,6 +364,21 @@ public final class Database {
     }
 
     /**
+     * Creates a PreparedStatement for the given SQL query and sets the provided parameters.
+     *
+     * @param connection The database connection to be used for creating the PreparedStatement.
+     * @param query The SQL query string for which the PreparedStatement is to be created.
+     * @param objects The parameters to be set in the PreparedStatement.
+     * @return The created PreparedStatement with the parameters set.
+     * @throws SQLException If a database access error occurs or this method is called on a closed connection.
+     */
+    private static PreparedStatement getPreparedStatement(Connection connection, String query, Object... objects) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(query);
+        setParameters(statement, objects);
+        return statement;
+    }
+
+    /**
      * Sets the parameters for a PreparedStatement.
      *
      * @param statement The PreparedStatement to which the parameters are to be set.
@@ -370,7 +386,32 @@ public final class Database {
      * @throws SQLException If an SQL exception occurs while setting the parameters.
      */
     private static void setParameters(PreparedStatement statement, Object... objects) throws SQLException {
-        for (int i = 0; i < objects.length; i++)
-            statement.setObject(i + 1, objects[i]);
+        for (int i = 0; i < objects.length; i++){
+            Object object = objects[i];
+            switch (object) {
+                case Boolean value -> statement.setBoolean(i + 1, value);
+                case Byte value -> statement.setByte(i + 1, value);
+                case Short value -> statement.setShort(i + 1, value);
+                case Integer value -> statement.setInt(i + 1, value);
+                case Long value -> statement.setLong(i + 1, value);
+                case Float value -> statement.setFloat(i + 1, value);
+                case Double value -> statement.setDouble(i + 1, value);
+                case BigDecimal value -> statement.setBigDecimal(i + 1, value);
+                case String value -> statement.setString(i + 1, value);
+                case byte[] value -> statement.setBytes(i + 1, value);
+                case Date value -> statement.setDate(i + 1, value);
+                case Time value -> statement.setTime(i + 1, value);
+                case Timestamp value -> statement.setTimestamp(i + 1, value);
+                case Ref value -> statement.setRef(i + 1, value);
+                case Blob value -> statement.setBlob(i + 1, value);
+                case Clob value -> statement.setClob(i + 1, value);
+                case Array value -> statement.setArray(i + 1, value);
+                case URL value -> statement.setURL(i + 1, value);
+                case RowId value -> statement.setRowId(i + 1, value);
+                case SQLXML value -> statement.setSQLXML(i + 1, value);
+                case UUID value -> statement.setString(i + 1, value.toString());
+                case null, default -> statement.setObject(i + 1, object);
+            }
+        }
     }
 }
