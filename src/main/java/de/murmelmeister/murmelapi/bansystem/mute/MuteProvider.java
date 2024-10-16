@@ -6,41 +6,49 @@ import de.murmelmeister.murmelapi.bansystem.reason.Reason;
 import de.murmelmeister.murmelapi.bansystem.reason.ReasonProvider;
 import de.murmelmeister.murmelapi.utils.Database;
 
+import java.text.SimpleDateFormat;
+
 public final class MuteProvider implements Mute {
-    private final String tableName = "Mute_List";
     private final Reason reason;
     private final Log log;
 
     public MuteProvider() {
         this.reason = new ReasonProvider("Mute_Reason");
         this.log = new LogProvider("Mute_Log", reason);
-        createTable();
+        String tableName = "Mute_List";
+        createTable(tableName);
         Procedure.loadAll(tableName);
     }
 
-    private void createTable() {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (UserID INT, ExpiredTime BIGINT(255))", tableName);
+    private void createTable(String tableName) {
+        Database.createTable(tableName, "UserID INT, ExpiredTime BIGINT(255)");
     }
 
     @Override
     public void mute(int userId, int creatorId, int reasonId, long time) {
         int logId = log.addLog(userId, creatorId, reasonId, time);
-        Database.updateCall(Procedure.PROCEDURE_MUTE_ADD.getName(), userId, log.getExpiredTime(logId));
+        Database.callUpdate(Procedure.MUTE_ADD.getName(), userId, log.getExpiredTime(logId));
     }
 
     @Override
     public void unmute(int userId) {
-        Database.updateCall(Procedure.PROCEDURE_MUTE_REMOVE.getName(), userId);
+        Database.callUpdate(Procedure.MUTE_REMOVE.getName(), userId);
     }
 
     @Override
     public long getExpiredTime(int userId) {
-        return Database.getLongCall(-2, "ExpiredTime", Procedure.PROCEDURE_MUTE_GET.getName(), userId);
+        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.MUTE_GET.getName(), userId);
+    }
+
+    @Override
+    public String getExpiredDate(int userId) {
+        long time = getExpiredTime(userId);
+        return time == -1 ? "never" : new SimpleDateFormat("dd.MM.yyyy HH:mm:ss").format(time);
     }
 
     @Override
     public boolean isMuted(int userId) {
-        long time = this.getExpiredTime(userId);
+        long time = getExpiredTime(userId);
         return time == -1 || time >= System.currentTimeMillis();
     }
 
@@ -55,10 +63,9 @@ public final class MuteProvider implements Mute {
     }
 
     private enum Procedure {
-        PROCEDURE_MUTE_ADD("Mute_Add", "uid INT, expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, expired);"),
-        PROCEDURE_MUTE_REMOVE("Mute_Remove", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
-        PROCEDURE_MUTE_GET("Mute_Get", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
-        ;
+        MUTE_ADD("Mute_Add", "uid INT, expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, expired);"),
+        MUTE_REMOVE("Mute_Remove", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
+        MUTE_GET("Mute_Get", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;

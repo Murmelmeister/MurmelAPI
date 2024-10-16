@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.UUID;
 
 public final class UserProvider implements User {
-    private static final String TABLE_NAME = "User";
-
     private final UserSettings settings;
     private final UserParent parent;
     private final UserPermission permission;
@@ -23,99 +21,99 @@ public final class UserProvider implements User {
     private final PlayTime playTime;
 
     public UserProvider() {
-        this.createTable();
-        Procedure.loadAll();
+        String tableName = "User";
+        createTable(tableName);
+        Procedure.loadAll(tableName);
         this.settings = new UserSettingsProvider(this);
         this.parent = new UserParentProvider();
         this.permission = new UserPermissionProvider();
         this.playTime = new PlayTimeProvider(this);
     }
 
-    private void createTable() {
-        Database.update("CREATE TABLE IF NOT EXISTS %s (ID INT PRIMARY KEY AUTO_INCREMENT, UUID VARCHAR(36), Username VARCHAR(100))", TABLE_NAME);
+    private void createTable(String tableName) {
+        Database.createTable(tableName, "ID INT PRIMARY KEY AUTO_INCREMENT, UUID VARCHAR(36), Username VARCHAR(100)");
     }
 
     @Override
     public boolean existsUser(UUID uuid) {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), uuid);
+        return Database.callExists(Procedure.USER_UNIQUE_ID.getName(), uuid);
     }
 
     @Override
     public boolean existsUser(String username) {
-        return Database.exists("CALL %s('%s')", Procedure.PROCEDURE_USERNAME.getName(), username);
+        return Database.callExists(Procedure.USER_USERNAME.getName(), username);
     }
 
     @Override
     public void createNewUser(UUID uuid, String username) {
         if (existsUser(uuid)) return;
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_INSERT.getName(), uuid, username);
-        var id = getId(uuid);
+        Database.callUpdate(Procedure.USER_INSERT.getName(), uuid, username);
+        int id = getId(uuid);
         settings.createUser(id);
         playTime.createUser(id);
     }
 
     @Override
     public void deleteUser(UUID uuid) {
-        var id = getId(uuid);
+        int id = getId(uuid);
         playTime.deleteUser(id);
         permission.clearPermission(id);
         parent.clearParent(id);
         settings.deleteUser(id);
-        Database.update("CALL %s('%s')", Procedure.PROCEDURE_DELETE.getName(), id);
+        Database.callUpdate(Procedure.USER_DELETE.getName(), id);
     }
 
     @Override
     public int getId(UUID uuid) {
-        return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_UNIQUE_ID.getName(), uuid);
+        return Database.callQuery(-2, "ID", int.class, Procedure.USER_UNIQUE_ID.getName(), uuid);
     }
 
     @Override
     public int getId(String username) {
-        return Database.getInt(-2, "ID", "CALL %s('%s')", Procedure.PROCEDURE_USERNAME.getName(), username);
+        return Database.callQuery(-2, "ID", int.class, Procedure.USER_USERNAME.getName(), username);
     }
 
     @Override
     public UUID getUniqueId(String username) {
-        var id = getId(username);
-        return Database.getUniqueId(null, "UUID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
+        int id = getId(username);
+        return Database.callQuery(null, "UUID", UUID.class, Procedure.USER_ID.getName(), id);
     }
 
     @Override
     public UUID getUniqueId(int id) {
-        if (id == -1) return null;
-        return UUID.fromString(Database.getString(null, "UUID", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id));
+        return id == -1 ? null : Database.callQuery(null, "UUID", UUID.class, Procedure.USER_ID.getName(), id);
     }
 
     @Override
     public String getUsername(UUID uuid) {
-        var id = getId(uuid);
-        return Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
+        int id = getId(uuid);
+        return Database.callQuery(null, "Username", String.class, Procedure.USER_ID.getName(), id);
     }
 
     @Override
     public String getUsername(int id) {
-        return id == -1 ? "CONSOLE" : Database.getString(null, "Username", "CALL %s('%s')", Procedure.PROCEDURE_ID.getName(), id);
+        return id == -1 ? "CONSOLE" : Database.callQuery(null, "Username", String.class, Procedure.USER_ID.getName(), id);
     }
 
     @Override
     public void rename(UUID uuid, String newName) {
-        var id = getId(uuid);
-        Database.update("CALL %s('%s','%s')", Procedure.PROCEDURE_RENAME.getName(), id, newName);
+        int id = getId(uuid);
+        Database.callUpdate(Procedure.USER_RENAME.getName(), id, newName);
     }
 
     @Override
     public List<UUID> getUniqueIds() {
-        return Database.getUniqueIdList("UUID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+        return Database.callQueryList("UUID", UUID.class, Procedure.USER_ALL.getName());
     }
 
     @Override
     public List<String> getUsernames() {
-        return Database.getStringList("Username", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+        return Database.callQueryList("Username", String.class, Procedure.USER_ALL.getName());
     }
 
     @Override
     public List<Integer> getIds() {
-        return Database.getIntList("ID", "CALL %s", Procedure.PROCEDURE_ALL.getName());
+        return Database.callQueryList("ID", int.class, Procedure.USER_ALL.getName());
     }
 
     @Override
@@ -151,34 +149,34 @@ public final class UserProvider implements User {
     }
 
     private enum Procedure {
-        PROCEDURE_UNIQUE_ID("User_UniqueID", Database.getProcedureQuery("User_UniqueID", "uid VARCHAR(36)", "SELECT * FROM %s WHERE UUID=uid;", TABLE_NAME)),
-        PROCEDURE_USERNAME("User_Username", Database.getProcedureQuery("User_Username", "user VARCHAR(100)", "SELECT * FROM %s WHERE Username=user;", TABLE_NAME)),
-        PROCEDURE_ID("User_ID", Database.getProcedureQuery("User_ID", "uid INT", "SELECT * FROM %s WHERE ID=uid;", TABLE_NAME)),
-        PROCEDURE_ALL("User_All", Database.getProcedureQuery("User_All", "", "SELECT * FROM %s;", TABLE_NAME)),
-        PROCEDURE_INSERT("User_Insert", Database.getProcedureQuery("User_Insert", "uid VARCHAR(36), user VARCHAR(100)", "INSERT INTO %s (UUID, Username) VALUES (uid, user);", TABLE_NAME)),
-        PROCEDURE_DELETE("User_Delete", Database.getProcedureQuery("User_Delete", "uid VARCHAR(36)", "DELETE FROM %s WHERE UUID=uid;", TABLE_NAME)),
-        PROCEDURE_RENAME("User_Rename", Database.getProcedureQuery("User_Rename", "uid INT, user VARCHAR(100)", "UPDATE %s SET Username=user WHERE ID=uid;", TABLE_NAME));
+        USER_UNIQUE_ID("User_UniqueID", "uid VARCHAR(36)", "SELECT * FROM [TABLE] WHERE UUID=uid;"),
+        USER_USERNAME("User_Username", "user VARCHAR(100)", "SELECT * FROM [TABLE] WHERE Username=user;"),
+        USER_ID("User_ID", "uid INT", "SELECT * FROM [TABLE] WHERE ID=uid;"),
+        USER_ALL("User_All", "", "SELECT * FROM [TABLE];"),
+        USER_INSERT("User_Insert", "uid VARCHAR(36), user VARCHAR(100)", "INSERT INTO [TABLE] (UUID, Username) VALUES (uid, user);"),
+        USER_DELETE("User_Delete", "uid VARCHAR(36)", "DELETE FROM [TABLE] WHERE UUID=uid;"),
+        USER_RENAME("User_Rename", "uid INT, user VARCHAR(100)", "UPDATE [TABLE] SET Username=user WHERE ID=uid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(String name, String query) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = query;
+            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
 
         public String getName() {
             return name;
         }
 
-        public String getQuery() {
-            return query;
+        public String getQuery(String tableName) {
+            return query.replace("[TABLE]", tableName);
         }
 
-        public static void loadAll() {
-            for (var procedure : VALUES)
-                Database.update(procedure.getQuery());
+        public static void loadAll(String tableName) {
+            for (Procedure procedure : VALUES)
+                Database.update(procedure.getQuery(tableName));
         }
     }
 }

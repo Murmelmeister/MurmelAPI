@@ -9,7 +9,7 @@ public record PermissionProvider(Group group, User user) implements Permission {
     @Override
     public List<String> getPermissions(int userId) {
         Set<String> permissions = new LinkedHashSet<>(user.getPermission().getPermissions(userId));
-        for (var parentId : user.getParent().getParentIds(userId))
+        for (int parentId : user.getParent().getParentIds(userId))
             permissions.addAll(group.getPermission().getAllPermissions(group.getParent(), parentId));
         return new ArrayList<>(permissions);
     }
