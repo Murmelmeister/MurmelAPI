@@ -125,7 +125,7 @@ public final class GroupPermissionProvider implements GroupPermission {
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query) {
+        Procedure(final String name, final String input, final String query) {
             this.name = name;
             this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
@@ -139,8 +139,7 @@ public final class GroupPermissionProvider implements GroupPermission {
         }
 
         public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES)
-                Database.update(procedure.getQuery(tableName));
+            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
         }
     }
 }
