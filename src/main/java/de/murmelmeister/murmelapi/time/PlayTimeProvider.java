@@ -78,17 +78,11 @@ public final class PlayTimeProvider implements PlayTime {
     }
 
     @Override
-    public Map<PlayTimeType, Integer> calculatePlayTime(int userId) {
+    public int calculatePlayTime(int userId, PlayTimeType type) {
         int totalSeconds = getTime(userId);
-        Map<PlayTimeType, Integer> result = new EnumMap<>(PlayTimeType.class);
-
-        for (PlayTimeType type : PlayTimeType.VALUES) {
-            int time = type.fromSeconds(totalSeconds);
-            totalSeconds -= type.toSeconds(time);
-            result.put(type, time);
-        }
-
-        return result;
+        int time = type.fromSeconds(totalSeconds);
+        totalSeconds -= type.toSeconds(time);
+        return totalSeconds;
     }
 
     private void loadTables(User user) {

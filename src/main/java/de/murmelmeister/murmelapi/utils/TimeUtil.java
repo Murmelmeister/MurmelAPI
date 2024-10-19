@@ -77,11 +77,11 @@ public final class TimeUtil {
      * @return The formatted time value as a string.
      */
     public static String formatTimeValue(PlayTime playTime, int userId) {
-        int seconds = playTime.calculatePlayTime(userId).get(PlayTimeType.SECONDS);
-        int minutes = playTime.calculatePlayTime(userId).get(PlayTimeType.MINUTES);
-        int hours = playTime.calculatePlayTime(userId).get(PlayTimeType.HOURS);
-        int days = playTime.calculatePlayTime(userId).get(PlayTimeType.DAYS);
-        int years = playTime.calculatePlayTime(userId).get(PlayTimeType.YEARS);
+        int seconds = playTime.calculatePlayTime(userId, PlayTimeType.SECONDS);
+        int minutes = playTime.calculatePlayTime(userId, PlayTimeType.MINUTES);
+        int hours = playTime.calculatePlayTime(userId, PlayTimeType.HOURS);
+        int days = playTime.calculatePlayTime(userId, PlayTimeType.DAYS);
+        int years = playTime.calculatePlayTime(userId, PlayTimeType.YEARS);
 
         return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
                + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
@@ -98,9 +98,9 @@ public final class TimeUtil {
      * @return The formatted time value as a string representing the time in days, hours, and years.
      */
     public static String formatScoreboardTime(PlayTime playTime, int userId) {
-        int hours = playTime.calculatePlayTime(userId).get(PlayTimeType.HOURS);
-        int days = playTime.calculatePlayTime(userId).get(PlayTimeType.DAYS);
-        int years = playTime.calculatePlayTime(userId).get(PlayTimeType.YEARS);
+        int hours = playTime.calculatePlayTime(userId, PlayTimeType.HOURS);
+        int days = playTime.calculatePlayTime(userId, PlayTimeType.DAYS);
+        int years = playTime.calculatePlayTime(userId, PlayTimeType.YEARS);
 
         return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
                + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")

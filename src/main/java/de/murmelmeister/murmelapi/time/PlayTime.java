@@ -84,10 +84,11 @@ public sealed interface PlayTime permits PlayTimeProvider {
     void resetTime(int userId);
 
     /**
-     * Calculates the total play time for a user with the given user ID, categorized by different play time types.
+     * Calculates the play time for a user based on the given play time type.
      *
-     * @param userId The ID of the user for whom the play time is to be calculated
-     * @return A map where the keys are play time types and the values are the play time amounts for each type
+     * @param userId The ID of the user.
+     * @param type   The type of play time to calculate.
+     * @return The calculated play time for the user in the units specified by the type.
      */
-    Map<PlayTimeType, Integer> calculatePlayTime(int userId);
+    int calculatePlayTime(int userId, PlayTimeType type);
 }
