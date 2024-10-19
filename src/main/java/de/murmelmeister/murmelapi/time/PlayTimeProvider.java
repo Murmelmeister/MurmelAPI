@@ -3,9 +3,6 @@ package de.murmelmeister.murmelapi.time;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.Database;
 
-import java.util.EnumMap;
-import java.util.Map;
-
 public final class PlayTimeProvider implements PlayTime {
     public PlayTimeProvider(User user) {
         String tableName = "PlayTime";

@@ -29,7 +29,7 @@ public final class LogProvider implements Log {
     public int addLog(int userId, int creatorId, int reasonId, long time) {
         if (!this.reason.exists(reasonId)) throw new IllegalArgumentException("Reason does not exist");
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        return Database.callUpdate(-1, "LogID", int.class, Procedure.LOG_ADD.getName(), userId, creatorId, reasonId, System.currentTimeMillis(), expired);
+        return Database.callUpdate(-1, "id", int.class, Procedure.LOG_ADD.getName(), userId, creatorId, reasonId, System.currentTimeMillis(), expired);
     }
 
     @Override
@@ -118,7 +118,7 @@ public final class LogProvider implements Log {
 
     private enum Procedure {
         LOG_ADD("Log_Add", "uid INT, cid INT, rid INT, created BIGINT, expired BIGINT",
-                "INSERT INTO [TABLE] (UserID, CreatorID, ReasonID, CreatedTime, ExpiredTime) VALUES (uid, cid, rid, created, expired);"),
+                "INSERT INTO [TABLE] (UserID, CreatorID, ReasonID, CreatedTime, ExpiredTime) VALUES (uid, cid, rid, created, expired); SELECT LAST_INSERT_ID() AS id;"),
         LOG_REMOVE("Log_Remove", "id INT", "DELETE FROM [TABLE] WHERE LogID=id;"),
         LOG_DELETE("Log_Delete", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
         LOG_ID("Log_ID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),

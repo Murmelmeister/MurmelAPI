@@ -137,31 +137,28 @@ public final class Database {
     }
 
     /**
-     * Executes a database update operation using a CallableStatement and returns a result of the specified type.
+     * Executes an update to the database using a stored procedure call, retrieves the result, and returns it.
      *
-     * @param <T> the type of the result object.
-     * @param defaultValue the default value to return if the update operation does not affect any rows.
-     * @param label the label of the column in the generated keys to retrieve the result.
-     * @param type the class of the result type.
-     * @param name the name of the stored procedure or SQL statement to execute.
-     * @param objects the parameters to pass to the stored procedure or SQL statement.
-     * @return the result of the update operation if successful, otherwise the default value.
+     * @param <T> The type of the result object.
+     * @param defaultValue The default value to return if no result is found.
+     * @param label The label of the result column.
+     * @param type The class of the result type.
+     * @param name The name of the stored procedure.
+     * @param objects The parameters to pass to the stored procedure.
+     * @return The result of the stored procedure call, or the defaultValue if no result is found.
+     * @throws RuntimeException if a database access error occurs.
      */
     public static <T> T callUpdate(T defaultValue, String label, Class<T> type, String name, Object... objects) {
         WRITE_LOCK.lock();
         try (Connection connection = DATA_SOURCE.getConnection();
              CallableStatement statement = getCallableStatement(connection, name, objects)) {
-            int affectedRows = statement.executeUpdate();
-            if (affectedRows > 0) {
-                try (ResultSet resultSet = statement.getGeneratedKeys()) {
-                    if (resultSet.next()) return resultSet.getObject(label, type);
-                } catch (SQLException e) {
-                    throw new RuntimeException("Database calling query error", e);
-                }
+            statement.executeUpdate();
+            try (ResultSet resultSet = statement.getResultSet()) {
+                if (resultSet.next()) return resultSet.getObject(label, type);
             }
             return defaultValue;
         } catch (SQLException e) {
-            throw new RuntimeException("Database calling update error", e);
+            throw new RuntimeException("Database calling update/query error", e);
         } finally {
             WRITE_LOCK.unlock();
         }

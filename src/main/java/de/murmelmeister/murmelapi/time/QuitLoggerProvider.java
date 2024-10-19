@@ -20,7 +20,7 @@ public final class QuitLoggerProvider implements QuitLogger {
 
     @Override
     public int createQuitDate(int userId) {
-        return Database.callUpdate(-1, "TimeID", int.class, Procedure.QUIT_LOGGER_INSERT.getName(), userId, System.currentTimeMillis());
+        return Database.callUpdate(-1, "id", int.class, Procedure.QUIT_LOGGER_INSERT.getName(), userId, System.currentTimeMillis());
     }
 
     @Override
@@ -44,7 +44,7 @@ public final class QuitLoggerProvider implements QuitLogger {
     }
 
     private enum Procedure {
-        QUIT_LOGGER_INSERT("QuitLogger_Insert", "uid INT, date BIGINT", "INSERT INTO [TABLE] (UserID, QuitDate) VALUES (uid, date);"),
+        QUIT_LOGGER_INSERT("QuitLogger_Insert", "uid INT, qDate BIGINT", "INSERT INTO [TABLE] (UserID, QuitDate) VALUES (uid, qDate); SELECT LAST_INSERT_ID() AS id;"),
         QUIT_LOGGER_DELETE_USER("QuitLogger_DeleteUser", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
         QUIT_LOGGER_GET_USER("QuitLogger_GetUser", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
         QUIT_LOGGER_GET_TIME("QuitLogger_GetTime", "tid INT, uid INT", "SELECT * FROM [TABLE] WHERE TimeID=tid AND UserID=uid;");

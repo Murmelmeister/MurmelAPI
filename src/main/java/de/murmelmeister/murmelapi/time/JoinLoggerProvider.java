@@ -20,7 +20,7 @@ public final class JoinLoggerProvider implements JoinLogger {
 
     @Override
     public int createJoinDate(int userId) {
-        return Database.callUpdate(-1, "TimeID", int.class, Procedure.JOIN_LOGGER_INSERT.getName(), userId, System.currentTimeMillis());
+        return Database.callUpdate(-1, "id", int.class, Procedure.JOIN_LOGGER_INSERT.getName(), userId, System.currentTimeMillis());
     }
 
     @Override
@@ -44,7 +44,7 @@ public final class JoinLoggerProvider implements JoinLogger {
     }
 
     private enum Procedure {
-        JOIN_LOGGER_INSERT("JoinLogger_Insert", "uid INT, date BIGINT", "INSERT INTO [TABLE] (UserID, JoinDate) VALUES (uid, date);"),
+        JOIN_LOGGER_INSERT("JoinLogger_Insert", "uid INT, jDate BIGINT", "INSERT INTO [TABLE] (UserID, JoinDate) VALUES (uid, jDate); SELECT LAST_INSERT_ID() AS id;"),
         JOIN_LOGGER_DELETE_USER("JoinLogger_DeleteUser", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
         JOIN_LOGGER_GET_USER("JoinLogger_GetUser", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
         JOIN_LOGGER_GET_TIME("JoinLogger_GetTime", "tid INT, uid INT", "SELECT * FROM [TABLE] WHERE TimeID=tid AND UserID=uid;");
