@@ -29,8 +29,7 @@ public final class LogProvider implements Log {
     public int addLog(int userId, int creatorId, int reasonId, long time) {
         if (!this.reason.exists(reasonId)) throw new IllegalArgumentException("Reason does not exist");
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.LOG_ADD.getName(), userId, creatorId, reasonId, System.currentTimeMillis(), expired);
-        return getLogId(userId);
+        return Database.callUpdate(-1, "LogID", int.class, Procedure.LOG_ADD.getName(), userId, creatorId, reasonId, System.currentTimeMillis(), expired);
     }
 
     @Override
@@ -41,11 +40,6 @@ public final class LogProvider implements Log {
     @Override
     public void deleteLog(int userId) {
         Database.callUpdate(Procedure.LOG_DELETE.getName(), userId);
-    }
-
-    @Override
-    public int getLogId(int userId) {
-        return Database.callQuery(-1, "LogID", int.class, Procedure.LOG_ID.getName(), userId);
     }
 
     @Override
@@ -136,7 +130,7 @@ public final class LogProvider implements Log {
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query) {
+        Procedure(final String name, final String input, final String query) {
             this.name = name;
             this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
@@ -150,8 +144,7 @@ public final class LogProvider implements Log {
         }
 
         public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES)
-                Database.update(procedure.getQuery(tableName));
+            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
         }
     }
 }

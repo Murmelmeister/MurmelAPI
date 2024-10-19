@@ -137,6 +137,37 @@ public final class Database {
     }
 
     /**
+     * Executes a database update operation using a CallableStatement and returns a result of the specified type.
+     *
+     * @param <T> the type of the result object.
+     * @param defaultValue the default value to return if the update operation does not affect any rows.
+     * @param label the label of the column in the generated keys to retrieve the result.
+     * @param type the class of the result type.
+     * @param name the name of the stored procedure or SQL statement to execute.
+     * @param objects the parameters to pass to the stored procedure or SQL statement.
+     * @return the result of the update operation if successful, otherwise the default value.
+     */
+    public static <T> T callUpdate(T defaultValue, String label, Class<T> type, String name, Object... objects) {
+        WRITE_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, name, objects)) {
+            int affectedRows = statement.executeUpdate();
+            if (affectedRows > 0) {
+                try (ResultSet resultSet = statement.getGeneratedKeys()) {
+                    if (resultSet.next()) return resultSet.getObject(label, type);
+                } catch (SQLException e) {
+                    throw new RuntimeException("Database calling query error", e);
+                }
+            }
+            return defaultValue;
+        } catch (SQLException e) {
+            throw new RuntimeException("Database calling update error", e);
+        } finally {
+            WRITE_LOCK.unlock();
+        }
+    }
+
+    /**
      * Creates a new table in the database if it does not already exist.
      *
      * @param tableName The name of the table to be created
@@ -367,8 +398,8 @@ public final class Database {
      * Creates a PreparedStatement for the given SQL query and sets the provided parameters.
      *
      * @param connection The database connection to be used for creating the PreparedStatement.
-     * @param query The SQL query string for which the PreparedStatement is to be created.
-     * @param objects The parameters to be set in the PreparedStatement.
+     * @param query      The SQL query string for which the PreparedStatement is to be created.
+     * @param objects    The parameters to be set in the PreparedStatement.
      * @return The created PreparedStatement with the parameters set.
      * @throws SQLException If a database access error occurs or this method is called on a closed connection.
      */
@@ -386,7 +417,7 @@ public final class Database {
      * @throws SQLException If an SQL exception occurs while setting the parameters.
      */
     private static void setParameters(PreparedStatement statement, Object... objects) throws SQLException {
-        for (int i = 0; i < objects.length; i++){
+        for (int i = 0; i < objects.length; i++) {
             Object object = objects[i];
             switch (object) {
                 case Boolean value -> statement.setBoolean(i + 1, value);

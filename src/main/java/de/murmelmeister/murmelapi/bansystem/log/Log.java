@@ -40,14 +40,6 @@ public sealed interface Log permits LogProvider {
     void deleteLog(int userId);
 
     /**
-     * Retrieves the log ID associated with the specified user ID.
-     *
-     * @param userId The ID of the user for whom the log ID will be retrieved.
-     * @return The log ID associated with the specified user ID.
-     */
-    int getLogId(int userId);
-
-    /**
      * Retrieves the logs associated with the specified user ID.
      *
      * @param userId The ID of the user for whom the logs will be retrieved.
