@@ -19,8 +19,8 @@ public final class JoinLoggerProvider implements JoinLogger {
     }
 
     @Override
-    public void createJoinDate(int userId) {
-        Database.callUpdate(Procedure.JOIN_LOGGER_INSERT.getName(), userId, System.currentTimeMillis());
+    public int createJoinDate(int userId) {
+        return Database.callUpdate(-1, "TimeID", int.class, Procedure.JOIN_LOGGER_INSERT.getName(), userId, System.currentTimeMillis());
     }
 
     @Override

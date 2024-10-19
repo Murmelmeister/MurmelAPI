@@ -11,7 +11,7 @@ public sealed interface QuitLogger permits QuitLoggerProvider {
      *
      * @param userId The ID of the user whose quit date is to be recorded
      */
-    void createQuitDate(int userId);
+    int createQuitDate(int userId);
 
     /**
      * Deletes the user identified by the given userId from the system.

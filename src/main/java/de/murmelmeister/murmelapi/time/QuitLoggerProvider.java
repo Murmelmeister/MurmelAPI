@@ -19,8 +19,8 @@ public final class QuitLoggerProvider implements QuitLogger {
     }
 
     @Override
-    public void createQuitDate(int userId) {
-        Database.callUpdate(Procedure.QUIT_LOGGER_INSERT.getName(), userId, System.currentTimeMillis());
+    public int createQuitDate(int userId) {
+        return Database.callUpdate(-1, "TimeID", int.class, Procedure.QUIT_LOGGER_INSERT.getName(), userId, System.currentTimeMillis());
     }
 
     @Override

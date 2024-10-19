@@ -11,7 +11,7 @@ public sealed interface JoinLogger permits JoinLoggerProvider {
      *
      * @param userId The ID of the user whose join date is to be recorded
      */
-    void createJoinDate(int userId);
+    int createJoinDate(int userId);
 
     /**
      * Deletes the user identified by the given userId from the system.
