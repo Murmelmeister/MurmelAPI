@@ -1,8 +1,8 @@
 package de.murmelmeister.murmelapi.utils;
 
 
-import de.murmelmeister.murmelapi.playtime.PlayTime;
-import de.murmelmeister.murmelapi.playtime.PlayTimeType;
+import de.murmelmeister.murmelapi.time.PlayTime;
+import de.murmelmeister.murmelapi.time.PlayTimeType;
 
 /**
  * Utility class for time-related operations.
@@ -77,11 +77,11 @@ public final class TimeUtil {
      * @return The formatted time value as a string.
      */
     public static String formatTimeValue(PlayTime playTime, int userId) {
-        long seconds = playTime.getTime(userId, PlayTimeType.SECONDS);
-        long minutes = playTime.getTime(userId, PlayTimeType.MINUTES);
-        long hours = playTime.getTime(userId, PlayTimeType.HOURS);
-        long days = playTime.getTime(userId, PlayTimeType.DAYS);
-        long years = playTime.getTime(userId, PlayTimeType.YEARS);
+        int seconds = playTime.calculatePlayTime(userId).get(PlayTimeType.SECONDS);
+        int minutes = playTime.calculatePlayTime(userId).get(PlayTimeType.MINUTES);
+        int hours = playTime.calculatePlayTime(userId).get(PlayTimeType.HOURS);
+        int days = playTime.calculatePlayTime(userId).get(PlayTimeType.DAYS);
+        int years = playTime.calculatePlayTime(userId).get(PlayTimeType.YEARS);
 
         return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
                + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
@@ -98,9 +98,9 @@ public final class TimeUtil {
      * @return The formatted time value as a string representing the time in days, hours, and years.
      */
     public static String formatScoreboardTime(PlayTime playTime, int userId) {
-        long hours = playTime.getTime(userId, PlayTimeType.HOURS);
-        long days = playTime.getTime(userId, PlayTimeType.DAYS);
-        long years = playTime.getTime(userId, PlayTimeType.YEARS);
+        int hours = playTime.calculatePlayTime(userId).get(PlayTimeType.HOURS);
+        int days = playTime.calculatePlayTime(userId).get(PlayTimeType.DAYS);
+        int years = playTime.calculatePlayTime(userId).get(PlayTimeType.YEARS);
 
         return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
                + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
@@ -115,7 +115,7 @@ public final class TimeUtil {
      * @param type the PlayTimeType representing the time unit
      * @return the formatted time value as a string
      */
-    private static String getTimeValue(long time, PlayTimeType type) {
+    private static String getTimeValue(int time, PlayTimeType type) {
         return time == 1 ? "1 " + type.getName().replace("s", "").toLowerCase() : time + " " + type.getName().toLowerCase();
     }
 }
