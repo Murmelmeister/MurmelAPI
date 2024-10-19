@@ -35,7 +35,7 @@ public final class JoinLoggerProvider implements JoinLogger {
 
     @Override
     public long getJoinTime(int timeId, int userId) {
-        return Database.callQuery(-1, "JoinDate", int.class, Procedure.JOIN_LOGGER_GET_TIME.getName(), timeId, userId);
+        return Database.callQuery(-1L, "JoinDate", long.class, Procedure.JOIN_LOGGER_GET_TIME.getName(), timeId, userId);
     }
 
     @Override

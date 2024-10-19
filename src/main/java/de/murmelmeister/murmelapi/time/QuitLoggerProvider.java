@@ -35,7 +35,7 @@ public final class QuitLoggerProvider implements QuitLogger {
 
     @Override
     public long getQuitTime(int timeId, int userId) {
-        return Database.callQuery(-1, "QuitDate", int.class, Procedure.QUIT_LOGGER_GET_TIME.getName(), timeId, userId);
+        return Database.callQuery(-1L, "QuitDate", long.class, Procedure.QUIT_LOGGER_GET_TIME.getName(), timeId, userId);
     }
 
     @Override
