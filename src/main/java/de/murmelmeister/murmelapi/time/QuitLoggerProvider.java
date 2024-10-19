@@ -44,7 +44,7 @@ public final class QuitLoggerProvider implements QuitLogger {
     }
 
     private enum Procedure {
-        QUIT_LOGGER_INSERT("QuitLogger_Insert", "uid INT, date BIGINT", "INSERT INTO [TABLE] (UserID, JoinDate) VALUES (uid, date);"),
+        QUIT_LOGGER_INSERT("QuitLogger_Insert", "uid INT, date BIGINT", "INSERT INTO [TABLE] (UserID, QuitDate) VALUES (uid, date);"),
         QUIT_LOGGER_DELETE_USER("QuitLogger_DeleteUser", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
         QUIT_LOGGER_GET_USER("QuitLogger_GetUser", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
         QUIT_LOGGER_GET_TIME("QuitLogger_GetTime", "tid INT, uid INT", "SELECT * FROM [TABLE] WHERE TimeID=tid AND UserID=uid;");
