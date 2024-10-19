@@ -18,7 +18,7 @@ public final class UserParentProvider implements UserParent {
     }
 
     private void createTable(String tableName) {
-        Database.createTable(tableName, "UserID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
+        Database.createTable(tableName, "UserID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT, ExpiredTime BIGINT");
     }
 
     @Override
@@ -120,10 +120,10 @@ public final class UserParentProvider implements UserParent {
     private enum Procedure {
         USER_PARENT_USER_ID("UserParent_UserID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
         USER_PARENT_PARENT("UserParent_Parent", "uid INT, pid INT", "SELECT * FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
-        USER_PARENT_ADD("UserParent_Add", "uid INT, creator INT, pid INT, created BIGINT(255), expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, creator, pid, created, expired);"),
+        USER_PARENT_ADD("UserParent_Add", "uid INT, creator INT, pid INT, created BIGINT, expired BIGINT", "INSERT INTO [TABLE] VALUES (uid, creator, pid, created, expired);"),
         USER_PARENT_REMOVE("UserParent_Remove", "uid INT, pid INT", "DELETE FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
         USER_PARENT_CLEAR("UserParent_Clear", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
-        USER_PARENT_EXPIRED("UserParent_Expired", "uid INT, pid INT, expired BIGINT(255)", "UPDATE [TABLE] SET ExpiredTime=expired WHERE UserID=uid AND ParentID=pid;");
+        USER_PARENT_EXPIRED("UserParent_Expired", "uid INT, pid INT, expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE UserID=uid AND ParentID=pid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;

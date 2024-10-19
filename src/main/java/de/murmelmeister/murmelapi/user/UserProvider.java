@@ -1,7 +1,7 @@
 package de.murmelmeister.murmelapi.user;
 
-import de.murmelmeister.murmelapi.playtime.PlayTime;
-import de.murmelmeister.murmelapi.playtime.PlayTimeProvider;
+import de.murmelmeister.murmelapi.time.PlayTime;
+import de.murmelmeister.murmelapi.time.PlayTimeProvider;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;

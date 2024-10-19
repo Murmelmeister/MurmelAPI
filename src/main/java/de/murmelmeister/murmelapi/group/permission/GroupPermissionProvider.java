@@ -17,7 +17,7 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     private void createTable(String tableName) {
-        Database.createTable(tableName, "GroupID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
+        Database.createTable(tableName, "GroupID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT, ExpiredTime BIGINT");
     }
 
     @Override
@@ -116,10 +116,10 @@ public final class GroupPermissionProvider implements GroupPermission {
     private enum Procedure {
         GROUP_PERMISSION_GROUP_ID("GroupPermission_GroupID", "gid INT", "SELECT * FROM [TABLE] WHERE GroupID=gid;"),
         GROUP_PERMISSION_PERMISSION("GroupPermission_Permission", "gid INT, perm VARCHAR(1000)", "SELECT * FROM [TABLE] WHERE GroupID=gid AND Permission=perm;"),
-        GROUP_PERMISSION_ADD("GroupPermission_Add", "gid INT, creator INT, perm VARCHAR(1000), created BIGINT(255), expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (gid, creator, perm, created, expired);"),
+        GROUP_PERMISSION_ADD("GroupPermission_Add", "gid INT, creator INT, perm VARCHAR(1000), created BIGINT, expired BIGINT", "INSERT INTO [TABLE] VALUES (gid, creator, perm, created, expired);"),
         GROUP_PERMISSION_REMOVE("GroupPermission_Remove", "gid INT, perm VARCHAR(1000)", "DELETE FROM [TABLE] WHERE GroupID=gid AND Permission=perm;"),
         GROUP_PERMISSION_CLEAR("GroupPermission_Clear", "gid INT", "DELETE FROM [TABLE] WHERE GroupID=gid;"),
-        GROUP_PERMISSION_EXPIRED("GroupPermission_Expired", "gid INT, perm VARCHAR(1000), expired BIGINT(255)", "UPDATE [TABLE] SET ExpiredTime=expired WHERE GroupID=gid AND Permission=perm;");
+        GROUP_PERMISSION_EXPIRED("GroupPermission_Expired", "gid INT, perm VARCHAR(1000), expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE GroupID=gid AND Permission=perm;");
         private static final Procedure[] VALUES = values();
 
         private final String name;

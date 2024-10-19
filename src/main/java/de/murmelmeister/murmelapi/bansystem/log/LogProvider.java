@@ -17,7 +17,7 @@ public final class LogProvider implements Log {
     }
 
     public void createTable(String tableName) {
-        Database.createTable(tableName, "LogID INT PRIMARY KEY AUTO_INCREMENT, UserID INT, CreatorID INT, ReasonID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
+        Database.createTable(tableName, "LogID INT PRIMARY KEY AUTO_INCREMENT, UserID INT, CreatorID INT, ReasonID INT, CreatedTime BIGINT, ExpiredTime BIGINT");
     }
 
     @Override
@@ -123,13 +123,13 @@ public final class LogProvider implements Log {
     }
 
     private enum Procedure {
-        LOG_ADD("Log_Add", "uid INT, cid INT, rid INT, created BIGINT(255), expired BIGINT(255)",
+        LOG_ADD("Log_Add", "uid INT, cid INT, rid INT, created BIGINT, expired BIGINT",
                 "INSERT INTO [TABLE] (UserID, CreatorID, ReasonID, CreatedTime, ExpiredTime) VALUES (uid, cid, rid, created, expired);"),
         LOG_REMOVE("Log_Remove", "id INT", "DELETE FROM [TABLE] WHERE LogID=id;"),
         LOG_DELETE("Log_Delete", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
         LOG_ID("Log_ID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
         LOG_GET("Log_Get", "id INT", "SELECT * FROM [TABLE] WHERE LogID=id;"),
-        LOG_EXPIRED("Log_Expired", "id INT, expired BIGINT(255)", "UPDATE [TABLE] SET ExpiredTime=expired WHERE LogID=id;"),
+        LOG_EXPIRED("Log_Expired", "id INT, expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE LogID=id;"),
         LOG_REASON_UPDATE("Log_Reason_Update", "id INT, rid INT", "UPDATE [TABLE] SET ReasonID=rid WHERE LogID=id;");
         private static final Procedure[] VALUES = values();
 

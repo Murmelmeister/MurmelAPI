@@ -12,7 +12,7 @@ public final class GroupSettingsProvider implements GroupSettings {
     }
 
     private void createTable(String tableName) {
-        Database.createTable(tableName, "GroupID INT PRIMARY KEY, CreatorID INT, CreatedTime BIGINT(255), SortID INT, TeamID VARCHAR(100)");
+        Database.createTable(tableName, "GroupID INT PRIMARY KEY, CreatorID INT, CreatedTime BIGINT, SortID INT, TeamID VARCHAR(100)");
     }
 
     @Override
@@ -68,7 +68,7 @@ public final class GroupSettingsProvider implements GroupSettings {
 
     private enum Procedure {
         GROUP_SETTINGS_ID("GroupSettings_ID", "gid INT", "SELECT * FROM [TABLE] WHERE GroupID=gid;"),
-        GROUP_SETTINGS_INSERT("GroupSettings_Insert", "gid INT, creator VARCHAR(36), time BIGINT(255), sort INT, team VARCHAR(100)", "INSERT INTO [TABLE] VALUES (gid, creator, time, sort, team);"),
+        GROUP_SETTINGS_INSERT("GroupSettings_Insert", "gid INT, creator VARCHAR(36), time BIGINT, sort INT, team VARCHAR(100)", "INSERT INTO [TABLE] VALUES (gid, creator, time, sort, team);"),
         GROUP_SETTINGS_DELETE("GroupSettings_Delete", "gid INT", "DELETE FROM [TABLE] WHERE GroupID=gid;"),
         GROUP_SETTINGS_UPDATE_SORT("GroupSettings_Update_SortID", "gid INT, sort INT", "UPDATE [TABLE] SET SortID=sort WHERE GroupID=gid;"),
         GROUP_SETTINGS_UPDATE_TEAM("GroupSettings_Update_TeamID", "gid INT, team VARCHAR(100)", "UPDATE [TABLE] SET TeamID=team WHERE GroupID=gid;");
