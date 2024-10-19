@@ -74,14 +74,6 @@ public final class PlayTimeProvider implements PlayTime {
         setTime(userId, 0);
     }
 
-    @Override
-    public int calculatePlayTime(int userId, PlayTimeType type) {
-        int totalSeconds = getTime(userId);
-        int time = type.fromSeconds(totalSeconds);
-        totalSeconds -= type.toSeconds(time);
-        return totalSeconds;
-    }
-
     private void loadTables(User user) {
         for (int userId : user.getIds())
             createUser(userId);

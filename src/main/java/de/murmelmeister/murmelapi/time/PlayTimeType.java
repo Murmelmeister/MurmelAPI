@@ -20,6 +20,10 @@ public enum PlayTimeType {
         return name;
     }
 
+    public int getMultiplier() {
+        return multiplier;
+    }
+
     public int toSeconds(int time) {
         return time * multiplier;
     }

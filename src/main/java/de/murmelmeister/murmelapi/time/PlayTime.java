@@ -1,7 +1,5 @@
 package de.murmelmeister.murmelapi.time;
 
-import java.util.Map;
-
 /**
  * The PlayTime interface provides methods to manage and manipulate play time for users.
  */
@@ -82,13 +80,4 @@ public sealed interface PlayTime permits PlayTimeProvider {
      * @param userId The ID of the user whose play time needs to be reset
      */
     void resetTime(int userId);
-
-    /**
-     * Calculates the play time for a user based on the given play time type.
-     *
-     * @param userId The ID of the user.
-     * @param type   The type of play time to calculate.
-     * @return The calculated play time for the user in the units specified by the type.
-     */
-    int calculatePlayTime(int userId, PlayTimeType type);
 }
