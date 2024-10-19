@@ -1,5 +1,7 @@
 package de.murmelmeister.murmelapi.bansystem.reason;
 
+import java.util.List;
+
 /**
  * The Reason interface provides methods to give Reason for the ban/mute system.
  */
@@ -41,4 +43,11 @@ public sealed interface Reason permits ReasonProvider {
      * @return The reason associated with the specified ID, represented as a string.
      */
     String get(int id);
+
+    /**
+     * Retrieves a list of all reason IDs.
+     *
+     * @return A list of integers representing the IDs of all reasons.
+     */
+    List<Integer> getIds();
 }
