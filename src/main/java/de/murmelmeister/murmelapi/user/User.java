@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user;
 
+import de.murmelmeister.murmelapi.time.JoinLogger;
 import de.murmelmeister.murmelapi.time.PlayTime;
+import de.murmelmeister.murmelapi.time.QuitLogger;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.settings.UserSettings;
@@ -164,4 +166,18 @@ public sealed interface User permits UserProvider {
      * @return The play time of the user.
      */
     PlayTime getPlayTime();
+
+    /**
+     * Obtains the JoinLogger instance for managing and logging the join dates of users.
+     *
+     * @return The JoinLogger instance associated with the user.
+     */
+    JoinLogger getJoinLogger();
+
+    /**
+     * Obtains the QuitLogger instance for managing and logging the quit dates of users.
+     *
+     * @return The QuitLogger instance associated with the user.
+     */
+    QuitLogger getQuitLogger();
 }
