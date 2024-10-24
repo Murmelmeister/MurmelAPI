@@ -16,7 +16,7 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     private void createTable(String tableName) {
-        Database.createTable(tableName, "UserID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
+        Database.createTable(tableName, "UserID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT, ExpiredTime BIGINT");
     }
 
     @Override
@@ -108,16 +108,16 @@ public final class UserPermissionProvider implements UserPermission {
     private enum Procedure {
         USER_PERMISSION_USER_ID("UserPermission_UserID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
         USER_PERMISSION_PERMISSION("UserPermission_Permission", "uid INT, perm VARCHAR(1000)", "SELECT * FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
-        USER_PERMISSION_ADD("UserPermission_Add", "uid INT, creator INT, perm VARCHAR(1000), created BIGINT(255), expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, creator, perm, created, expired);"),
+        USER_PERMISSION_ADD("UserPermission_Add", "uid INT, creator INT, perm VARCHAR(1000), created BIGINT, expired BIGINT", "INSERT INTO [TABLE] VALUES (uid, creator, perm, created, expired);"),
         USER_PERMISSION_REMOVE("UserPermission_Remove", "uid INT, perm VARCHAR(1000)", "DELETE FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
         USER_PERMISSION_CLEAR("UserPermission_Clear", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
-        USER_PERMISSION_EXPIRED("UserPermission_Expired", "uid INT, perm VARCHAR(1000), expired BIGINT(255)", "UPDATE [TABLE] SET ExpiredTime=expired WHERE UserID=uid AND Permission=perm;");
+        USER_PERMISSION_EXPIRED("UserPermission_Expired", "uid INT, perm VARCHAR(1000), expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE UserID=uid AND Permission=perm;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query) {
+        Procedure(final String name, final String input, final String query) {
             this.name = name;
             this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
@@ -131,8 +131,7 @@ public final class UserPermissionProvider implements UserPermission {
         }
 
         public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES)
-                Database.update(procedure.getQuery(tableName));
+            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
         }
     }
 }

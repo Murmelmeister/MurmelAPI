@@ -1,7 +1,6 @@
 package de.murmelmeister.murmelapi.user;
 
-import de.murmelmeister.murmelapi.playtime.PlayTime;
-import de.murmelmeister.murmelapi.playtime.PlayTimeProvider;
+import de.murmelmeister.murmelapi.time.*;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
@@ -19,6 +18,8 @@ public final class UserProvider implements User {
     private final UserPermission permission;
 
     private final PlayTime playTime;
+    private final JoinLogger joinLogger;
+    private final QuitLogger quitLogger;
 
     public UserProvider() {
         String tableName = "User";
@@ -28,6 +29,8 @@ public final class UserProvider implements User {
         this.parent = new UserParentProvider();
         this.permission = new UserPermissionProvider();
         this.playTime = new PlayTimeProvider(this);
+        this.joinLogger = new JoinLoggerProvider();
+        this.quitLogger = new QuitLoggerProvider();
     }
 
     private void createTable(String tableName) {
@@ -60,6 +63,8 @@ public final class UserProvider implements User {
         permission.clearPermission(id);
         parent.clearParent(id);
         settings.deleteUser(id);
+        joinLogger.deleteUser(id);
+        quitLogger.deleteUser(id);
         Database.callUpdate(Procedure.USER_DELETE.getName(), id);
     }
 
@@ -148,6 +153,16 @@ public final class UserProvider implements User {
         return playTime;
     }
 
+    @Override
+    public JoinLogger getJoinLogger() {
+        return joinLogger;
+    }
+
+    @Override
+    public QuitLogger getQuitLogger() {
+        return quitLogger;
+    }
+
     private enum Procedure {
         USER_UNIQUE_ID("User_UniqueID", "uid VARCHAR(36)", "SELECT * FROM [TABLE] WHERE UUID=uid;"),
         USER_USERNAME("User_Username", "user VARCHAR(100)", "SELECT * FROM [TABLE] WHERE Username=user;"),
@@ -161,7 +176,7 @@ public final class UserProvider implements User {
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query) {
+        Procedure(final String name, final String input, final String query) {
             this.name = name;
             this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
@@ -175,8 +190,7 @@ public final class UserProvider implements User {
         }
 
         public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES)
-                Database.update(procedure.getQuery(tableName));
+            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
         }
     }
 }

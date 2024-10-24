@@ -21,7 +21,7 @@ public final class BanProvider implements Ban {
     }
 
     private void createTable(String tableName) {
-        Database.createTable(tableName, "UserID INT, ExpiredTime BIGINT(255)");
+        Database.createTable(tableName, "UserID INT, ExpiredTime BIGINT");
     }
 
     @Override
@@ -63,7 +63,7 @@ public final class BanProvider implements Ban {
     }
 
     private enum Procedure {
-        BAN_ADD("Ban_Add", "uid INT, expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (uid, expired);"),
+        BAN_ADD("Ban_Add", "uid INT, expired BIGINT", "INSERT INTO [TABLE] VALUES (uid, expired);"),
         BAN_REMOVE("Ban_Remove", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
         BAN_GET("Ban_Get", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;");
         private static final Procedure[] VALUES = values();
@@ -71,7 +71,7 @@ public final class BanProvider implements Ban {
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query) {
+        Procedure(final String name, final String input, final String query) {
             this.name = name;
             this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
@@ -85,8 +85,7 @@ public final class BanProvider implements Ban {
         }
 
         public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES)
-                Database.update(procedure.getQuery(tableName));
+            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
         }
     }
 }

@@ -17,7 +17,7 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     private void createTable(String tableName) {
-        Database.createTable(tableName, "GroupID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT(255), ExpiredTime BIGINT(255)");
+        Database.createTable(tableName, "GroupID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT, ExpiredTime BIGINT");
     }
 
     @Override
@@ -114,16 +114,16 @@ public final class GroupParentProvider implements GroupParent {
     private enum Procedure {
         GROUP_PARENT_GROUP_ID("GroupParent_GroupID", "gid INT", "SELECT * FROM [TABLE] WHERE GroupID=gid;"),
         GROUP_PARENT_PARENT("GroupParent_Parent", "gid INT, pid INT", "SELECT * FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;"),
-        GROUP_PARENT_ADD("GroupParent_Add", "gid INT, creator INT, pid INT, created BIGINT(255), expired BIGINT(255)", "INSERT INTO [TABLE] VALUES (gid, creator, pid, created, expired);"),
+        GROUP_PARENT_ADD("GroupParent_Add", "gid INT, creator INT, pid INT, created BIGINT, expired BIGINT", "INSERT INTO [TABLE] VALUES (gid, creator, pid, created, expired);"),
         GROUP_PARENT_REMOVE("GroupParent_Remove", "gid INT, pid INT", "DELETE FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;"),
         GROUP_PARENT_CLEAR("GroupParent_Clear", "gid INT", "DELETE FROM [TABLE] WHERE GroupID=gid;"),
-        GROUP_PARENT_EXPIRED("GroupParent_Expired", "gid INT, pid INT, expired BIGINT(255)", "UPDATE [TABLE] SET ExpiredTime=expired WHERE GroupID=gid AND ParentID=pid;");
+        GROUP_PARENT_EXPIRED("GroupParent_Expired", "gid INT, pid INT, expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE GroupID=gid AND ParentID=pid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query) {
+        Procedure(final String name, final String input, final String query) {
             this.name = name;
             this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
@@ -137,8 +137,7 @@ public final class GroupParentProvider implements GroupParent {
         }
 
         public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES)
-                Database.update(procedure.getQuery(tableName));
+            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
         }
     }
 }

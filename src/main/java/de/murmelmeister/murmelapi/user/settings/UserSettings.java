@@ -44,11 +44,10 @@ public sealed interface UserSettings permits UserSettingsProvider {
     String getFirstJoinDate(int id);
 
     /**
-     * Sets the last quit time for a user identified by the given ID.
-     * This method updates the last quit time of the user in the user settings database.
+     * Sets the last quit time for the specified user.
      *
-     * @param id   The ID of the user.
-     * @param time The last quit time to set for the user, represented as a long value.
+     * @param id The id of the user.
+     * @param time The last quit time to set for the user.
      */
     void setLastQuitTime(int id, long time);
 
@@ -58,13 +57,13 @@ public sealed interface UserSettings permits UserSettingsProvider {
      * @param id The id of the user.
      * @return The last quit time of the user as a long value.
      */
-    long getLastQuitTime(int id);
+    long getLstQuitTime(int id);
 
     /**
-     * Retrieves the last quit date of a user identified by the given ID.
+     * Retrieves the last quit date of a user.
      *
-     * @param id The ID of the user.
-     * @return The last quit date of the user as a string.
+     * @param id The id of the user.
+     * @return The last quit date of the user as a String formatted by the SimpleDateFormat.
      */
     String getLastQuitDate(int id);
 
@@ -75,7 +74,7 @@ public sealed interface UserSettings permits UserSettingsProvider {
      * @param id     The ID of the user.
      * @param online The online status to set for the user, represented as a byte value.
      */
-    void setOnline(int id, int online);
+    void setOnline(int id, boolean online);
 
     /**
      * Retrieves the online status of a user identified by the given ID.
@@ -84,5 +83,5 @@ public sealed interface UserSettings permits UserSettingsProvider {
      * @param id The ID of the user.
      * @return The online status of the user as a boolean value. True indicates that the user is online, false indicates that the user is offline.
      */
-    int getOnline(int id);
+    boolean isOnline(int id);
 }

@@ -8,7 +8,9 @@ import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.permission.PermissionProvider;
-import de.murmelmeister.murmelapi.playtime.PlayTime;
+import de.murmelmeister.murmelapi.time.JoinLogger;
+import de.murmelmeister.murmelapi.time.PlayTime;
+import de.murmelmeister.murmelapi.time.QuitLogger;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.UserProvider;
 
@@ -20,6 +22,8 @@ public final class MurmelAPI {
     private static final User USER;
     private static final Permission PERMISSION;
     private static final PlayTime PLAY_TIME;
+    private static final JoinLogger JOIN_LOGGER;
+    private static final QuitLogger QUIT_LOGGER;
 
     private static final Mute MUTE;
     private static final Ban BAN;
@@ -29,6 +33,8 @@ public final class MurmelAPI {
         USER = new UserProvider();
         PERMISSION = new PermissionProvider(GROUP, USER);
         PLAY_TIME = USER.getPlayTime();
+        JOIN_LOGGER = USER.getJoinLogger();
+        QUIT_LOGGER = USER.getQuitLogger();
         MUTE = new MuteProvider();
         BAN = new BanProvider();
     }
@@ -67,6 +73,24 @@ public final class MurmelAPI {
      */
     public static PlayTime getPlayTime() {
         return PLAY_TIME;
+    }
+
+    /**
+     * Get the join logger provider.
+     *
+     * @return the join logger provider
+     */
+    public static JoinLogger getJoinLogger() {
+        return JOIN_LOGGER;
+    }
+
+    /**
+     * Get the quit logger provider.
+     *
+     * @return the quit logger provider
+     */
+    public static QuitLogger getQuitLogger() {
+        return QUIT_LOGGER;
     }
 
     /**

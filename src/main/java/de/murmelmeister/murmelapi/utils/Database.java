@@ -137,6 +137,34 @@ public final class Database {
     }
 
     /**
+     * Executes an update to the database using a stored procedure call, retrieves the result, and returns it.
+     *
+     * @param <T> The type of the result object.
+     * @param defaultValue The default value to return if no result is found.
+     * @param label The label of the result column.
+     * @param type The class of the result type.
+     * @param name The name of the stored procedure.
+     * @param objects The parameters to pass to the stored procedure.
+     * @return The result of the stored procedure call, or the defaultValue if no result is found.
+     * @throws RuntimeException if a database access error occurs.
+     */
+    public static <T> T callUpdate(T defaultValue, String label, Class<T> type, String name, Object... objects) {
+        WRITE_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, name, objects)) {
+            statement.executeUpdate();
+            try (ResultSet resultSet = statement.getResultSet()) {
+                if (resultSet.next()) return resultSet.getObject(label, type);
+            }
+            return defaultValue;
+        } catch (SQLException e) {
+            throw new RuntimeException("Database calling update/query error", e);
+        } finally {
+            WRITE_LOCK.unlock();
+        }
+    }
+
+    /**
      * Creates a new table in the database if it does not already exist.
      *
      * @param tableName The name of the table to be created
@@ -367,8 +395,8 @@ public final class Database {
      * Creates a PreparedStatement for the given SQL query and sets the provided parameters.
      *
      * @param connection The database connection to be used for creating the PreparedStatement.
-     * @param query The SQL query string for which the PreparedStatement is to be created.
-     * @param objects The parameters to be set in the PreparedStatement.
+     * @param query      The SQL query string for which the PreparedStatement is to be created.
+     * @param objects    The parameters to be set in the PreparedStatement.
      * @return The created PreparedStatement with the parameters set.
      * @throws SQLException If a database access error occurs or this method is called on a closed connection.
      */
@@ -386,7 +414,7 @@ public final class Database {
      * @throws SQLException If an SQL exception occurs while setting the parameters.
      */
     private static void setParameters(PreparedStatement statement, Object... objects) throws SQLException {
-        for (int i = 0; i < objects.length; i++){
+        for (int i = 0; i < objects.length; i++) {
             Object object = objects[i];
             switch (object) {
                 case Boolean value -> statement.setBoolean(i + 1, value);

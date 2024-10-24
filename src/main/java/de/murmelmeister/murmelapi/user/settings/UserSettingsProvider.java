@@ -16,7 +16,7 @@ public final class UserSettingsProvider implements UserSettings {
     }
 
     private void createTable(String tableName) {
-        Database.createTable(tableName, "ID INT PRIMARY KEY, FirstJoin BIGINT(255), LastQuit BIGINT(255), IsOnline BOOL");
+        Database.createTable(tableName, "ID INT PRIMARY KEY, FirstJoin BIGINT, LastQuit BIGINT, Online BOOL");
     }
 
     @Override
@@ -46,28 +46,28 @@ public final class UserSettingsProvider implements UserSettings {
     }
 
     @Override
+    public long getLstQuitTime(int id) {
+        return Database.callQuery(-1L, "LastQuit", long.class, Procedure.USER_SETTINGS_ID.getName(), id);
+    }
+
+    @Override
     public void setLastQuitTime(int id, long time) {
         Database.callUpdate(Procedure.USER_SETTINGS_UPDATE_LAST_QUIT.getName(), id, time);
     }
 
     @Override
-    public long getLastQuitTime(int id) {
-        return Database.callQuery(-1L, "LastQuit", long.class, Procedure.USER_SETTINGS_ID.getName(), id);
-    }
-
-    @Override
     public String getLastQuitDate(int id) {
-        return dateFormat.format(getLastQuitTime(id));
+        return dateFormat.format(getLstQuitTime(id));
     }
 
     @Override
-    public void setOnline(int id, int online) {
-        Database.callUpdate(Procedure.USER_SETTINGS_UPDATE_ONLINE.getName(), id, online);
+    public void setOnline(int id, boolean isOnline) {
+        Database.callUpdate(Procedure.USER_SETTINGS_UPDATE_ONLINE.getName(), id, isOnline ? (byte) 1 : (byte) 0);
     }
 
     @Override
-    public int getOnline(int id) {
-        return Database.callQuery(0, "IsOnline", int.class, Procedure.USER_SETTINGS_ID.getName(), id);
+    public boolean isOnline(int id) {
+        return Database.callQuery((byte) 0, "Online", byte.class, Procedure.USER_SETTINGS_ID.getName(), id) == 1;
     }
 
     private void loadTablesIfNotCreated(User user) {
@@ -77,16 +77,16 @@ public final class UserSettingsProvider implements UserSettings {
 
     private enum Procedure {
         USER_SETTINGS_ID("UserSettings_ID", "uid INT", "SELECT * FROM [TABLE] WHERE ID=uid;"),
-        USER_SETTINGS_INSERT("UserSettings_Insert", "uid INT, first BIGINT(255), last BIGINT(255), online BOOL", "INSERT INTO [TABLE] VALUES (uid, first, last, online);"),
+        USER_SETTINGS_INSERT("UserSettings_Insert", "uid INT, first BIGINT, last BIGINT, isOnline BOOL", "INSERT INTO [TABLE] VALUES (uid, first, last, isOnline);"),
         USER_SETTINGS_DELETE("UserSettings_Delete", "uid INT", "DELETE FROM [TABLE] WHERE ID=uid;"),
-        USER_SETTINGS_UPDATE_ONLINE("UserSettings_UpdateOnline", "uid INT, online BOOL", "UPDATE [TABLE] SET IsOnline=online WHERE ID=uid;"),
-        USER_SETTINGS_UPDATE_LAST_QUIT("UserSettings_UpdateLastQuit", "uid INT, last BIGINT(255)", "UPDATE [TABLE] SET LastQuit=last WHERE ID=uid;");
+        USER_SETTINGS_UPDATE_LAST_QUIT("UserSettings_UpdateLastQuit", "uid INT, last BIGINT", "UPDATE [TABLE] SET LastQuit=last WHERE ID=uid;"),
+        USER_SETTINGS_UPDATE_ONLINE("UserSettings_UpdateOnline", "uid INT, isOnline BOOL", "UPDATE [TABLE] SET Online=isOnline WHERE ID=uid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(String name, String input, String query) {
+        Procedure(final String name, final String input, final String query) {
             this.name = name;
             this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
         }
@@ -100,8 +100,7 @@ public final class UserSettingsProvider implements UserSettings {
         }
 
         public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES)
-                Database.update(procedure.getQuery(tableName));
+            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
         }
     }
 }
