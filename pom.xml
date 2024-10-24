@@ -76,8 +76,8 @@
                             <goal>jar</goal>
                         </goals>
                         <configuration>
-                            <show>private</show>
-                            <doclint>none</doclint>
+                            <failOnError>false</failOnError>
+                            <additionalJOption>-Xdoclint:none</additionalJOption>
                         </configuration>
                     </execution>
                 </executions>
