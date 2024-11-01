@@ -8,7 +8,10 @@ import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
 import de.murmelmeister.murmelapi.user.settings.UserSettings;
 import de.murmelmeister.murmelapi.user.settings.UserSettingsProvider;
 import de.murmelmeister.murmelapi.utils.Database;
+import de.murmelmeister.murmelapi.utils.MojangUtils;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,6 +41,26 @@ public final class UserProvider implements User {
     }
 
     @Override
+    public int createOrLoadUser(String username) {
+        try {
+            UUID uuid = MojangUtils.getUUID(username);
+            return createNewUser(uuid, username);
+        } catch (IOException | URISyntaxException e) {
+            throw new RuntimeException("Couldn't find any profile with name: " + username);
+        }
+    }
+
+    @Override
+    public int createOrLoadUser(UUID uuid) {
+        try {
+            String username = MojangUtils.getUsername(uuid);
+            return createNewUser(uuid, username);
+        } catch (IOException | URISyntaxException e) {
+            throw new RuntimeException("Couldn't find any profile with uuid: " + uuid);
+        }
+    }
+
+    @Override
     public boolean existsUser(UUID uuid) {
         return Database.callExists(Procedure.USER_UNIQUE_ID.getName(), uuid);
     }
@@ -48,12 +71,13 @@ public final class UserProvider implements User {
     }
 
     @Override
-    public void createNewUser(UUID uuid, String username) {
-        if (existsUser(uuid)) return;
+    public int createNewUser(UUID uuid, String username) {
+        if (existsUser(uuid)) return getId(uuid);
         Database.callUpdate(Procedure.USER_INSERT.getName(), uuid, username);
         int id = getId(uuid);
         settings.createUser(id);
         playTime.createUser(id);
+        return id;
     }
 
     @Override
@@ -81,12 +105,12 @@ public final class UserProvider implements User {
     @Override
     public UUID getUniqueId(String username) {
         int id = getId(username);
-        return Database.callQuery(null, "UUID", UUID.class, Procedure.USER_ID.getName(), id);
+        return UUID.fromString(Database.callQuery(null, "UUID", String.class, Procedure.USER_ID.getName(), id));
     }
 
     @Override
     public UUID getUniqueId(int id) {
-        return id == -1 ? null : Database.callQuery(null, "UUID", UUID.class, Procedure.USER_ID.getName(), id);
+        return id == -1 ? null : UUID.fromString(Database.callQuery(null, "UUID", String.class, Procedure.USER_ID.getName(), id));
     }
 
     @Override
