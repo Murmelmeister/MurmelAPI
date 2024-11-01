@@ -7,6 +7,43 @@ import java.util.*;
  */
 public abstract class MurmelMemory {
     protected final Map<String, Object> data = new LinkedHashMap<>();
+    private final MurmelSection root;
+    private final MurmelSection parent;
+    private final String path;
+    private final String fullPath;
+    private final char pathSeparator = '.';
+
+    protected MurmelMemory() {
+        this.path = "";
+        this.fullPath = "";
+        this.parent = null;
+        this.root = null;
+    }
+
+    protected MurmelMemory(final MurmelSection parent, final String path) {
+        this.path = path;
+        this.parent = parent;
+        this.root = parent.getRoot();
+        this.fullPath = createPath(parent, path);
+    }
+
+    public String createPath(final MurmelSection parent, final String path) {
+        MurmelSection root = parent.getRoot();
+        if (root == null) throw new IllegalArgumentException("Cannot create path without a root");
+        char separator = pathSeparator;
+        StringBuilder builder = new StringBuilder();
+        for (MurmelSection section = parent; (section != null) && (section != parent.getRoot()); section = section.getParent()) {
+            if (!builder.isEmpty()) builder.insert(0, separator);
+            builder.insert(0, section.getName());
+        }
+
+        if ((path != null) && (!path.isEmpty()) ) {
+            if (!builder.isEmpty()) builder.append(separator);
+            builder.append(path);
+        }
+
+        return builder.toString();
+    }
 
     /**
      * Stores a key-value pair in the data map.
