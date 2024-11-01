@@ -31,22 +31,22 @@ public sealed interface User permits UserProvider {
     boolean existsUser(String username);
 
     /**
-     * Creates or loads a user based on the provided username.
+     * Creates or gets a user based on the provided username.
      * If the user already exists, their ID is returned.
      *
      * @param username The username of the user.
      * @return The ID of the created or existing user.
      */
-    int createOrLoadUser(String username);
+    int createOrGetUser(String username);
 
     /**
-     * Creates or loads a user based on the provided UUID.
+     * Creates or gets a user based on the provided UUID.
      * If the user already exists, their ID is returned.
      *
      * @param uuid The unique identifier of the user.
      * @return The ID of the created or existing user.
      */
-    int createOrLoadUser(UUID uuid);
+    int createOrGetUser(UUID uuid);
 
     /**
      * Creates a new user in the system with the given UUID and username.

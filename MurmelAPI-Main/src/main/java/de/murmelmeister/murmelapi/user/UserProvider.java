@@ -41,7 +41,7 @@ public final class UserProvider implements User {
     }
 
     @Override
-    public int createOrLoadUser(String username) {
+    public int createOrGetUser(String username) {
         try {
             UUID uuid = MojangUtils.getUUID(username);
             return createNewUser(uuid, username);
@@ -51,7 +51,7 @@ public final class UserProvider implements User {
     }
 
     @Override
-    public int createOrLoadUser(UUID uuid) {
+    public int createOrGetUser(UUID uuid) {
         try {
             String username = MojangUtils.getUsername(uuid);
             return createNewUser(uuid, username);
