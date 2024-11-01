@@ -42,19 +42,23 @@ public final class UserProvider implements User {
 
     @Override
     public int createOrGetUser(String username) {
+        int id = getId(username);
+        if (id != -2) return id;
         try {
             UUID uuid = MojangUtils.getUUID(username);
-            return createNewUser(uuid, username);
+            return createUser(uuid, username);
         } catch (IOException | URISyntaxException e) {
-            throw new RuntimeException("Couldn't find any profile with name: " + username);
+            throw new RuntimeException("Couldn't find any profile with username: " + username);
         }
     }
 
     @Override
     public int createOrGetUser(UUID uuid) {
+        int id = getId(uuid);
+        if (id != -2) return id;
         try {
             String username = MojangUtils.getUsername(uuid);
-            return createNewUser(uuid, username);
+            return createUser(uuid, username);
         } catch (IOException | URISyntaxException e) {
             throw new RuntimeException("Couldn't find any profile with uuid: " + uuid);
         }
@@ -73,6 +77,10 @@ public final class UserProvider implements User {
     @Override
     public int createNewUser(UUID uuid, String username) {
         if (existsUser(uuid)) return getId(uuid);
+        return createUser(uuid, username);
+    }
+
+    private int createUser(UUID uuid, String username) {
         Database.callUpdate(Procedure.USER_INSERT.getName(), uuid, username);
         int id = getId(uuid);
         settings.createUser(id);
@@ -148,24 +156,6 @@ public final class UserProvider implements User {
     @Override
     public List<Integer> getIds() {
         return Database.callQueryList("ID", int.class, Procedure.USER_ALL.getName());
-    }
-
-    @Override
-    public void updateAllUsernames() {
-        for (int id : getIds()) {
-            UUID uuid = getUniqueId(id);
-            if (uuid == null) continue;
-            String username;
-            try {
-                username = MojangUtils.getUsername(uuid);
-            } catch (IOException | URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
-            if (username == null) continue;
-            String oldUsername = getUsername(id);
-            if (oldUsername.equals(username)) continue;
-            rename(id, username);
-        }
     }
 
     @Override

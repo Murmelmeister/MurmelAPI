@@ -152,15 +152,6 @@ public sealed interface User permits UserProvider {
     List<Integer> getIds();
 
     /**
-     * Updates all usernames in the system.
-     * This method will iterate through the existing usernames
-     * and apply necessary updates to ensure consistency and correctness.
-     * It may interact with other methods or services to fetch updated
-     * usernames and persist any changes.
-     */
-    void updateAllUsernames();
-
-    /**
      * Join a user to the server.
      * Create a new user if the user does not exist.
      * Check if the user changes their name and rename them.
