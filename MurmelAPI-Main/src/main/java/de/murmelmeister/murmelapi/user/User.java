@@ -115,6 +115,14 @@ public sealed interface User permits UserProvider {
     String getUsername(int id);
 
     /**
+     * Renames a user based on their ID.
+     *
+     * @param id The ID of the user.
+     * @param newUsername The new username for the user.
+     */
+    void rename(int id, String newUsername);
+
+    /**
      * Renames a user.
      *
      * @param uuid    The unique id of the user.
@@ -142,6 +150,15 @@ public sealed interface User permits UserProvider {
      * @return A list of all ids.
      */
     List<Integer> getIds();
+
+    /**
+     * Updates all usernames in the system.
+     * This method will iterate through the existing usernames
+     * and apply necessary updates to ensure consistency and correctness.
+     * It may interact with other methods or services to fetch updated
+     * usernames and persist any changes.
+     */
+    void updateAllUsernames();
 
     /**
      * Join a user to the server.

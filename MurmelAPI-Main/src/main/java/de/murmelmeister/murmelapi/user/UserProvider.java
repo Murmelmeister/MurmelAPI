@@ -125,6 +125,11 @@ public final class UserProvider implements User {
     }
 
     @Override
+    public void rename(int id, String newUsername) {
+        Database.callUpdate(Procedure.USER_RENAME.getName(), id, newUsername);
+    }
+
+    @Override
     public void rename(UUID uuid, String newName) {
         int id = getId(uuid);
         Database.callUpdate(Procedure.USER_RENAME.getName(), id, newName);
@@ -143,6 +148,24 @@ public final class UserProvider implements User {
     @Override
     public List<Integer> getIds() {
         return Database.callQueryList("ID", int.class, Procedure.USER_ALL.getName());
+    }
+
+    @Override
+    public void updateAllUsernames() {
+        for (int id : getIds()) {
+            UUID uuid = getUniqueId(id);
+            if (uuid == null) continue;
+            String username;
+            try {
+                username = MojangUtils.getUsername(uuid);
+            } catch (IOException | URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+            if (username == null) continue;
+            String oldUsername = getUsername(id);
+            if (oldUsername.equals(username)) continue;
+            rename(id, username);
+        }
     }
 
     @Override
