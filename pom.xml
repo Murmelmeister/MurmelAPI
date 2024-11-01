@@ -6,42 +6,18 @@
 
     <groupId>de.murmelmeister.murmelapi</groupId>
     <artifactId>MurmelAPI</artifactId>
-    <version>0.0.4-SNAPSHOT</version>
+    <version>0.0.5-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <modules>
+        <module>MurmelAPI-Paper</module>
+        <module>MurmelAPI-Main</module>
+    </modules>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>6.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.16</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>2.0.16</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.11.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-            <version>2.3</version>
-        </dependency>
-    </dependencies>
 
     <build>
         <plugins>
