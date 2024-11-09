@@ -4,10 +4,15 @@ package de.murmelmeister.murmelapi.utils;
 import de.murmelmeister.murmelapi.time.PlayTime;
 import de.murmelmeister.murmelapi.time.PlayTimeType;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Utility class for time-related operations.
  */
 public final class TimeUtil {
+    private static final Pattern TIME_PATTERN = Pattern.compile("^(\\d+)([smhdwMy])$");
+
     /**
      * Formats the given time string into a long value representing the time in milliseconds.
      * The time string should be a number followed by a time unit. The following time units are supported:
@@ -37,13 +42,13 @@ public final class TimeUtil {
     public static long formatTime(String args) {
         if (args.equals("-1")) return -1L; // Permanent
         if (args.startsWith("-")) return -2L; // No negative value
-        try {
-            String format = args.substring(args.length() - 1);
-            long duration = Long.parseLong(args.substring(0, args.length() - 1));
-            return getTime(format, duration);
-        } catch (NumberFormatException e) {
-            throw new RuntimeException(e);
-        }
+
+        Matcher matcher = TIME_PATTERN.matcher(args);
+        if (!matcher.matches()) return -3L; // Invalid format
+
+        long duration = Long.parseLong(matcher.group(1));
+        String format = matcher.group(2);
+        return getTime(format, duration);
     }
 
     /**
@@ -95,7 +100,7 @@ public final class TimeUtil {
                + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
                + (hours != 0 ? getTimeValue(hours, PlayTimeType.HOURS).replace("60 minutes", "") + " " : "")
                + (minutes != 0 ? getTimeValue(minutes, PlayTimeType.MINUTES).replace("60 seconds", "") + " " : "")
-               + (seconds != 0 ? getTimeValue(seconds, PlayTimeType.SECONDS) : "");
+               + getTimeValue(seconds, PlayTimeType.SECONDS);
     }
 
     /**
@@ -116,7 +121,7 @@ public final class TimeUtil {
 
         return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
                + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
-               + (hours != 0 ? getTimeValue(hours, PlayTimeType.HOURS) : "0 ");
+               + getTimeValue(hours, PlayTimeType.HOURS);
     }
 
 
