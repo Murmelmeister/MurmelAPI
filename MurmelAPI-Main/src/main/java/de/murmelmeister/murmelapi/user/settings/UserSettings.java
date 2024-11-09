@@ -44,12 +44,11 @@ public sealed interface UserSettings permits UserSettingsProvider {
     String getFirstJoinDate(int id);
 
     /**
-     * Sets the last quit time for the specified user.
+     * Sets the first join time for the specified user if it is not already set.
      *
      * @param id The id of the user.
-     * @param time The last quit time to set for the user.
      */
-    void setLastQuitTime(int id, long time);
+    void setFirstJoinTime(int id);
 
     /**
      * Retrieves the last quit time of a user.
@@ -57,7 +56,7 @@ public sealed interface UserSettings permits UserSettingsProvider {
      * @param id The id of the user.
      * @return The last quit time of the user as a long value.
      */
-    long getLstQuitTime(int id);
+    long getLastQuitTime(int id);
 
     /**
      * Retrieves the last quit date of a user.
@@ -66,6 +65,14 @@ public sealed interface UserSettings permits UserSettingsProvider {
      * @return The last quit date of the user as a String formatted by the SimpleDateFormat.
      */
     String getLastQuitDate(int id);
+
+    /**
+     * Sets the last quit time for the specified user.
+     *
+     * @param id The id of the user.
+     * @param time The last quit time to set for the user.
+     */
+    void setLastQuitTime(int id, long time);
 
     /**
      * Sets the online status of a user identified by the given ID.

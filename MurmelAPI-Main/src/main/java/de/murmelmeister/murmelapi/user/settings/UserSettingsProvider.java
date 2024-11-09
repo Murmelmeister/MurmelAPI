@@ -27,7 +27,7 @@ public final class UserSettingsProvider implements UserSettings {
     @Override
     public void createUser(int id) {
         if (existsUser(id)) return;
-        Database.callUpdate(Procedure.USER_SETTINGS_INSERT.getName(), id, System.currentTimeMillis(), System.currentTimeMillis(), 0);
+        Database.callUpdate(Procedure.USER_SETTINGS_INSERT.getName(), id, -1, -1, 0);
     }
 
     @Override
@@ -37,17 +37,30 @@ public final class UserSettingsProvider implements UserSettings {
 
     @Override
     public long getFirstJoinTime(int id) {
-        return Database.callQuery(-1L, "FirstJoin", long.class, Procedure.USER_SETTINGS_ID.getName(), id);
+        return Database.callQuery(-2L, "FirstJoin", long.class, Procedure.USER_SETTINGS_ID.getName(), id);
     }
 
     @Override
     public String getFirstJoinDate(int id) {
-        return dateFormat.format(getFirstJoinTime(id));
+        long time = getFirstJoinTime(id);
+        return time == -1 ? "never" : dateFormat.format(time);
     }
 
     @Override
-    public long getLstQuitTime(int id) {
-        return Database.callQuery(-1L, "LastQuit", long.class, Procedure.USER_SETTINGS_ID.getName(), id);
+    public void setFirstJoinTime(int id) {
+        if (getFirstJoinTime(id) != -1) return;
+        Database.callUpdate(Procedure.USER_SETTINGS_UPDATE_FIRST_JOIN.getName(), id, System.currentTimeMillis());
+    }
+
+    @Override
+    public long getLastQuitTime(int id) {
+        return Database.callQuery(-2L, "LastQuit", long.class, Procedure.USER_SETTINGS_ID.getName(), id);
+    }
+
+    @Override
+    public String getLastQuitDate(int id) {
+        long time = getLastQuitTime(id);
+        return time == -1 ? "never" : dateFormat.format(time);
     }
 
     @Override
@@ -56,18 +69,13 @@ public final class UserSettingsProvider implements UserSettings {
     }
 
     @Override
-    public String getLastQuitDate(int id) {
-        return dateFormat.format(getLstQuitTime(id));
+    public boolean isOnline(int id) {
+        return Database.callQuery((byte) 0, "Online", byte.class, Procedure.USER_SETTINGS_ID.getName(), id) == 1;
     }
 
     @Override
     public void setOnline(int id, boolean isOnline) {
         Database.callUpdate(Procedure.USER_SETTINGS_UPDATE_ONLINE.getName(), id, isOnline ? (byte) 1 : (byte) 0);
-    }
-
-    @Override
-    public boolean isOnline(int id) {
-        return Database.callQuery((byte) 0, "Online", byte.class, Procedure.USER_SETTINGS_ID.getName(), id) == 1;
     }
 
     private void loadTablesIfNotCreated(User user) {
@@ -80,6 +88,7 @@ public final class UserSettingsProvider implements UserSettings {
         USER_SETTINGS_INSERT("UserSettings_Insert", "uid INT, first BIGINT, last BIGINT, isOnline BOOL", "INSERT INTO [TABLE] VALUES (uid, first, last, isOnline);"),
         USER_SETTINGS_DELETE("UserSettings_Delete", "uid INT", "DELETE FROM [TABLE] WHERE ID=uid;"),
         USER_SETTINGS_UPDATE_LAST_QUIT("UserSettings_UpdateLastQuit", "uid INT, last BIGINT", "UPDATE [TABLE] SET LastQuit=last WHERE ID=uid;"),
+        USER_SETTINGS_UPDATE_FIRST_JOIN("UserSettings_UpdateFirstJoin", "uid INT, first BIGINT", "UPDATE [TABLE] SET FirstJoin=first WHERE ID=uid;"),
         USER_SETTINGS_UPDATE_ONLINE("UserSettings_UpdateOnline", "uid INT, isOnline BOOL", "UPDATE [TABLE] SET Online=isOnline WHERE ID=uid;");
         private static final Procedure[] VALUES = values();
 
