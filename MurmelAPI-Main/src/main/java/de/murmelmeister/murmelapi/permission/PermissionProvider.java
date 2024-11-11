@@ -17,8 +17,22 @@ public record PermissionProvider(Group group, User user) implements Permission {
     @Override
     public boolean hasPermission(UUID uuid, String permission) {
         Set<String> permissions = new LinkedHashSet<>(getPermissions(user.getId(uuid)));
-        if (permissions.contains("-" + permission)) return false;
-        if (permissions.contains("*")) return true;
-        return permissions.contains(permission);
+        boolean hasUniversalPermission = permissions.contains("*");
+
+        for (String perm : permissions) {
+            if (perm.startsWith("-") && wildcardMatch(perm.substring(1), permission)) return false;
+            if (wildcardMatch(perm, permission)) return true;
+        }
+        return hasUniversalPermission;
+    }
+
+    private boolean wildcardMatch(String pattern, String input) {
+        String[] parts = pattern.split("\\*");
+        for (String part : parts) {
+            int index = input.indexOf(part);
+            if (index == -1) return false;
+            input = input.substring(index + part.length());
+        }
+        return true;
     }
 }
