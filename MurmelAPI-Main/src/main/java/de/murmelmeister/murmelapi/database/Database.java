@@ -1,14 +1,12 @@
-package de.murmelmeister.murmelapi.utils;
+package de.murmelmeister.murmelapi.database;
 
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.math.BigDecimal;
 import java.net.URL;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.sql.Date;
+import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -139,12 +137,12 @@ public final class Database {
     /**
      * Executes an update to the database using a stored procedure call, retrieves the result, and returns it.
      *
-     * @param <T> The type of the result object.
+     * @param <T>          The type of the result object.
      * @param defaultValue The default value to return if no result is found.
-     * @param label The label of the result column.
-     * @param type The class of the result type.
-     * @param name The name of the stored procedure.
-     * @param objects The parameters to pass to the stored procedure.
+     * @param label        The label of the result column.
+     * @param type         The class of the result type.
+     * @param name         The name of the stored procedure.
+     * @param objects      The parameters to pass to the stored procedure.
      * @return The result of the stored procedure call, or the defaultValue if no result is found.
      * @throws RuntimeException if a database access error occurs.
      */
@@ -254,6 +252,23 @@ public final class Database {
         }
     }
 
+    public static <T> T callQuery(T defaultValue, String label, Class<T> type, String tableName, String conditionClause, String... objects) {
+        READ_LOCK.lock();
+        T value = defaultValue;
+        try (ResultSet resultSet = genericSelect(tableName, "*", conditionClause, objects)) {
+            while (resultSet.next()) value = resultSet.getObject(label, type);
+        } catch (SQLException e) {
+            throw new RuntimeException("Database query error", e);
+        } finally {
+            READ_LOCK.unlock();
+        }
+        return value;
+    }
+
+    public static <T> T callQuery(T defaultValue, String label, Class<T> type, String tableName) {
+        return callQuery(defaultValue, label, type, tableName, null, "");
+    }
+
     /**
      * Executes a database stored procedure query and retrieves a list of result objects.
      *
@@ -277,6 +292,71 @@ public final class Database {
         } finally {
             READ_LOCK.unlock();
         }
+    }
+
+    public static <T> List<T> callQueryList(List<T> defaultList, String label, Class<T> type, String tableName, String conditionClause, String... objects) {
+        READ_LOCK.lock();
+        try (ResultSet resultSet = genericSelect(tableName, "*", conditionClause, objects)) {
+            while (resultSet.next()) defaultList.add(resultSet.getObject(label, type));
+        } catch (SQLException e) {
+            throw new RuntimeException("Database query error", e);
+        } finally {
+            READ_LOCK.unlock();
+        }
+        return defaultList;
+    }
+
+    public static <T> List<T> callQueryList(List<T> defaultList, String label, Class<T> type, String tableName) {
+        return callQueryList(defaultList, label, type, tableName, null, "");
+    }
+
+    /**
+     * Executes a database callable statement and returns a map with keys and values extracted from the result set.
+     *
+     * @param valueType the class of the map values
+     * @param name      the name of the callable statement to execute
+     * @param objects   the parameters to the callable statement
+     * @param <V>       the type of values in the map
+     * @return a map with keys and values extracted from the result set of the callable statement
+     */
+    public static <V> Map<String, V> callQueryMap(Class<V> valueType, String name, Object... objects) {
+        READ_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, name, objects)) {
+            Map<String, V> value = Collections.synchronizedMap(new HashMap<>());
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    ResultSetMetaData metaData = resultSet.getMetaData();
+                    for (int i = 1; i <= metaData.getColumnCount(); i++) {
+                        value.put(metaData.getColumnLabel(i), valueType.cast(resultSet.getObject(i)));
+                    }
+                }
+            }
+            return value;
+        } catch (SQLException e) {
+            throw new RuntimeException("Database query error", e);
+        } finally {
+            READ_LOCK.unlock();
+        }
+    }
+
+    public static <V> Map<String, V> callQueryMap(Map<String, V> defaultMap, Class<V> valueType, String tableName, String conditionClause, String... objects) {
+        READ_LOCK.lock();
+        try (ResultSet resultSet = genericSelect(tableName, "*", conditionClause, objects)) {
+            ResultSetMetaData metaData = resultSet.getMetaData();
+            while (resultSet.next())
+                for (int i = 1; i <= metaData.getColumnCount(); i++)
+                    defaultMap.put(metaData.getColumnLabel(i), resultSet.getObject(i, valueType));
+        } catch (SQLException e) {
+            throw new RuntimeException("Database query error", e);
+        } finally {
+            READ_LOCK.unlock();
+        }
+        return defaultMap;
+    }
+
+    public static <V> Map<String, V> callQueryMap(Map<String, V> defaultMap, Class<V> valueType, String tableName) {
+        return callQueryMap(defaultMap, valueType, tableName, null, "");
     }
 
     /**
@@ -323,6 +403,19 @@ public final class Database {
         } finally {
             READ_LOCK.unlock();
         }
+    }
+
+    public static boolean callExist(String tableName, String conditionClause, String... objects) {
+        READ_LOCK.lock();
+        boolean exist = false;
+        try (ResultSet resultSet = genericSelect(tableName, "*", conditionClause, objects)) {
+            while (resultSet.next()) exist = true;
+        } catch (SQLException e) {
+            throw new RuntimeException("Database retrieval error", e);
+        } finally {
+            READ_LOCK.unlock();
+        }
+        return exist;
     }
 
     /**
@@ -440,6 +533,88 @@ public final class Database {
                 case UUID value -> statement.setString(i + 1, value.toString());
                 case null, default -> statement.setObject(i + 1, object);
             }
+        }
+    }
+
+    public static void genericInsert(String tableName, String columns, String... value) {
+        WRITE_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, Procedure.GENERIC_INSERT.getName(),
+                     tableName, columns, String.join(",", value))) {
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Database generic insert error", e);
+        } finally {
+            WRITE_LOCK.unlock();
+        }
+    }
+
+    public static void genericUpdate(String tableName, String setClause, String conditionClause, String... value) {
+        WRITE_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, Procedure.GENERIC_UPDATE.getName(),
+                     tableName, setClause, conditionClause, String.join(",", value))) {
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Database generic update error", e);
+        } finally {
+            WRITE_LOCK.unlock();
+        }
+    }
+
+    public static void genericDelete(String tableName, String conditionClause, String... value) {
+        WRITE_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, Procedure.GENERIC_DELETE.getName(),
+                     tableName, conditionClause, String.join(",", value))) {
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Database generic delete error", e);
+        } finally {
+            WRITE_LOCK.unlock();
+        }
+    }
+
+    public static ResultSet genericSelect(String tableName, String columns, String conditionClause, String... value) {
+        READ_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, Procedure.GENERIC_SELECT.getName(),
+                     tableName, columns, conditionClause, String.join(",", value))) {
+            return statement.executeQuery();
+        } catch (SQLException e) {
+            throw new RuntimeException("Database generic select error", e);
+        } finally {
+            READ_LOCK.unlock();
+        }
+    }
+
+    public static ResultSet genericSelect(String tableName, String columns) {
+        return genericSelect(tableName, columns, null, "");
+    }
+
+    public static void genericAlter(String tableName, String actionType, String columnDefinition) {
+        WRITE_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, Procedure.GENERIC_ALTER.getName(),
+                     tableName, actionType, columnDefinition)) {
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Database generic alter error", e);
+        } finally {
+            WRITE_LOCK.unlock();
+        }
+    }
+
+    public static void genericCreateTable(String tableName, String columnsAndTypes) {
+        WRITE_LOCK.lock();
+        try (Connection connection = DATA_SOURCE.getConnection();
+             CallableStatement statement = getCallableStatement(connection, Procedure.GENERIC_CREATE_TABLE.getName(),
+                     tableName, columnsAndTypes)) {
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Database generic create table error", e);
+        } finally {
+            WRITE_LOCK.unlock();
         }
     }
 }

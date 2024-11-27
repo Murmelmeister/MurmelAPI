@@ -4,6 +4,7 @@ import de.murmelmeister.murmelapi.bansystem.ban.Ban;
 import de.murmelmeister.murmelapi.bansystem.ban.BanProvider;
 import de.murmelmeister.murmelapi.bansystem.mute.Mute;
 import de.murmelmeister.murmelapi.bansystem.mute.MuteProvider;
+import de.murmelmeister.murmelapi.database.Procedure;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.permission.Permission;
@@ -29,6 +30,7 @@ public final class MurmelAPI {
     private static final Ban BAN;
 
     static {
+        Procedure.loadAll();
         GROUP = new GroupProvider();
         USER = new UserProvider();
         PERMISSION = new PermissionProvider(GROUP, USER);
