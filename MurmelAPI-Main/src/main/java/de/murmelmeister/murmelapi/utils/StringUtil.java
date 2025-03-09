@@ -1,7 +1,5 @@
 package de.murmelmeister.murmelapi.utils;
 
-import java.util.regex.Pattern;
-
 /**
  * Utility class for string operations.
  */

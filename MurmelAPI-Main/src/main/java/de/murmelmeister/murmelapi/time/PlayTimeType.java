@@ -1,12 +1,18 @@
 package de.murmelmeister.murmelapi.time;
 
+/**
+ * Represents different units of time that can be used to measure or convert play time.
+ * Each unit has a name and a multiplier that defines its relationship to seconds.
+ * <p>
+ * This enum provides methods for converting time values between the specific units
+ * and seconds, allowing for flexibility in handling time-related operations.
+ */
 public enum PlayTimeType {
     SECONDS("Seconds", 1),
     MINUTES("Minutes", 60),
     HOURS("Hours", 3600),
     DAYS("Days", 86400),
     YEARS("Years", 31536000);
-    public static final PlayTimeType[] VALUES = values();
 
     private final String name;
     private final int multiplier;

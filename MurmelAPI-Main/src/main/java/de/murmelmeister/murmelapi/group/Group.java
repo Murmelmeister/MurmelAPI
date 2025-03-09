@@ -1,10 +1,10 @@
 package de.murmelmeister.murmelapi.group;
 
+import de.murmelmeister.murmelapi.group.color.GroupColor;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
 import de.murmelmeister.murmelapi.group.permission.GroupPermission;
-import de.murmelmeister.murmelapi.group.settings.GroupColorSettings;
-import de.murmelmeister.murmelapi.group.settings.GroupSettings;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
@@ -12,121 +12,170 @@ import java.util.List;
  */
 public sealed interface Group permits GroupProvider {
     /**
-     * Checks if a group exists.
+     * Checks if a group with the specified group ID exists.
      *
-     * @param id The id of the group.
-     * @return True if the group exists, otherwise false.
+     * @param groupId The unique identifier of the group to check.
+     * @return True if the group exists, false otherwise.
      */
-    boolean existsGroup(int id);
+    boolean existsGroup(int groupId);
 
     /**
-     * Checks if a group exists.
+     * Checks if a group with the specified group name exists.
      *
-     * @param name The name of the group.
-     * @return True if the group exists, otherwise false.
+     * @param groupName The name of the group to check.
+     * @return True if the group exists, false otherwise.
      */
-    boolean existsGroup(String name);
+    boolean existsGroup(String groupName);
 
     /**
-     * Creates a new group and checks if the group already exists.
-     * If the group already exists, the method will return without creating a new group.
+     * Creates a new group with the specified details.
      *
-     * @param name      The name of the group.
-     * @param creatorId The creator id of the group.
-     * @param sortId    The sort id of the group.
-     * @param teamId    The team id of the group.
+     * @param groupName The name of the new group to be created.
+     * @param createdBy The ID of the user creating the group.
+     * @param priority  The priority level of the group.
+     * @param teamId    The ID of the team to which the group belongs.
      */
-    void createNewGroup(String name, int creatorId, int sortId, String teamId);
+    void createNewGroup(String groupName, int createdBy, int priority, String teamId);
 
     /**
-     * Deletes a group.
+     * Deletes a group with the specified group ID.
      *
-     * @param id The id of the group.
+     * @param executorId The unique identifier of the user performing the deletion.
+     * @param groupId    The unique identifier of the group to be deleted.
      */
-    void deleteGroup(int id);
+    void deleteGroup(int executorId, int groupId);
 
     /**
-     * Obtains the unique id of a group.
+     * Retrieves the unique identifier for the specified group name.
      *
-     * @param name The name of the group.
-     * @return The unique id of the group.
+     * @param groupName The name of the group whose unique identifier is to be retrieved.
+     * @return The unique identifier associated with the specified group name.
      */
-    int getUniqueId(String name);
+    int getUniqueId(String groupName);
 
     /**
-     * Obtains the name of a group.
+     * Retrieves the name of the group associated with the specified group ID.
      *
-     * @param id The id of the group.
-     * @return The name of the group.
+     * @param groupId The unique identifier of the group whose name is to be retrieved.
+     * @return The name of the group corresponding to the provided group ID.
      */
-    String getName(int id);
+    String getName(int groupId);
 
     /**
-     * Renames a group.
+     * Renames the specified group to a new name.
      *
-     * @param id      The id of the group.
-     * @param newName The new name of the group.
+     * @param executorId The unique identifier of the user performing the rename operation.
+     * @param groupId    The unique identifier of the group to be renamed.
+     * @param newName    The new name for the group.
      */
-    void rename(int id, String newName);
+    void rename(int executorId, int groupId, String newName);
 
     /**
-     * Renames a group.
+     * Retrieves a list of unique identifiers for the groups.
      *
-     * @param oldName The old name of the group.
-     * @param newName The new name of the group.
-     */
-    void rename(String oldName, String newName);
-
-    /**
-     * Obtains a list of all unique ids of the groups.
-     *
-     * @return A list of all unique ids of the groups.
+     * @return A list of integers representing the unique identifiers for the groups.
      */
     List<Integer> getUniqueIds();
 
     /**
-     * Obtains a list of all names of the groups.
+     * Retrieves a list of names associated with the groups.
      *
-     * @return A list of all names of the groups.
+     * @return A list of strings representing the names of the groups.
      */
     List<String> getNames();
 
     /**
-     * Loads all expired things.
-     */
-    void loadExpired();
-
-    /**
-     * Obtains the default group.
-     * The default group is the group with the id 1.
-     */
-    int getDefaultGroup();
-
-    /**
-     * Obtains the settings of a group.
+     * Retrieves the priority level assigned to a group specified by its unique identifier.
      *
-     * @return The settings of the group.
+     * @param groupId The unique identifier of the group whose priority is to be retrieved.
+     * @return The priority level of the specified group as an integer.
      */
-    GroupSettings getSettings();
+    int getPriority(int groupId);
 
     /**
-     * Obtains the color settings of a group.
+     * Updates the priority level of a specified group.
      *
-     * @return The color settings of the group.
+     * @param executorId The unique identifier of the user performing the update.
+     * @param groupId    The unique identifier of the group whose priority is to be set.
+     * @param priority   The new priority level to assign to the group.
      */
-    GroupColorSettings getColorSettings();
+    void setPriority(int executorId, int groupId, int priority);
 
     /**
-     * Obtains the parent of a group.
+     * Retrieves the team sort value associated with the specified group ID.
      *
-     * @return The parent of the group.
+     * @param groupId The unique identifier of the group whose team sort value is to be retrieved.
+     * @return The team sort value of the specified group as a string.
+     */
+    String getTeamSort(int groupId);
+
+    /**
+     * Sets the team sort order for the specified group.
+     *
+     * @param executorId The unique identifier of the user performing the operation.
+     * @param groupId    The unique identifier of the group whose team sort is being set.
+     * @param teamSort   The new team sort value to assign to the group.
+     */
+    void setTeamSort(int executorId, int groupId, String teamSort);
+
+    /**
+     * Retrieves the unique identifier of the user who created the specified group.
+     *
+     * @param groupId The unique identifier of the group whose creator's ID is to be retrieved.
+     * @return The unique identifier of the user who created the specified group.
+     */
+    int getCreatedBy(int groupId);
+
+    /**
+     * Retrieves the creation timestamp of the group specified by its unique ID.
+     *
+     * @param groupId The unique identifier of the group whose creation timestamp is to be retrieved.
+     * @return The creation timestamp of the group as a {@code Timestamp}.
+     */
+    Timestamp getCreatedAt(int groupId);
+
+    /**
+     * Retrieves the unique identifier of the user who last modified the group
+     * specified by its unique identifier.
+     *
+     * @param groupId The unique identifier of the group whose modifier is to be retrieved.
+     * @return The unique identifier of the user who last modified the specified group.
+     */
+    int getModifiedBy(int groupId);
+
+    /**
+     * Retrieves the timestamp indicating when the specified group was last modified.
+     *
+     * @param groupId The unique identifier of the group whose modification timestamp is to be retrieved.
+     * @return A {@code Timestamp} object representing the last modification time of the specified group.
+     */
+    Timestamp getModifiedAt(int groupId);
+
+    /**
+     * Creates a default group with the specified name.
+     *
+     * @param groupName The name of the group to be created.
+     */
+    void createDefaultGroup(String groupName);
+
+    /**
+     * Retrieves the color information associated with a group.
+     *
+     * @return An instance of {@code GroupColor} representing the color configuration of the group.
+     */
+    GroupColor getColor();
+
+    /**
+     * Retrieves the parent information associated with the group.
+     *
+     * @return An instance of {@code GroupParent} representing the parent configuration of the group.
      */
     GroupParent getParent();
 
     /**
-     * Obtains the permission of a group.
+     * Retrieves the permission details associated with the group.
      *
-     * @return The permission of the group.
+     * @return An instance of {@code GroupPermission} representing the permission configuration of the group.
      */
     GroupPermission getPermission();
 }

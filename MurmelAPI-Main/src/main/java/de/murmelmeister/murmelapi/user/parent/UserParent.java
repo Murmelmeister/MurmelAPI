@@ -3,6 +3,7 @@ package de.murmelmeister.murmelapi.user.parent;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.user.User;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
@@ -10,143 +11,149 @@ import java.util.List;
  */
 public sealed interface UserParent permits UserParentProvider {
     /**
-     * Checks if a parent exists.
+     * Checks if a parent-child relationship exists between a user and a parent.
      *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @return True if the parent exists, otherwise false.
+     * @param userId   The ID of the user whose parent relationship is to be verified
+     * @param parentId The ID of the parent to be checked
+     * @return True if the user has the specified parent, false otherwise
      */
     boolean existsParent(int userId, int parentId);
 
     /**
-     * Adds a parent to a user.
+     * Adds a parent-child relationship for the specified user with an optional expiration time.
      *
-     * @param userId    The id of the user.
-     * @param creatorId The id of the creator.
-     * @param parentId  The id of the parent.
-     * @param time      The time the parent was added.
+     * @param executorId The ID of the user performing the log action.
+     * @param userId     The ID of the user for whom the parent relationship is being added.
+     * @param parentId   The ID of the parent to be associated with the user.
+     * @param time       The duration (in milliseconds) until this relationship expires.
+     *                   Use -1 for a relationship that does not expire.
      */
-    void addParent(int userId, int creatorId, int parentId, long time);
+    void addParent(int executorId, int userId, int parentId, long time);
 
     /**
-     * Removes a parent from a user.
+     * Removes the parent-child relationship between a specified user and parent.
      *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
+     * @param userId   The ID of the user whose parent relationship is being removed.
+     * @param parentId The ID of the parent to be removed from the user.
      */
     void removeParent(int userId, int parentId);
 
     /**
-     * Clears all parents from a user.
+     * Clears all parent-child relationships for the specified user.
      *
-     * @param userId The id of the user.
+     * @param userId The ID of the user whose parent relationships are being cleared.
      */
     void clearParent(int userId);
 
     /**
-     * Obtains the parent id of a user.
+     * Retrieves the list of parent IDs associated with the specified user.
      *
-     * @param userId The id of the user.
-     * @return The parent id of the user.
-     */
-    int getParentId(int userId);
-
-    /**
-     * Obtains all parent ids of a user.
-     *
-     * @param userId The id of the user.
-     * @return A list of all parent ids of the user.
+     * @param userId The ID of the user whose parent IDs are to be fetched.
+     * @return A list of integers representing the parent IDs associated with the user.
      */
     List<Integer> getParentIds(int userId);
 
     /**
-     * Obtains all parent names of a user.
+     * Retrieves the list of parent names associated with the specified user within the given group.
      *
-     * @param group  The group.
-     * @param userId The id of the user.
-     * @return A list of all parent names of the user.
+     * @param group  The group context in which the parent names are to be retrieved.
+     * @param userId The ID of the user whose parent names are to be fetched.
+     * @return A list of strings representing the names of the parents associated with the specified user.
      */
     List<String> getParentNames(Group group, int userId);
 
     /**
-     * Obtains the creator id of a parent.
+     * Retrieves the highest priority value for a specific user within the given group.
      *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @return The creator id of the parent.
+     * @param group  The group context to retrieve the priority for the user.
+     * @param userId The ID of the user whose highest priority is being determined.
+     * @return The highest priority value associated with the user in the specified group.
      */
-    int getCreatorId(int userId, int parentId);
+    int getHighestPriority(Group group, int userId);
 
     /**
-     * Obtains the created time of a parent.
+     * Retrieves the expiration timestamp of the relationship between the specified user and parent.
      *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @return The created time of the parent.
-     */
-    long getCreatedTime(int userId, int parentId);
-
-    /**
-     * Obtains the created date of a parent.
-     *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @return The created date of the parent.
-     */
-    String getCreatedDate(int userId, int parentId);
-
-    /**
-     * Obtains the expired time of a parent.
-     *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @return The expired time of the parent.
+     * @param userId   The ID of the user whose relationship expiration time is being retrieved.
+     * @param parentId The ID of the parent involved in the relationship.
+     * @return The expiration timestamp of the relationship in milliseconds since the epoch.
+     * Returns -1 if the relationship does not expire.
      */
     long getExpiredTime(int userId, int parentId);
 
     /**
-     * Obtains the expired date of a parent.
+     * Retrieves the formatted expiration date of the relationship between the specified user and parent.
      *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @return The expired date of the parent.
+     * @param userId   The ID of the user whose relationship expiration date is being retrieved.
+     * @param parentId The ID of the parent involved in the relationship.
+     * @return A string representation of the expiration date of the relationship in a human-readable format.
      */
     String getExpiredDate(int userId, int parentId);
 
     /**
-     * Sets the expired time of a parent.
+     * Sets the expiration time for the relationship between a specified user and parent.
      *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @param time     The time the parent expires.
-     * @return The date the parent will expire.
+     * @param executorId The ID of the user performing the log action.
+     * @param userId     The ID of the user whose parent relationship is being updated.
+     * @param parentId   The ID of the parent associated with the user.
+     * @param time       The new expiration timestamp for the relationship in milliseconds since the epoch.
+     *                   Use -1 for a relationship that does not expire.
+     * @return A string message indicating the result of the operation.
      */
-    String setExpiredTime(int userId, int parentId, long time);
+    String setExpiredTime(int executorId, int userId, int parentId, long time);
 
     /**
-     * Adds an expired time to a parent.
+     * Checks if the relationship between a specified user and parent has expired.
      *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @param time     The time to add to the expired time.
-     * @return The date the parent will expire.
+     * @param userId   The ID of the user whose parent relationship is being checked.
+     * @param parentId The ID of the parent to check for expiration.
+     * @return True if the relationship has expired, false otherwise.
      */
-    String addExpiredTime(int userId, int parentId, long time);
+    boolean isExpired(int userId, int parentId);
 
     /**
-     * Removes an expired time from a parent.
+     * Retrieves the ID of the user who created the parent-child relationship
+     * between the specified user and parent.
      *
-     * @param userId   The id of the user.
-     * @param parentId The id of the parent.
-     * @param time     The time to remove from the expired time.
-     * @return The date the parent will expire.
+     * @param userId   The ID of the user associated with the relationship.
+     * @param parentId The ID of the parent associated with the relationship.
+     * @return The ID of the user who created the relationship.
      */
-    String removeExpiredTime(int userId, int parentId, long time);
+    int getCreatedBy(int userId, int parentId);
 
     /**
-     * Loads all expired parents of a user.
+     * Retrieves the timestamp of when the parent-child relationship between a specified user and parent was created.
      *
-     * @param user The user.
+     * @param userId   The ID of the user whose parent relationship creation timestamp is being retrieved.
+     * @param parentId The ID of the parent involved in the relationship.
+     * @return The timestamp representing the creation time of the relationship.
+     */
+    Timestamp getCreatedAt(int userId, int parentId);
+
+    /**
+     * Retrieves the ID of the user who last modified the relationship between the specified user and parent.
+     *
+     * @param userId   The ID of the user associated with the relationship.
+     * @param parentId The ID of the parent associated with the relationship.
+     * @return The ID of the user who last modified the relationship.
+     */
+    int getModifiedBy(int userId, int parentId);
+
+    /**
+     * Retrieves the timestamp indicating the last modification time
+     * of the relationship between the specified user and parent.
+     *
+     * @param userId   The ID of the user whose relationship modification timestamp is being retrieved.
+     * @param parentId The ID of the parent involved in the relationship.
+     * @return A {@code Timestamp} object representing the last modification time
+     * of the relationship between the user and parent.
+     */
+    Timestamp getModifiedAt(int userId, int parentId);
+
+    /**
+     * Loads and processes the expired parent-child relationships for a given user.
+     *
+     * @param user The user for whom expired relationships are to be loaded.
      */
     void loadExpired(User user);
 }

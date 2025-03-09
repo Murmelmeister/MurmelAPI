@@ -9,14 +9,23 @@ public record PermissionProvider(Group group, User user) implements Permission {
     @Override
     public List<String> getPermissions(int userId) {
         Set<String> permissions = new LinkedHashSet<>(user.getPermission().getPermissions(userId));
-        for (int parentId : user.getParent().getParentIds(userId))
+        List<Integer> parentIds = user.getParent().getParentIds(userId);
+
+        for (int i = parentIds.size() - 1; i >= 0; i--) {
+            int parentId = parentIds.get(i);
             permissions.addAll(group.getPermission().getAllPermissions(group.getParent(), parentId));
-        return new ArrayList<>(permissions);
+        }
+        return new LinkedList<>(permissions);
     }
 
     @Override
     public boolean hasPermission(UUID uuid, String permission) {
-        Set<String> permissions = new LinkedHashSet<>(getPermissions(user.getId(uuid)));
+        return hasPermission(user.getId(uuid), permission);
+    }
+
+    @Override
+    public boolean hasPermission(int userId, String permission) {
+        Set<String> permissions = new LinkedHashSet<>(getPermissions(userId));
         boolean hasUniversalPermission = permissions.contains("*");
 
         for (String perm : permissions) {
@@ -27,11 +36,17 @@ public record PermissionProvider(Group group, User user) implements Permission {
     }
 
     private boolean wildcardMatch(String pattern, String input) {
+        if (pattern.isEmpty()) return input.isEmpty();
+        if (pattern.equals("*")) return true;
+
         String[] parts = pattern.split("\\*");
-        for (String part : parts) {
-            int index = input.indexOf(part);
-            if (index == -1) return false;
-            input = input.substring(index + part.length());
+        int endIndex = input.length();
+
+        for (int i = parts.length - 1; i >= 0; i--) {
+            String part = parts[i];
+            int index = input.lastIndexOf(part, endIndex);
+            if (index == -1 || index + part.length() < endIndex) return false;
+            endIndex = index;
         }
         return true;
     }

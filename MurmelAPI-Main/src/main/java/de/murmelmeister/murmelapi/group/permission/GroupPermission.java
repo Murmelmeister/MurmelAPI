@@ -3,6 +3,7 @@ package de.murmelmeister.murmelapi.group.permission;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
@@ -10,135 +11,141 @@ import java.util.List;
  */
 public sealed interface GroupPermission permits GroupPermissionProvider {
     /**
-     * Checks if a permission exists.
+     * Checks if a specific permission exists for a given group.
      *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @return True if the permission exists, otherwise false.
+     * @param groupId    The ID of the group to check the permission for.
+     * @param permission The name of the permission to verify.
+     * @return {@code true} if the permission exists for the group, otherwise {@code false}.
      */
     boolean existsPermission(int groupId, String permission);
 
     /**
-     * Adds a permission to a group.
+     * Adds a specific permission to a group along with an expiration time.
      *
-     * @param groupId    The id of the group.
-     * @param creatorId  The id of the creator.
-     * @param permission The permission.
-     * @param time       The time the permission was added.
+     * @param executorId The ID of the executor initiating the permission addition.
+     * @param groupId    The ID of the group to which the permission will be added.
+     * @param permission The permission to add to the group.
+     * @param time       The expiration time in milliseconds. If set to -1, the permission will not expire.
      */
-    void addPermission(int groupId, int creatorId, String permission, long time);
+    void addPermission(int executorId, int groupId, String permission, long time);
 
     /**
-     * Removes a permission from a group.
+     * Removes a specific permission from a group.
      *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
+     * @param groupId    The ID of the group from which the permission is to be removed.
+     * @param permission The permission to be removed from the group.
      */
     void removePermission(int groupId, String permission);
 
     /**
-     * Clears all permissions of a group.
+     * Removes all permissions associated with the specified group.
      *
-     * @param groupId The id of the group.
+     * @param groupId The unique identifier of the group whose permissions are to be cleared.
      */
     void clearPermission(int groupId);
 
     /**
-     * Obtains all permissions of a group.
+     * Retrieves a list of permissions associated with a specified group ID.
      *
-     * @param groupId The id of the group.
-     * @return A list of all permissions of the group.
+     * @param groupId The ID of the group whose permissions are to be retrieved.
+     * @return A list of permissions associated with the given group ID.
      */
     List<String> getPermissions(int groupId);
 
     /**
-     * Obtains all permissions of a group.
+     * Retrieves all permissions associated with a given group, including inherited permissions
+     * from its parent group if applicable.
      *
-     * @param groupParent The group parent.
-     * @param groupId     The id of the group.
-     * @return A list of all permissions of the group.
+     * @param groupParent The parent group entity, which may provide inherited permissions to the group.
+     * @param groupId     The unique identifier of the group for which permissions are being retrieved.
+     * @return A list of permissions associated with the group, including inherited permissions if present.
      */
     List<String> getAllPermissions(GroupParent groupParent, int groupId);
 
     /**
-     * Obtains the creator id of a permission.
+     * Retrieves the expiration time for a specific permission associated with a given group.
      *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @return The creator id of the permission.
-     */
-    int getCreatorId(int groupId, String permission);
-
-    /**
-     * Obtains the created time of a permission.
-     *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @return The created time of the permission.
-     */
-    long getCreatedTime(int groupId, String permission);
-
-    /**
-     * Obtains the created date of a permission.
-     *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @return The created date of the permission.
-     */
-    String getCreatedDate(int groupId, String permission);
-
-    /**
-     * Obtains the expired time of a permission.
-     *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @return The expired time of the permission.
+     * @param groupId    The ID of the group for which the permission expiration time is being retrieved.
+     * @param permission The permission whose expiration time is being retrieved.
+     * @return The expiration time in milliseconds since epoch. Returns -1 if the permission has no expiration time, or -2 if the permission does not exist.
      */
     long getExpiredTime(int groupId, String permission);
 
     /**
-     * Obtains the expired date of a permission.
+     * Retrieves the expiration date of a specific permission for a given group.
+     * If the permission does not expire, the method will return "never".
      *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @return The expired date of the permission.
+     * @param groupId    The ID of the group associated with the permission.
+     * @param permission The specific permission to retrieve the expiration date for.
+     * @return A string representation of the expiration date. Returns "never" if the permission does not expire.
      */
     String getExpiredDate(int groupId, String permission);
 
     /**
-     * Sets the expired time of a permission.
+     * Sets the expiration time for a specific permission associated with a group.
+     * The expiration time can be specified to indicate when the permission should expire.
      *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @param time       The time the permission will expire.
-     * @return The expired date of the permission.
+     * @param executorId The ID of the user or process making the change.
+     * @param groupId    The ID of the group associated with the permission.
+     * @param permission The name of the permission whose expiration time is being set.
+     * @param time       The expiration time in milliseconds from the current time; use -1 for no expiration.
+     * @return A string representation of the new expiration date, or "never" if no expiration is set.
      */
-    String setExpiredTime(int groupId, String permission, long time);
+    String setExpiredTime(int executorId, int groupId, String permission, long time);
 
     /**
-     * Adds time to the expired time of a permission.
+     * Determines whether a specified permission for a given group is expired.
      *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @param time       The time to add to the expired time.
-     * @return The expired date of the permission.
+     * @param groupId    The ID of the group to check the permission for.
+     * @param permission The name of the permission to check for expiration.
+     * @return {@code true} if the specified permission is expired, otherwise {@code false}.
      */
-    String addExpiredTime(int groupId, String permission, long time);
+    boolean isExpired(int groupId, String permission);
 
     /**
-     * Removes time from the expired time of a permission.
+     * Retrieves the ID of the user who created the specified permission for the given group.
      *
-     * @param groupId    The id of the group.
-     * @param permission The permission.
-     * @param time       The time to remove from the expired time.
-     * @return The expired date of the permission.
+     * @param groupId    The ID of the group for which the permission was created.
+     * @param permission The name of the permission to retrieve the creator information for.
+     * @return The ID of the user who created the permission, or -2 if no such permission exists.
      */
-    String removeExpiredTime(int groupId, String permission, long time);
+    int getCreatedBy(int groupId, String permission);
 
     /**
-     * Loads all expired permissions of a group.
+     * Retrieves the timestamp of when the given permission was created for the specified group.
      *
-     * @param group The group.
+     * @param groupId    The ID of the group for which the permission was created.
+     * @param permission The specific permission whose creation timestamp is to be retrieved.
+     * @return A {@code Timestamp} representing the creation time of the permission, or {@code null}
+     * if the permission does not exist or no creation time is available.
+     */
+    Timestamp getCreatedAt(int groupId, String permission);
+
+    /**
+     * Retrieves the user ID of the user who last modified the specified permission for a given group.
+     *
+     * @param groupId    The ID of the group whose permission modification details are being queried.
+     * @param permission The name of the permission for which the modifying user is being retrieved.
+     * @return The ID of the user who last modified the specified permission. If no modification was found, returns -2 as a fallback.
+     */
+    int getModifiedBy(int groupId, String permission);
+
+    /**
+     * Retrieves the timestamp of the last modification made to a specific permission
+     * associated with a given group.
+     *
+     * @param groupId    The unique identifier of the group the permission belongs to.
+     * @param permission The name of the permission whose modification timestamp is to be retrieved.
+     * @return A {@code Timestamp} object representing the last modification time of the specified
+     * permission, or {@code null} if no modification record exists.
+     */
+    Timestamp getModifiedAt(int groupId, String permission);
+
+    /**
+     * Loads all expired permissions or entities associated with a given group
+     * into the system for further processing or cleanup.
+     *
+     * @param group The group for which expired permissions or entities will be loaded.
      */
     void loadExpired(Group group);
 }

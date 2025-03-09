@@ -1,56 +1,61 @@
 package de.murmelmeister.murmelapi.user.parent;
 
+import de.murmelmeister.murmelapi.MurmelAPI;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.utils.Database;
+import de.murmelmeister.murmelapi.database.Database;
 
-import java.text.SimpleDateFormat;
+import java.sql.Timestamp;
+import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class UserParentProvider implements UserParent {
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+    private static final String TABLE_NAME = "UserParent";
+    private final Database database;
 
-    public UserParentProvider() {
-        String tableName = "UserParent";
-        createTable(tableName);
-        Procedure.loadAll(tableName);
+    public UserParentProvider(Database database) {
+        this.database = database;
     }
 
-    private void createTable(String tableName) {
-        Database.createTable(tableName, "UserID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT, ExpiredTime BIGINT");
+    public static void setup(Database database) {
+        database.createTable(TABLE_NAME, "UserID INT, ParentID INT, PRIMARY KEY (UserID, ParentID), " +
+                                         "FOREIGN KEY (UserID) REFERENCES Users(ID), " +
+                                         "FOREIGN KEY (ParentID) REFERENCES Groups(ID), " +
+                                         "ExpiredTime BIGINT, " +
+                                         "CreatedBy INT, FOREIGN KEY (CreatedBy) REFERENCES Users(ID), " +
+                                         "CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
+                                         "ModifiedBy INT, FOREIGN KEY (ModifiedBy) REFERENCES Users(ID), " +
+                                         "ModifiedAt DATETIME DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP()");
+        Procedure.loadAll(database);
     }
 
     @Override
     public boolean existsParent(int userId, int parentId) {
-        return Database.callExists(Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+        return database.exists(Procedure.GET_ALL.getName(), userId, parentId);
     }
 
     @Override
-    public void addParent(int userId, int creatorId, int parentId, long time) {
-        if (existsParent(userId, parentId)) return;
+    public void addParent(int executorId, int userId, int parentId, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.USER_PARENT_ADD.getName(), userId, creatorId, parentId, System.currentTimeMillis(), expired);
+        database.callUpdate(Procedure.CREATE.getName(), userId, parentId, expired, executorId, executorId);
     }
 
     @Override
     public void removeParent(int userId, int parentId) {
-        Database.callUpdate(Procedure.USER_PARENT_REMOVE.getName(), userId, parentId);
+        database.callUpdate(Procedure.DELETE_PARENT.getName(), userId, parentId);
     }
 
     @Override
     public void clearParent(int userId) {
-        Database.callUpdate(Procedure.USER_PARENT_CLEAR.getName(), userId);
-    }
-
-    @Override
-    public int getParentId(int userId) {
-        return Database.callQuery(-1, "ParentID", int.class, Procedure.USER_PARENT_USER_ID.getName(), userId);
+        database.callUpdate(Procedure.DELETE_USER.getName(), userId);
     }
 
     @Override
     public List<Integer> getParentIds(int userId) {
-        return Database.callQueryList("ParentID", int.class, Procedure.USER_PARENT_USER_ID.getName(), userId);
+        return database.queryList(new LinkedList<>(), "ParentID", int.class, Procedure.GET_BY_USER.getName(), userId);
     }
 
     @Override
@@ -59,71 +64,83 @@ public final class UserParentProvider implements UserParent {
     }
 
     @Override
-    public int getCreatorId(int userId, int parentId) {
-        return Database.callQuery(-2, "CreatorID", int.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
-    }
-
-    @Override
-    public long getCreatedTime(int userId, int parentId) {
-        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
-    }
-
-    @Override
-    public String getCreatedDate(int userId, int parentId) {
-        return dateFormat.format(getCreatedTime(userId, parentId));
+    public int getHighestPriority(Group group, int userId) {
+        return getParentIds(userId)
+                .parallelStream()
+                .map(group::getPriority)
+                .max(Comparator.naturalOrder())
+                .orElse(-1);
     }
 
     @Override
     public long getExpiredTime(int userId, int parentId) {
-        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+        return database.query(-2L, "ExpiredTime", long.class, Procedure.GET_ALL.getName(), userId, parentId);
     }
 
     @Override
     public String getExpiredDate(int userId, int parentId) {
         long time = getExpiredTime(userId, parentId);
-        return time == -1 ? "never" : dateFormat.format(time);
+        return time == -1 ? "never" : MurmelAPI.getDateFormat().format(time);
     }
 
     @Override
-    public String setExpiredTime(int userId, int parentId, long time) {
+    public String setExpiredTime(int executorId, int userId, int parentId, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
+        database.callUpdate(Procedure.SET_EXPIRED_TIME.getName(), userId, parentId, expired, executorId);
         return getExpiredDate(userId, parentId);
     }
 
     @Override
-    public String addExpiredTime(int userId, int parentId, long time) {
-        long current = getExpiredTime(userId, parentId);
-        long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
-        return getExpiredDate(userId, parentId);
+    public boolean isExpired(int userId, int parentId) {
+        return database.query((byte) 0, "Expired", byte.class, Procedure.IS_EXPIRED.getName(), userId, parentId) == 1;
     }
 
     @Override
-    public String removeExpiredTime(int userId, int parentId, long time) {
-        long current = getExpiredTime(userId, parentId);
-        long expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
-        return getExpiredDate(userId, parentId);
+    public int getCreatedBy(int userId, int parentId) {
+        return database.query(-2, "CreatedBy", int.class, Procedure.GET_ALL.getName(), userId, parentId);
+    }
+
+    @Override
+    public Timestamp getCreatedAt(int userId, int parentId) {
+        return database.query(null, "CreatedAt", Timestamp.class, Procedure.GET_ALL.getName(), userId, parentId);
+    }
+
+    @Override
+    public int getModifiedBy(int userId, int parentId) {
+        return database.query(-2, "ModifiedBy", int.class, Procedure.GET_ALL.getName(), userId, parentId);
+    }
+
+    @Override
+    public Timestamp getModifiedAt(int userId, int parentId) {
+        return database.query(null, "ModifiedAt", Timestamp.class, Procedure.GET_ALL.getName(), userId, parentId);
     }
 
     @Override
     public void loadExpired(User user) {
-        for (int userId : user.getIds())
-            for (int parentId : getParentIds(userId)) {
-                long time = getExpiredTime(userId, parentId);
-                if (time == -1) continue;
-                if (time <= System.currentTimeMillis()) removeParent(userId, parentId);
+        List<UUID> userIds = user.getUniqueIds();
+        for (int i = userIds.size() - 1; i >= 0; i--) {
+            int userId = user.getId(userIds.get(i));
+            List<Integer> parentIds = getParentIds(userId);
+
+            for (int j = parentIds.size() - 1; j >= 0; j--) {
+                int parentId = parentIds.get(j);
+                if (isExpired(userId, parentId))
+                    removeParent(userId, parentId);
             }
+        }
     }
 
     private enum Procedure {
-        USER_PARENT_USER_ID("UserParent_UserID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
-        USER_PARENT_PARENT("UserParent_Parent", "uid INT, pid INT", "SELECT * FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
-        USER_PARENT_ADD("UserParent_Add", "uid INT, creator INT, pid INT, created BIGINT, expired BIGINT", "INSERT INTO [TABLE] VALUES (uid, creator, pid, created, expired);"),
-        USER_PARENT_REMOVE("UserParent_Remove", "uid INT, pid INT", "DELETE FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
-        USER_PARENT_CLEAR("UserParent_Clear", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
-        USER_PARENT_EXPIRED("UserParent_Expired", "uid INT, pid INT, expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE UserID=uid AND ParentID=pid;");
+        CREATE("UserParent_Create", "uid INT, pid INT, et BIGINT, created INT, modified INT",
+                "INSERT INTO [TABLE] (UserID,ParentID,ExpiredTime,CreatedBy,ModifiedBy) VALUES (uid,pid,et,created,modified);"),
+        DELETE_PARENT("UserParent_DeleteParent", "uid INT, pid INT", "DELETE FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
+        DELETE_USER("UserParent_DeleteUser", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
+        GET_ALL("UserParent_GetAll", "uid INT, pid INT", "SELECT * FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
+        GET_BY_USER("UserParent_GetByUser", "uid INT", "SELECT ParentID FROM [TABLE] WHERE UserID=uid;"),
+        SET_EXPIRED_TIME("UserParent_SetExpiredTime", "uid INT, pid INT, et BIGINT, modified INT",
+                "UPDATE [TABLE] SET ExpiredTime=et, ModifiedBy=modified WHERE UserID=uid AND ParentID=pid;"),
+        IS_EXPIRED("UserParent_IsExpired", "uid INT, pid INT",
+                "SELECT IF(ExpiredTime = -1, 0, ExpiredTime <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE UserID=uid AND ParentID=pid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
@@ -131,19 +148,19 @@ public final class UserParentProvider implements UserParent {
 
         Procedure(final String name, final String input, final String query) {
             this.name = name;
-            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
+            this.query = Database.getProcedureQuery(name, input, query);
         }
 
         public String getName() {
             return name;
         }
 
-        public String getQuery(String tableName) {
-            return query.replace("[TABLE]", tableName);
+        public String getQuery() {
+            return query.replace("[TABLE]", TABLE_NAME);
         }
 
-        public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
+        private static void loadAll(Database database) {
+            for (Procedure procedure : VALUES) database.update(procedure.getQuery());
         }
     }
 }

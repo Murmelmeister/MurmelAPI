@@ -83,6 +83,7 @@ public final class TimeUtil {
      */
     public static String formatTimeValue(PlayTime playTime, int userId) {
         int currentTime = playTime.getTime(userId);
+        if (currentTime == 0) return "0 seconds";
 
         int years = PlayTimeType.YEARS.fromSeconds(currentTime);
         currentTime %= (PlayTimeType.YEARS.getMultiplier());
@@ -96,11 +97,42 @@ public final class TimeUtil {
         int minutes = PlayTimeType.MINUTES.fromSeconds(currentTime);
         int seconds = currentTime % PlayTimeType.MINUTES.getMultiplier();
 
-        return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
-               + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
-               + (hours != 0 ? getTimeValue(hours, PlayTimeType.HOURS).replace("60 minutes", "") + " " : "")
-               + (minutes != 0 ? getTimeValue(minutes, PlayTimeType.MINUTES).replace("60 seconds", "") + " " : "")
-               + getTimeValue(seconds, PlayTimeType.SECONDS);
+        return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS) + " " : "")
+               + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS) + " " : "")
+               + (hours != 0 ? getTimeValue(hours, PlayTimeType.HOURS) + " " : "")
+               + (minutes != 0 ? getTimeValue(minutes, PlayTimeType.MINUTES) + " " : "")
+               + (seconds != 0 ? getTimeValue(seconds, PlayTimeType.SECONDS) : "").trim();
+    }
+
+    /**
+     * Formats a duration in milliseconds into a human-readable string representation.
+     * The output includes years, days, hours, minutes, and seconds as applicable.
+     *
+     * @param durationInMilliseconds the time duration to be formatted, in milliseconds
+     * @return a formatted string representation of the time duration
+     */
+    public static String formatTimeValue(long durationInMilliseconds) {
+        if (durationInMilliseconds <= 0) return "0 seconds";
+
+        long durationInSeconds = durationInMilliseconds / 1000;
+
+        long years = durationInSeconds / (365L * 24 * 60 * 60);
+        durationInSeconds %= (365L * 24 * 60 * 60);
+
+        long days = durationInSeconds / (24 * 60 * 60);
+        durationInSeconds %= (24 * 60 * 60);
+
+        long hours = durationInSeconds / (60 * 60);
+        durationInSeconds %= (60 * 60);
+
+        long minutes = durationInSeconds / 60;
+        long seconds = durationInSeconds % 60;
+
+        return (years != 0 ? years + " " + (years == 1 ? "year" : "years") + " " : "")
+               + (days != 0 ? days + " " + (days == 1 ? "day" : "days") + " " : "")
+               + (hours != 0 ? hours + " " + (hours == 1 ? "hour" : "hours") + " " : "")
+               + (minutes != 0 ? minutes + " " + (minutes == 1 ? "minute" : "minutes") + " " : "")
+               + (seconds != 0 ? seconds + " " + (seconds == 1 ? "second" : "seconds") : "").trim();
     }
 
     /**
@@ -112,6 +144,7 @@ public final class TimeUtil {
      */
     public static String formatScoreboardTime(PlayTime playTime, int userId) {
         int currentTime = playTime.getTime(userId);
+        if (currentTime < 3600) return "0 hours";
 
         int years = PlayTimeType.YEARS.fromSeconds(currentTime);
         currentTime %= (PlayTimeType.YEARS.getMultiplier());
@@ -119,9 +152,9 @@ public final class TimeUtil {
         int days = PlayTimeType.DAYS.fromSeconds(currentTime);
         int hours = currentTime % PlayTimeType.DAYS.getMultiplier();
 
-        return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS).replace("365 days", "") + " " : "")
-               + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS).replace("24 hours", "") + " " : "")
-               + getTimeValue(hours, PlayTimeType.HOURS);
+        return (years != 0 ? getTimeValue(years, PlayTimeType.YEARS) + " " : "")
+               + (days != 0 ? getTimeValue(days, PlayTimeType.DAYS) + " " : "")
+               + (hours != 0 ? getTimeValue(hours, PlayTimeType.HOURS) : "").trim();
     }
 
 
