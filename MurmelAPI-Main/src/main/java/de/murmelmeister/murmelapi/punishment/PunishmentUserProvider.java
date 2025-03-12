@@ -104,7 +104,7 @@ public final class PunishmentUserProvider implements PunishmentUser {
     @Override
     public boolean isPunished(int userId, int typeId) {
         UUID logId = getLogId(userId, typeId);
-        return logId != null && log.isExpired(logId, typeId);
+        return logId != null && !log.isExpired(logId, typeId);
     }
 
     @Override

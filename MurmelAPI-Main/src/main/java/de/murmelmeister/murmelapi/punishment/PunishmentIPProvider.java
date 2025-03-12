@@ -101,7 +101,7 @@ public final class PunishmentIPProvider implements PunishmentIP {
     @Override
     public boolean isPunished(InetAddress inetAddress, int typeId) {
         UUID logId = getLogId(inetAddress, typeId);
-        return logId != null && log.isExpired(logId, typeId);
+        return logId != null && !log.isExpired(logId, typeId);
     }
 
     @Override
