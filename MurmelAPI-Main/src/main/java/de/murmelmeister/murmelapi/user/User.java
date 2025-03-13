@@ -173,6 +173,14 @@ public sealed interface User permits UserProvider {
     void joinUser(UUID uuid, String username);
 
     /**
+     * Loads and processes expired user data in the system.
+     * This method handles expired or outdated user records, executing
+     * relevant operations such as cleanup, refresh, or other maintenance tasks
+     * depending on the specific implementation.
+     */
+    void loadExpired();
+
+    /**
      * Retrieves the parent information associated with the user.
      *
      * @return A UserParent object representing the parent information of the user.

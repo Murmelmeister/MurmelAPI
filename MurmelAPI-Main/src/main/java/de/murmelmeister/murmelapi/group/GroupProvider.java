@@ -164,6 +164,12 @@ public final class GroupProvider implements Group {
     }
 
     @Override
+    public void loadExpired() {
+        parent.loadExpired(this);
+        permission.loadExpired(this);
+    }
+
+    @Override
     public GroupColor getColor() {
         if (color == null) color = new GroupColorProvider(database);
         return color;

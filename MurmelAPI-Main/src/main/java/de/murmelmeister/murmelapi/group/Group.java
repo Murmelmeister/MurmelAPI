@@ -159,6 +159,13 @@ public sealed interface Group permits GroupProvider {
     void createDefaultGroup(String groupName);
 
     /**
+     * Loads expired group data for processing or further operations.
+     * This method fetches and handles groups that have surpassed their expiration criteria.
+     * Typically used to manage or clean up expired group entries.
+     */
+    void loadExpired();
+
+    /**
      * Retrieves the color information associated with a group.
      *
      * @return An instance of {@code GroupColor} representing the color configuration of the group.

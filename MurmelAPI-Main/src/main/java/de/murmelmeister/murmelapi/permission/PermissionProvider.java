@@ -4,6 +4,7 @@ import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.user.User;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 public record PermissionProvider(Group group, User user) implements Permission {
     @Override
@@ -19,6 +20,12 @@ public record PermissionProvider(Group group, User user) implements Permission {
     }
 
     @Override
+    public void loadExpired() {
+        group.loadExpired();
+        user.loadExpired();
+    }
+
+    @Override
     public boolean hasPermission(UUID uuid, String permission) {
         return hasPermission(user.getId(uuid), permission);
     }
@@ -26,13 +33,25 @@ public record PermissionProvider(Group group, User user) implements Permission {
     @Override
     public boolean hasPermission(int userId, String permission) {
         Set<String> permissions = new LinkedHashSet<>(getPermissions(userId));
-        boolean hasUniversalPermission = permissions.contains("*");
+        // boolean hasUniversalPermission = permissions.contains("*");
+        boolean universal = false;
+        boolean positive = false;
 
         for (String perm : permissions) {
-            if (perm.startsWith("-") && wildcardMatch(perm.substring(1), permission)) return false;
-            if (wildcardMatch(perm, permission)) return true;
+            // if (perm.startsWith("-") && wildcardMatch(perm.substring(1), permission)) return false;
+            // if (wildcardMatch(perm, permission)) return true;
+            if (perm.startsWith("-")) {
+                if (wildcardMatchV2(perm.substring(1), permission)) return false;
+            } else {
+                if (perm.equals("*")) {
+                    universal = true;
+                } else if (wildcardMatchV2(perm, permission)) {
+                    positive = true;
+                }
+            }
         }
-        return hasUniversalPermission;
+        // return hasUniversalPermission;
+        return universal || positive;
     }
 
     private boolean wildcardMatch(String pattern, String input) {
@@ -49,5 +68,17 @@ public record PermissionProvider(Group group, User user) implements Permission {
             endIndex = index;
         }
         return true;
+    }
+
+    private boolean wildcardMatchV2(String pattern, String input) {
+        StringBuilder regex = new StringBuilder();
+        regex.append("^");
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+            if (c == '*') regex.append(".*");
+            else regex.append(Pattern.quote(String.valueOf(c)));
+        }
+        regex.append("$");
+        return input.matches(regex.toString());
     }
 }

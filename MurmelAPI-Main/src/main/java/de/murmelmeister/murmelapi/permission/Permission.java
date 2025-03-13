@@ -18,6 +18,13 @@ public sealed interface Permission permits PermissionProvider {
     List<String> getPermissions(int userId);
 
     /**
+     * Reloads or refreshes any expired entities or permissions within the system.
+     * This method is intended to invoke expiration-related updates for underlying
+     * group and user components.
+     */
+    void loadExpired();
+
+    /**
      * Checks if a user identified by their unique UUID has a specific permission.
      *
      * @param uuid       The universally unique identifier (UUID) of the user.
