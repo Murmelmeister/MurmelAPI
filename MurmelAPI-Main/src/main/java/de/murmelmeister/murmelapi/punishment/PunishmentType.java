@@ -9,7 +9,8 @@ import de.murmelmeister.murmelapi.database.Database;
 public enum PunishmentType {
     BAN(1, "Ban", false),
     MUTE(2, "Mute", false),
-    IP_BAN(3, "IP-Ban", true);
+    IP_BAN(3, "IP-Ban", true),
+    IP_MUTE(4, "IP-Mute", true);
     public static final PunishmentType[] VALUES = values();
     private static final String TABLE_NAME = "PunishmentTypes";
     private static final Database DATABASE = MurmelAPI.getDatabase();
