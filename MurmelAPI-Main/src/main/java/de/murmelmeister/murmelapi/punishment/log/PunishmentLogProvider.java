@@ -152,7 +152,7 @@ public final class PunishmentLogProvider implements PunishmentLog {
                 "UPDATE [TABLE] SET ExpiredTime=time, ModifiedBy=modified WHERE LogID=lid AND TypeID=tid;"),
         SET_LOG_REASON("PunishmentLog_SetReason", "lid UUID, tid INT, reason TEXT, modified INT",
                 "UPDATE [TABLE] SET ReasonID=reason, ModifiedBy=modified WHERE LogID=lid AND TypeID=tid;"),
-        IS_LOG_EXPIRED("PunishmentLog_IsExpired", "lid UUID, tid INT", "SELECT ExpiredTime<=CURRENT_TIMESTAMP() AS Expired FROM [TABLE] WHERE LogID=lid AND TypeID=tid;");
+        IS_LOG_EXPIRED("PunishmentLog_IsExpired", "lid UUID, tid INT", "SELECT IF(ExpiredTime = -1, 0, ExpiredTime <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE LogID=lid AND TypeID=tid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
