@@ -116,7 +116,7 @@ public final class GroupColorProvider implements GroupColor {
                 IF columnName IN ('ChatPrefix', 'ChatSuffix', 'ChatColor',
                                   'TabPrefix', 'TabSuffix', 'TabColor',
                                   'TeamPrefix', 'TeamSuffix', 'TeamColor') THEN
-                    SET @sql = CONCAT('UPDATE [TABLE] SET ', columnName, '="', columnValue, '", ModifiedBy=modified WHERE GroupID=', gid, ';');
+                    SET @sql = CONCAT('UPDATE [TABLE] SET ', columnName, '="', columnValue, '", ModifiedBy=', modified, ' WHERE GroupID=', gid, ';');
                     PREPARE stmt FROM @sql;
                     EXECUTE stmt;
                     DEALLOCATE PREPARE stmt;
