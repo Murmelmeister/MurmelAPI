@@ -7,6 +7,7 @@ import de.murmelmeister.murmelapi.database.Database;
 import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 public final class GroupParentProvider implements GroupParent {
@@ -29,93 +30,161 @@ public final class GroupParentProvider implements GroupParent {
         Procedure.loadAll(database);
     }
 
+    // === Asynchrone API-Methoden ===
+
+    public CompletableFuture<Boolean> existsParentAsync(int groupId, int parentId) {
+        return database.asyncExists(Procedure.GET_ALL.getName(), groupId, parentId);
+    }
+
+    public CompletableFuture<Void> addParentAsync(int executorId, int groupId, int parentId, long time) {
+        long expired = time == -1 ? time : System.currentTimeMillis() + time;
+        return database.asyncUpdate(Procedure.CREATE.getName(), groupId, parentId, expired, executorId, executorId);
+    }
+
+    public CompletableFuture<Void> removeParentAsync(int groupId, int parentId) {
+        return database.asyncUpdate(Procedure.DELETE_PARENT.getName(), groupId, parentId);
+    }
+
+    public CompletableFuture<Void> clearParentAsync(int groupId) {
+        return database.asyncUpdate(Procedure.DELETE_GROUP.getName(), groupId);
+    }
+
+    public CompletableFuture<List<Integer>> getParentIdsAsync(int groupId) {
+        return database.asyncQueryList(new LinkedList<>(), "ParentID", int.class, Procedure.GET_BY_USER.getName(), groupId);
+    }
+
+    public CompletableFuture<List<String>> getParentNamesAsync(Group group, int groupId) {
+        return getParentIdsAsync(groupId).thenApply(ids ->
+                ids.parallelStream().map(group::getName).collect(Collectors.toList())
+        );
+    }
+
+    public CompletableFuture<Long> getExpiredTimeAsync(int groupId, int parentId) {
+        return database.asyncQuery(-2L, "ExpiredTime", long.class, Procedure.GET_ALL.getName(), groupId, parentId);
+    }
+
+    public CompletableFuture<String> getExpiredDateAsync(int groupId, int parentId) {
+        return getExpiredTimeAsync(groupId, parentId)
+                .thenApply(time -> time == -1 ? "never" : MurmelAPI.getDateFormat().format(time));
+    }
+
+    public CompletableFuture<String> setExpiredTimeAsync(int executorId, int groupId, int parentId, long time) {
+        long expired = time == -1 ? time : System.currentTimeMillis() + time;
+        return database.asyncUpdate(Procedure.SET_EXPIRED_TIME.getName(), groupId, parentId, expired, executorId)
+                .thenCompose(v -> getExpiredDateAsync(groupId, parentId));
+    }
+
+    public CompletableFuture<Boolean> isExpiredAsync(int groupId, int parentId) {
+        return database.asyncQuery((byte) 0, "Expired", byte.class, Procedure.IS_EXPIRED.getName(), groupId, parentId)
+                .thenApply(b -> b == 1);
+    }
+
+    public CompletableFuture<Integer> getCreatedByAsync(int groupId, int parentId) {
+        return database.asyncQuery(-2, "CreatedBy", int.class, Procedure.GET_ALL.getName(), groupId, parentId);
+    }
+
+    public CompletableFuture<Timestamp> getCreatedAtAsync(int groupId, int parentId) {
+        return database.asyncQuery(null, "CreatedAt", Timestamp.class, Procedure.GET_ALL.getName(), groupId, parentId);
+    }
+
+    public CompletableFuture<Integer> getModifiedByAsync(int groupId, int parentId) {
+        return database.asyncQuery(-2, "ModifiedBy", int.class, Procedure.GET_ALL.getName(), groupId, parentId);
+    }
+
+    public CompletableFuture<Timestamp> getModifiedAtAsync(int groupId, int parentId) {
+        return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GET_ALL.getName(), groupId, parentId);
+    }
+
+    public CompletableFuture<Void> loadExpiredAsync(Group group) {
+        return CompletableFuture.runAsync(() -> {
+            List<Integer> groupIds = group.getUniqueIds();
+            for (int i = groupIds.size() - 1; i >= 0; i--) {
+                int groupId = groupIds.get(i);
+                List<Integer> parentIds = getParentIdsAsync(groupId).join();
+                for (int j = parentIds.size() - 1; j >= 0; j--) {
+                    int parentId = parentIds.get(j);
+                    if (isExpiredAsync(groupId, parentId).join())
+                        removeParentAsync(groupId, parentId).join();
+                }
+            }
+        });
+    }
+
+    // === Synchrone Wrapper (Interface-Implementierung) ===
+
     @Override
     public boolean existsParent(int groupId, int parentId) {
-        return database.exists(Procedure.GET_ALL.getName(), groupId, parentId);
+        return existsParentAsync(groupId, parentId).join();
     }
 
     @Override
     public void addParent(int executorId, int groupId, int parentId, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        database.callUpdate(Procedure.CREATE.getName(), groupId, parentId, expired, executorId, executorId);
+        addParentAsync(executorId, groupId, parentId, time).join();
     }
 
     @Override
     public void removeParent(int groupId, int parentId) {
-        database.callUpdate(Procedure.DELETE_PARENT.getName(), groupId, parentId);
+        removeParentAsync(groupId, parentId).join();
     }
 
     @Override
     public void clearParent(int groupId) {
-        database.callUpdate(Procedure.DELETE_GROUP.getName(), groupId);
+        clearParentAsync(groupId).join();
     }
 
     @Override
     public List<Integer> getParentIds(int groupId) {
-        return database.queryList(new LinkedList<>(), "ParentID", int.class, Procedure.GET_BY_USER.getName(), groupId);
+        return getParentIdsAsync(groupId).join();
     }
 
     @Override
     public List<String> getParentNames(Group group, int groupId) {
-        return getParentIds(groupId).parallelStream().map(group::getName).collect(Collectors.toList());
+        return getParentNamesAsync(group, groupId).join();
     }
 
     @Override
     public long getExpiredTime(int groupId, int parentId) {
-        return database.query(-2L, "ExpiredTime", long.class, Procedure.GET_ALL.getName(), groupId, parentId);
+        return getExpiredTimeAsync(groupId, parentId).join();
     }
 
     @Override
     public String getExpiredDate(int groupId, int parentId) {
-        long time = getExpiredTime(groupId, parentId);
-        return time == -1 ? "never" : MurmelAPI.getDateFormat().format(time);
+        return getExpiredDateAsync(groupId, parentId).join();
     }
 
     @Override
     public String setExpiredTime(int executorId, int groupId, int parentId, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        database.callUpdate(Procedure.SET_EXPIRED_TIME.getName(), groupId, parentId, expired, executorId);
-        return getExpiredDate(groupId, parentId);
+        return setExpiredTimeAsync(executorId, groupId, parentId, time).join();
     }
 
     @Override
     public boolean isExpired(int groupId, int parentId) {
-        return database.query((byte) 0, "Expired", byte.class, Procedure.IS_EXPIRED.getName(), groupId, parentId) == 1;
+        return isExpiredAsync(groupId, parentId).join();
     }
 
     @Override
     public int getCreatedBy(int groupId, int parentId) {
-        return database.query(-2, "CreatedBy", int.class, Procedure.GET_ALL.getName(), groupId, parentId);
+        return getCreatedByAsync(groupId, parentId).join();
     }
 
     @Override
     public Timestamp getCreatedAt(int groupId, int parentId) {
-        return database.query(null, "CreatedAt", Timestamp.class, Procedure.GET_ALL.getName(), groupId, parentId);
+        return getCreatedAtAsync(groupId, parentId).join();
     }
 
     @Override
     public int getModifiedBy(int groupId, int parentId) {
-        return database.query(-2, "ModifiedBy", int.class, Procedure.GET_ALL.getName(), groupId, parentId);
+        return getModifiedByAsync(groupId, parentId).join();
     }
 
     @Override
     public Timestamp getModifiedAt(int groupId, int parentId) {
-        return database.query(null, "ModifiedAt", Timestamp.class, Procedure.GET_ALL.getName(), groupId, parentId);
+        return getModifiedAtAsync(groupId, parentId).join();
     }
 
     @Override
     public void loadExpired(Group group) {
-        List<Integer> groupIds = group.getUniqueIds();
-        for (int i = groupIds.size() - 1; i >= 0; i--) {
-            int groupId = groupIds.get(i);
-            List<Integer> parentIds = getParentIds(groupId);
-
-            for (int j = parentIds.size() - 1; j >= 0; j--) {
-                int parentId = parentIds.get(j);
-                if (isExpired(groupId, parentId))
-                    removeParent(groupId, parentId);
-            }
-        }
+        loadExpiredAsync(group).join();
     }
 
     private enum Procedure {

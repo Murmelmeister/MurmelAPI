@@ -24,11 +24,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public final class Database {
     private final Logger logger = LoggerFactory.getLogger(Database.class);
-    private HikariDataSource dataSource;
+    private volatile HikariDataSource dataSource;
     private final ReadWriteLock lock = new ReentrantReadWriteLock(true);
     private final Lock writeLock = lock.writeLock();
 
-    private final ExecutorService executor = Executors.newCachedThreadPool();
+    private final ExecutorService executor = Executors.newCachedThreadPool(runnable -> {
+        Thread thread = new Thread(runnable);
+        thread.setName("Database-Thread-" + thread.threadId());
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public void shutdownExecutor() {
         executor.shutdown();
@@ -61,6 +66,7 @@ public final class Database {
      * @param password The password for the database.
      */
     public void connect(String url, String user, String password) {
+        writeLock.lock();
         try {
             if (dataSource != null && !dataSource.isClosed())
                 dataSource.close();
@@ -69,6 +75,8 @@ public final class Database {
         } catch (Exception e) {
             logger.error("Error connecting to database", e);
             throw new DatabaseException("Database connecting error", e);
+        } finally {
+            writeLock.unlock();
         }
     }
 
@@ -95,12 +103,15 @@ public final class Database {
      * The lock is always released after the operation, regardless of its success.
      */
     public void disconnect() {
+        writeLock.lock();
         try {
             if (dataSource != null && !dataSource.isClosed())
                 dataSource.close();
         } catch (Exception e) {
             logger.error("Error closing the database", e);
             throw new DatabaseException("Database closing error", e);
+        } finally {
+            writeLock.unlock();
         }
     }
 

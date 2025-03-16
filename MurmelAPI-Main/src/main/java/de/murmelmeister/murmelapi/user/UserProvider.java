@@ -15,6 +15,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
@@ -56,73 +58,222 @@ public final class UserProvider implements User {
         database.callUpdate(Procedure.USERS_CREATE_CONSOLE.getName(), id);
     }
 
+    // --- Asynchronous Methods ---
+
+    public CompletableFuture<Integer> createOrGetUserAsync(String username) {
+        return getIdAsync(username).thenCompose(id -> {
+            if (id != -2) return CompletableFuture.completedFuture(id);
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    return MojangUtils.getUUID(username);
+                } catch (IOException | URISyntaxException e) {
+                    throw new CompletionException(e);
+                }
+            }).thenCompose(uuid -> createUserAsync(uuid, username)
+                    .thenCompose(v -> getIdAsync(uuid)));
+        });
+    }
+
+    public CompletableFuture<Integer> createOrGetUserAsync(UUID uuid) {
+        return getIdAsync(uuid).thenCompose(id -> {
+            if (id != -2) return CompletableFuture.completedFuture(id);
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    return MojangUtils.getUsername(uuid);
+                } catch (IOException | URISyntaxException e) {
+                    throw new CompletionException(e);
+                }
+            }).thenCompose(username -> createUserAsync(uuid, username)
+                    .thenCompose(v -> getIdAsync(uuid)));
+        });
+    }
+
+    public CompletableFuture<Boolean> existsUserAsync(UUID uuid) {
+        return database.asyncExists(Procedure.USERS_GET_ALL_BY_UUID.getName(), uuid.toString());
+    }
+
+    public CompletableFuture<Boolean> existsUserAsync(String username) {
+        return database.asyncExists(Procedure.USERS_GET_ALL_BY_USERNAME.getName(), username);
+    }
+
+    public CompletableFuture<Void> createUserAsync(UUID uuid, String username) {
+        return database.asyncUpdate(Procedure.USERS_CREATE.getName(), uuid.toString(), username);
+    }
+
+    public CompletableFuture<Void> deleteUserAsync(UUID uuid) {
+        return getUsernameAsync(uuid).thenCompose(username ->
+                database.asyncUpdate(Procedure.USERS_DELETE.getName(), uuid.toString())
+                        .thenRun(() -> {
+                            if (username != null) usernameCache.remove(username);
+                            if (uuidCache.get(uuid) != null) uuidCache.remove(uuid);
+                        })
+        );
+    }
+
+    public CompletableFuture<Integer> getIdAsync(UUID uuid) {
+        Integer cached = uuidCache.get(uuid);
+        if (cached != null) return CompletableFuture.completedFuture(cached);
+        return database.asyncQuery(-2, "ID", int.class, Procedure.USERS_GET_ALL_BY_UUID.getName(), uuid.toString())
+                .thenApply(id -> {
+                    if (id != -2) uuidCache.put(uuid, id, 1, TimeUnit.HOURS);
+                    return id;
+                });
+    }
+
+    public CompletableFuture<Integer> getIdAsync(String username) {
+        Integer cached = usernameCache.get(username);
+        if (cached != null) return CompletableFuture.completedFuture(cached);
+        return database.asyncQuery(-2, "ID", int.class, Procedure.USERS_GET_ALL_BY_USERNAME.getName(), username)
+                .thenApply(id -> {
+                    if (id != -2) usernameCache.put(username, id, 1, TimeUnit.HOURS);
+                    return id;
+                });
+    }
+
+    public CompletableFuture<UUID> getUniqueIdAsync(int userId) {
+        if (userId == -1) return CompletableFuture.completedFuture(null);
+        return database.asyncQuery(null, "MojangID", String.class, Procedure.USERS_GET_ALL_BY_ID.getName(), userId)
+                .thenApply(str -> str == null ? null : UUID.fromString(str));
+    }
+
+    public CompletableFuture<UUID> getUniqueIdAsync(String username) {
+        return getIdAsync(username).thenCompose(id ->
+                database.asyncQuery(null, "MojangID", String.class, Procedure.USERS_GET_ALL_BY_ID.getName(), id)
+                        .thenApply(str -> str == null ? null : UUID.fromString(str))
+        );
+    }
+
+    public CompletableFuture<String> getUsernameAsync(int userId) {
+        if (userId == -1) return CompletableFuture.completedFuture("CONSOLE");
+        return database.asyncQuery(null, "Username", String.class, Procedure.USERS_GET_ALL_BY_ID.getName(), userId);
+    }
+
+    public CompletableFuture<String> getUsernameAsync(UUID uuid) {
+        return getIdAsync(uuid).thenCompose(id ->
+                id == -1 ? CompletableFuture.completedFuture("CONSOLE") :
+                        database.asyncQuery(null, "Username", String.class, Procedure.USERS_GET_ALL_BY_ID.getName(), id)
+        );
+    }
+
+    public CompletableFuture<Void> renameAsync(int userId, String newUsername) {
+        return database.asyncUpdate(Procedure.USERS_RENAME.getName(), newUsername, userId);
+    }
+
+    public CompletableFuture<Void> renameAsync(UUID uuid, String newUsername) {
+        return getIdAsync(uuid).thenCompose(id -> database.asyncUpdate(Procedure.USERS_RENAME.getName(), newUsername, id));
+    }
+
+    public CompletableFuture<List<UUID>> getUniqueIdsAsync() {
+        return database.asyncQueryList(new LinkedList<>(), "MojangID", String.class, Procedure.USERS_GET_ALL.getName())
+                .thenApply(list -> list.parallelStream()
+                        .filter(Objects::nonNull)
+                        .map(UUID::fromString)
+                        .toList());
+    }
+
+    public CompletableFuture<List<String>> getUsernamesAsync() {
+        return database.asyncQueryList(new LinkedList<>(), "Username", String.class, Procedure.USERS_GET_ALL.getName())
+                .thenApply(list -> list.parallelStream().filter(Objects::nonNull).toList());
+    }
+
+    public CompletableFuture<Timestamp> getFirstJoinTimeAsync(int userId) {
+        return database.asyncQuery(null, "FirstJoinTime", Timestamp.class, Procedure.USERS_GET_ALL_BY_ID.getName(), userId);
+    }
+
+    public CompletableFuture<String> getFirstJoinDateAsync(int userId) {
+        return getFirstJoinTimeAsync(userId)
+                .thenApply(time -> time == null ? "never" : getDateFormat().format(time));
+    }
+
+    public CompletableFuture<Void> setFirstJoinTimeAsync(int userId) {
+        return getFirstJoinTimeAsync(userId).thenCompose(time -> {
+            if (time != null) return CompletableFuture.completedFuture(null);
+            return database.asyncUpdate(Procedure.USERS_SET_FIRST_JOIN.getName(), userId,
+                    new Timestamp(System.currentTimeMillis()).toString());
+        });
+    }
+
+    public CompletableFuture<Void> joinUserAsync(UUID uuid, String username) {
+        return getIdAsync(uuid).thenCompose(id -> {
+            if (id == -2) {
+                return createUserAsync(uuid, username)
+                        .thenCompose(v -> getIdAsync(uuid))
+                        .thenCompose(newId -> joinUserAsync(uuid, username));
+            }
+            return getUsernameAsync(id).thenCompose(currentUsername -> {
+                if (!currentUsername.equals(username)) {
+                    return renameAsync(id, username);
+                }
+                return CompletableFuture.completedFuture(null);
+            });
+        });
+    }
+
+    /*public CompletableFuture<Void> loadExpiredAsync() {
+        return CompletableFuture.allOf(
+                parent.loadExpiredAsync(this),
+                permission.loadExpiredAsync(this)
+        );
+    }*/
+
+    public CompletableFuture<UserParent> getParentAsync() {
+        return CompletableFuture.supplyAsync(() -> {
+            if (parent == null) {
+                parent = new UserParentProvider(database);
+            }
+            return parent;
+        });
+    }
+
+    public CompletableFuture<UserPermission> getPermissionAsync() {
+        return CompletableFuture.supplyAsync(() -> {
+            if (permission == null) {
+                permission = new UserPermissionProvider(database);
+            }
+            return permission;
+        });
+    }
+
+    // --- Synchronous Methods ---
+
     @Override
     public int createOrGetUser(String username) {
-        int id = getId(username);
-        if (id != -2) return id;
-        try {
-            UUID uuid = MojangUtils.getUUID(username);
-            createUser(uuid, username);
-            return getId(uuid);
-        } catch (IOException | URISyntaxException e) {
-            throw new RuntimeException("Couldn't find any profile with username: " + username);
-        }
+        return createOrGetUserAsync(username).join();
     }
 
     @Override
     public int createOrGetUser(UUID uuid) {
-        int id = getId(uuid);
-        if (id != -2) return id;
-        try {
-            String username = MojangUtils.getUsername(uuid);
-            createUser(uuid, username);
-            return getId(uuid);
-        } catch (IOException | URISyntaxException e) {
-            throw new RuntimeException("Couldn't find any profile with uuid: " + uuid);
-        }
+        return createOrGetUserAsync(uuid).join();
     }
 
     @Override
     public boolean existsUser(UUID uuid) {
-        return database.exists(Procedure.USERS_GET_ALL_BY_UUID.getName(), uuid.toString());
+        return existsUserAsync(uuid).join();
     }
 
     @Override
     public boolean existsUser(String username) {
-        return database.exists(Procedure.USERS_GET_ALL_BY_USERNAME.getName(), username);
+        return existsUserAsync(username).join();
     }
 
     @Override
     public void createUser(UUID uuid, String username) {
-        database.callUpdate(Procedure.USERS_CREATE.getName(), uuid.toString(), username);
+        createUserAsync(uuid, username).join();
     }
 
     @Override
     public void deleteUser(UUID uuid) {
-        String username = getUsername(uuid);
-        database.update(Procedure.USERS_DELETE.getName(), uuid.toString());
-        if (username != null) usernameCache.remove(username);
-        if (uuidCache.get(uuid) != null) uuidCache.remove(uuid);
+        deleteUserAsync(uuid).join();
     }
 
     @Override
     public int getId(UUID uuid) {
-        Integer id = uuidCache.get(uuid);
-        if (id == null) {
-            id = loadIdByUUID(uuid);
-            if (id != -2) uuidCache.put(uuid, id, 1, TimeUnit.HOURS);
-        }
-        return id;
+        return getIdAsync(uuid).join();
     }
 
     @Override
     public int getId(String username) {
-        Integer id = usernameCache.get(username);
-        if (id == null) {
-            id = loadIdByUsername(username);
-            if (id != -2) usernameCache.put(username, id, 1, TimeUnit.HOURS);
-        }
-        return id;
+        return getIdAsync(username).join();
     }
 
     private int loadIdByUUID(UUID uuid) {
@@ -135,79 +286,62 @@ public final class UserProvider implements User {
 
     @Override
     public UUID getUniqueId(int userId) {
-        return userId == -1 ? null : UUID.fromString(database.query(null, "MojangID", String.class, Procedure.USERS_GET_ALL_BY_ID.getName(), userId));
+        return userId == -1 ? null : getUniqueIdAsync(userId).join();
     }
 
     @Override
     public UUID getUniqueId(String username) {
-        int id = getId(username);
-        return UUID.fromString(database.query(null, "MojangID", String.class, Procedure.USERS_GET_ALL_BY_ID.getName(), id));
+        return getUniqueIdAsync(username).join();
     }
 
     @Override
     public String getUsername(int userId) {
-        return userId == -1 ? "CONSOLE" : database.query(null, "Username", String.class, Procedure.USERS_GET_ALL_BY_ID.getName(), userId);
+        return userId == -1 ? "CONSOLE" : getUsernameAsync(userId).join();
     }
 
     @Override
     public String getUsername(UUID uuid) {
-        int id = getId(uuid);
-        return id == -1 ? "CONSOLE" : database.query(null, "Username", String.class, Procedure.USERS_GET_ALL_BY_ID.getName(), id);
+        return getUsernameAsync(uuid).join();
     }
 
     @Override
     public void rename(int userId, String newUsername) {
-        database.callUpdate(Procedure.USERS_RENAME.getName(), newUsername, userId);
+        renameAsync(userId, newUsername).join();
     }
 
     @Override
     public void rename(UUID uuid, String newUsername) {
-        int id = getId(uuid);
-        database.callUpdate(Procedure.USERS_RENAME.getName(), newUsername, id);
+        renameAsync(uuid, newUsername).join();
     }
 
     @Override
     public List<UUID> getUniqueIds() {
-        return database.queryList(new LinkedList<>(), "MojangID", String.class, Procedure.USERS_GET_ALL.getName())
-                .parallelStream()
-                .filter(Objects::nonNull)
-                .map(UUID::fromString)
-                .toList();
+        return getUniqueIdsAsync().join();
     }
 
     @Override
     public List<String> getUsernames() {
-        return database.queryList(new LinkedList<>(), "Username", String.class, Procedure.USERS_GET_ALL.getName())
-                .parallelStream()
-                .filter(Objects::nonNull)
-                .toList();
+        return getUsernamesAsync().join();
     }
 
     @Override
     public Timestamp getFirstJoinTime(int userId) {
-        return database.query(null, "FirstJoinTime", Timestamp.class, Procedure.USERS_GET_ALL_BY_ID.getName(), userId);
+        return getFirstJoinTimeAsync(userId).join();
     }
 
     @Override
     public String getFirstJoinDate(int userId) {
-        Timestamp time = getFirstJoinTime(userId);
-        return time == null ? "never" : getDateFormat().format(time);
+        return getFirstJoinDateAsync(userId).join();
     }
 
     @Override
     public void setFirstJoinTime(int userId) {
-        if (getFirstJoinTime(userId) != null) return;
-        database.callUpdate(Procedure.USERS_SET_FIRST_JOIN.getName(), userId, new Timestamp(System.currentTimeMillis()).toString());
+        setFirstJoinTimeAsync(userId).join();
     }
 
     @Override
     public void joinUser(UUID uuid, String username) {
-        int id = getId(uuid);
-        if (id == -2) {
-            createUser(uuid, username);
-            id = getId(uuid);
-        }
-        if (!getUsername(id).equals(username)) rename(id, username);
+        joinUserAsync(uuid, username).join();
     }
 
     @Override
@@ -218,14 +352,12 @@ public final class UserProvider implements User {
 
     @Override
     public UserParent getParent() {
-        if (parent == null) parent = new UserParentProvider(database);
-        return parent;
+        return getParentAsync().join();
     }
 
     @Override
     public UserPermission getPermission() {
-        if (permission == null) permission = new UserPermissionProvider(database);
-        return permission;
+        return getPermissionAsync().join();
     }
 
     private enum Procedure {
