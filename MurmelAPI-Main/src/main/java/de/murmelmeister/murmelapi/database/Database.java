@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.database;
 
+import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import de.murmelmeister.murmelapi.exceptions.DatabaseException;
 import org.slf4j.Logger;
@@ -10,6 +11,9 @@ import java.net.URL;
 import java.sql.*;
 import java.sql.Date;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -20,9 +24,33 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public final class Database {
     private final Logger logger = LoggerFactory.getLogger(Database.class);
-    private final HikariDataSource dataSource = new HikariDataSource();
+    private HikariDataSource dataSource;
     private final ReadWriteLock lock = new ReentrantReadWriteLock(true);
     private final Lock writeLock = lock.writeLock();
+
+    private final ExecutorService executor = Executors.newCachedThreadPool();
+
+    public void shutdownExecutor() {
+        executor.shutdown();
+    }
+
+    private HikariConfig getHikariConfig(String driverClassName, String url, String user, String password) {
+        HikariConfig config = new HikariConfig();
+
+        config.setDriverClassName(driverClassName);
+        config.setJdbcUrl(url);
+        config.setUsername(user);
+        config.setPassword(password);
+
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
+        config.setConnectionTimeout(30000);
+        config.setIdleTimeout(60000);
+        config.setMaxLifetime(1800000);
+
+        return config;
+    }
+
 
     /**
      * Connects to the database using the provided URL, username and password.
@@ -33,16 +61,14 @@ public final class Database {
      * @param password The password for the database.
      */
     public void connect(String url, String user, String password) {
-        writeLock.lock();
         try {
-            dataSource.setJdbcUrl(url);
-            dataSource.setUsername(user);
-            dataSource.setPassword(password);
+            if (dataSource != null && !dataSource.isClosed())
+                dataSource.close();
+            HikariConfig config = getHikariConfig("com.mysql.cj.jdbc.Driver", url, user, password);
+            this.dataSource = new HikariDataSource(config);
         } catch (Exception e) {
             logger.error("Error connecting to database", e);
             throw new DatabaseException("Database connecting error", e);
-        } finally {
-            writeLock.unlock();
         }
     }
 
@@ -69,15 +95,12 @@ public final class Database {
      * The lock is always released after the operation, regardless of its success.
      */
     public void disconnect() {
-        writeLock.lock();
         try {
-            if (!dataSource.isClosed())
+            if (dataSource != null && !dataSource.isClosed())
                 dataSource.close();
         } catch (Exception e) {
             logger.error("Error closing the database", e);
             throw new DatabaseException("Database closing error", e);
-        } finally {
-            writeLock.unlock();
         }
     }
 
@@ -118,6 +141,10 @@ public final class Database {
         }
     }
 
+    public CompletableFuture<Void> asyncUpdate(String name, Object... objects) {
+        return CompletableFuture.runAsync(() -> callUpdate(name, objects), executor);
+    }
+
     /**
      * Creates a new database table if it does not already exist.
      *
@@ -153,6 +180,10 @@ public final class Database {
         return value;
     }
 
+    public <T> CompletableFuture<T> asyncQuery(T defaultValue, String label, Class<T> type, String name, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> query(defaultValue, label, type, name, objects), executor);
+    }
+
     /**
      * Executes a database query using a callable statement and populates the provided list
      * with the results. The method operates under a read lock to ensure thread safety during
@@ -178,6 +209,10 @@ public final class Database {
             throw new DatabaseException("Database query error", e);
         }
         return defaultList;
+    }
+
+    public <T> CompletableFuture<List<T>> asyncQueryList(List<T> defaultList, String label, Class<T> type, String name, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> queryList(defaultList, label, type, name, objects), executor);
     }
 
     /**
@@ -210,6 +245,10 @@ public final class Database {
         return defaultMap;
     }
 
+    public <V> CompletableFuture<Map<String, V>> asyncQueryMap(Map<String, V> defaultMap, Class<V> valueType, String name, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> queryMap(defaultMap, valueType, name, objects), executor);
+    }
+
     /**
      * Checks whether a record exists in the database for a given stored procedure name
      * and the provided parameters.
@@ -229,6 +268,10 @@ public final class Database {
             logger.error("Error executing exists: {}", name, e);
             throw new DatabaseException("Database retrieval error", e);
         }
+    }
+
+    public CompletableFuture<Boolean> asyncExists(String name, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> exists(name, objects), executor);
     }
 
     /**

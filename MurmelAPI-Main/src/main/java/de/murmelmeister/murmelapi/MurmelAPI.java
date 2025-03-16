@@ -69,6 +69,7 @@ public final class MurmelAPI {
      * It ensures proper disconnection and resource cleanup related to the database connection.
      */
     public static void disconnect() {
+        DATABASE.shutdownExecutor();
         DATABASE.disconnect();
     }
 
