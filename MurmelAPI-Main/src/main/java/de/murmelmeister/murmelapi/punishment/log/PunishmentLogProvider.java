@@ -42,7 +42,7 @@ public final class PunishmentLogProvider implements PunishmentLog {
 
     @Override
     public UUID addLogIp(int executorId, int typeId, InetAddress inetAddress, int reasonId) {
-        UUID logId = database.generateUniqueIdentifier(Procedure.CHECK_GENERATED_LOG_ID.getName());
+        UUID logId = UUID.randomUUID(); // database.generateUniqueIdentifier(Procedure.CHECK_GENERATED_LOG_ID.getName());
         long duration = reason.getDuration(reasonId, typeId);
         long time = duration == -1L ? duration : System.currentTimeMillis() + duration;
         database.callUpdate(Procedure.CREATE_LOG_IP.getName(), logId.toString(), typeId, inetAddress.getHostAddress(), time, reasonId, executorId, executorId);
@@ -51,7 +51,7 @@ public final class PunishmentLogProvider implements PunishmentLog {
 
     @Override
     public UUID addLogUser(int executorId, int typeId, int userId, InetAddress inetAddress, int reasonId) {
-        UUID logId = database.generateUniqueIdentifier(Procedure.CHECK_GENERATED_LOG_ID.getName());
+        UUID logId = UUID.randomUUID(); // database.generateUniqueIdentifier(Procedure.CHECK_GENERATED_LOG_ID.getName());
         long duration = reason.getDuration(reasonId, typeId);
         long time = duration == -1L ? duration : System.currentTimeMillis() + duration;
         database.callUpdate(Procedure.CREATE_LOG_USER.getName(), logId.toString(), typeId, userId, inetAddress.getHostAddress(), time, reasonId, executorId, executorId);
