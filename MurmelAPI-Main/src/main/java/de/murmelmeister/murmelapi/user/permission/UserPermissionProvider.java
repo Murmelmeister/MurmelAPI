@@ -1,13 +1,10 @@
 package de.murmelmeister.murmelapi.user.permission;
 
-import de.murmelmeister.murmelapi.MurmelAPI;
-import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.database.Database;
 
 import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public final class UserPermissionProvider implements UserPermission {
@@ -21,7 +18,9 @@ public final class UserPermissionProvider implements UserPermission {
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "UserID INT, Permission VARCHAR(200), PRIMARY KEY (UserID, Permission), " +
                                          "FOREIGN KEY (UserID) REFERENCES Users(ID), " +
-                                         "ExpiredTime BIGINT, " +
+                                         "ExpiredAt DATETIME, " +
+                                         "Archived TINYINT(1) DEFAULT 0, " +
+                                         "ArchivedAt DATETIME, " +
                                          "CreatedBy INT, FOREIGN KEY (CreatedBy) REFERENCES Users(ID), " +
                                          "CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
                                          "ModifiedBy INT, FOREIGN KEY (ModifiedBy) REFERENCES Users(ID), " +
@@ -37,7 +36,7 @@ public final class UserPermissionProvider implements UserPermission {
 
     public CompletableFuture<Void> addPermissionAsync(int executorId, int userId, String permission, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        return database.asyncUpdate(Procedure.CREATE.getName(), userId, permission, expired, executorId, executorId);
+        return database.asyncUpdate(Procedure.CREATE.getName(), userId, permission, new Timestamp(expired), executorId, executorId);
     }
 
     public CompletableFuture<Void> removePermissionAsync(int userId, String permission) {
@@ -52,18 +51,18 @@ public final class UserPermissionProvider implements UserPermission {
         return database.asyncQueryList(new LinkedList<>(), "Permission", String.class, Procedure.GET_BY_USER.getName(), userId);
     }
 
-    public CompletableFuture<Long> getExpiredTimeAsync(int userId, String permission) {
-        return database.asyncQuery(-2L, "ExpiredTime", long.class, Procedure.GET_ALL.getName(), userId, permission);
+    public CompletableFuture<Timestamp> getExpiredTimeAsync(int userId, String permission) {
+        return database.asyncQuery(null, "ExpiredTime", Timestamp.class, Procedure.GET_ALL.getName(), userId, permission);
     }
 
     public CompletableFuture<String> getExpiredDateAsync(int userId, String permission) {
         return getExpiredTimeAsync(userId, permission)
-                .thenApply(time -> time == -1 ? "never" : MurmelAPI.getDateFormat().format(time));
+                .thenApply(time -> time == null ? "never" : time.toString());
     }
 
     public CompletableFuture<String> setExpiredTimeAsync(int executorId, int userId, String permission, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        return database.asyncUpdate(Procedure.SET_EXPIRED_TIME.getName(), userId, permission, expired, executorId)
+        return database.asyncUpdate(Procedure.SET_EXPIRED_TIME.getName(), userId, permission, new Timestamp(expired), executorId)
                 .thenCompose(v -> getExpiredDateAsync(userId, permission));
     }
 
@@ -88,8 +87,8 @@ public final class UserPermissionProvider implements UserPermission {
         return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GET_ALL.getName(), userId, permission);
     }
 
-    public CompletableFuture<Void> loadExpiredAsync(User user) {
-        return CompletableFuture.runAsync(() -> {
+    public CompletableFuture<Void> loadExpiredAsync() {
+        /*return CompletableFuture.runAsync(() -> {
             List<UUID> userIds = user.getUniqueIds();
             for (int i = userIds.size() - 1; i >= 0; i--) {
                 int userId = user.getId(userIds.get(i));
@@ -101,7 +100,8 @@ public final class UserPermissionProvider implements UserPermission {
                     }
                 }
             }
-        });
+        });*/
+        return database.asyncUpdate(Procedure.UPDATE_ARCHIVED.getName());
     }
 
     // === Synchrone Wrapper (Interface-Implementierung) ===
@@ -132,7 +132,7 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     @Override
-    public long getExpiredTime(int userId, String permission) {
+    public Timestamp getExpiredTime(int userId, String permission) {
         return getExpiredTimeAsync(userId, permission).join();
     }
 
@@ -172,21 +172,27 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     @Override
-    public void loadExpired(User user) {
-        loadExpiredAsync(user).join();
+    public void loadExpired() {
+        loadExpiredAsync().join();
     }
 
     private enum Procedure {
-        CREATE("UserPermission_Create", "uid INT, perm VARCHAR(200), et BIGINT, created INT, modified INT",
-                "INSERT INTO [TABLE] (UserID,Permission,ExpiredTime,CreatedBy,ModifiedBy) VALUES (uid,perm,et,created,modified);"),
-        DELETE_PERMISSION("UserPermission_DeletePermission", "uid INT, perm VARCHAR(200)", "DELETE FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
-        DELETE_USER("UserPermission_DeleteUser", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
+        CREATE("UserPermission_Create", "uid INT, perm VARCHAR(200), et DATETIME, created INT, modified INT",
+                "INSERT INTO [TABLE] (UserID,Permission,ExpiredAt,CreatedBy,ModifiedBy) VALUES (uid,perm,et,created,modified);"),
+        DELETE_PERMISSION("UserPermission_DeletePermission", "uid INT, perm VARCHAR(200)",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP() WHERE UserID=uid AND Permission=perm;"),
+        DELETE_USER("UserPermission_DeleteUser", "uid INT",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP() WHERE UserID=uid;"),
         GET_ALL("UserPermission_GetAll", "uid INT, perm VARCHAR(200)", "SELECT * FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
         GET_BY_USER("UserPermission_GetByUser", "uid INT", "SELECT Permission FROM [TABLE] WHERE UserID=uid;"),
-        SET_EXPIRED_TIME("UserPermission_UpdateExpiredTime", "uid INT, perm VARCHAR(200), et BIGINT, modified INT",
-                "UPDATE [TABLE] SET ExpiredTime=et, ModifiedBy=modified WHERE UserID=uid AND Permission=perm;"),
+        GET_ACTIVE("UserPermission_GetActive", "uid INT, perm VARCHAR(200)",
+                "SELECT * FROM [TABLE] WHERE UserID=uid AND Permission=perm AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP()) AND Archived=0;"),
+        SET_EXPIRED_TIME("UserPermission_UpdateExpiredAt", "uid INT, perm VARCHAR(200), et DATETIME, modified INT",
+                "UPDATE [TABLE] SET ExpiredAt=et, ModifiedBy=modified WHERE UserID=uid AND Permission=perm;"),
         IS_EXPIRED("UserPermission_IsExpired", "uid INT, perm VARCHAR(200)",
-                "SELECT IF(ExpiredTime = -1, 0, ExpiredTime <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE UserID=uid AND Permission=perm;");
+                "SELECT IF(ExpiredAt IS NULL, 0, ExpiredAt <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
+        UPDATE_ARCHIVED("UserPermission_UpdateArchived", "",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=-1 WHERE Archived=0 AND ExpiredAt IS NOT NULL AND ExpiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
         private final String name;

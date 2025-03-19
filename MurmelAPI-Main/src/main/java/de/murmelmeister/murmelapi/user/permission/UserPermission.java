@@ -1,7 +1,5 @@
 package de.murmelmeister.murmelapi.user.permission;
 
-import de.murmelmeister.murmelapi.user.User;
-
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -59,7 +57,7 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @return The expiration time in milliseconds since the epoch for the specified permission and user.
      * Returns -1 if the permission has no expiration time.
      */
-    long getExpiredTime(int userId, String permission);
+    Timestamp getExpiredTime(int userId, String permission);
 
     /**
      * Retrieves the expiration date of a specific permission for a given user.
@@ -133,8 +131,6 @@ public sealed interface UserPermission permits UserPermissionProvider {
 
     /**
      * Loads all expired permissions for the specified user and performs operations related to the expired permissions.
-     *
-     * @param user The user whose expired permissions need to be loaded. This is the user object associated with the permissions.
      */
-    void loadExpired(User user);
+    void loadExpired();
 }

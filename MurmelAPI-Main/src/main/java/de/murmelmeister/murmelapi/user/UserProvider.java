@@ -347,7 +347,7 @@ public final class UserProvider implements User {
     @Override
     public void loadExpired() {
         parent.loadExpired(this);
-        permission.loadExpired(this);
+        permission.loadExpired();
     }
 
     @Override
