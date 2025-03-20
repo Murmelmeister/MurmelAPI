@@ -1,7 +1,5 @@
 package de.murmelmeister.murmelapi.group.permission;
 
-import de.murmelmeister.murmelapi.MurmelAPI;
-import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
 import de.murmelmeister.murmelapi.database.Database;
 
@@ -20,7 +18,9 @@ public final class GroupPermissionProvider implements GroupPermission {
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "GroupID INT, Permission VARCHAR(200), PRIMARY KEY (GroupID, Permission), " +
                                          "FOREIGN KEY (GroupID) REFERENCES Groups(ID), " +
-                                         "ExpiredTime BIGINT, " +
+                                         "ExpiredAt DATETIME, " +
+                                         "Archived TINYINT(1) DEFAULT 0, " +
+                                         "ArchivedAt DATETIME, " +
                                          "CreatedBy INT, FOREIGN KEY (CreatedBy) REFERENCES Users(ID), " +
                                          "CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
                                          "ModifiedBy INT, FOREIGN KEY (ModifiedBy) REFERENCES Users(ID), " +
@@ -35,39 +35,33 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     public CompletableFuture<Void> addPermissionAsync(int executorId, int groupId, String permission, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
         return database.asyncUpdate(Procedure.CREATE.getName(), groupId, permission, expired, executorId, executorId);
     }
 
-    public CompletableFuture<Void> removePermissionAsync(int groupId, String permission) {
-        return database.asyncUpdate(Procedure.DELETE_PERMISSION.getName(), groupId, permission);
+    public CompletableFuture<Void> removePermissionAsync(int executorId, int groupId, String permission) {
+        return database.asyncUpdate(Procedure.REMOVE_PERMISSION.getName(), groupId, permission, executorId);
     }
 
-    public CompletableFuture<Void> clearPermissionAsync(int groupId) {
-        return database.asyncUpdate(Procedure.DELETE_GROUP.getName(), groupId);
+    public CompletableFuture<Void> clearPermissionAsync(int executorId, int groupId) {
+        return database.asyncUpdate(Procedure.CLEAR_PERMISSION.getName(), groupId, executorId);
     }
 
     public CompletableFuture<List<String>> getPermissionsAsync(int groupId) {
-        return database.asyncQueryList(new LinkedList<>(), "Permission", String.class, Procedure.GET_BY_GROUP.getName(), groupId);
+        return database.asyncQueryList(new LinkedList<>(), "Permission", String.class, Procedure.GET_ACTIVE_PERMISSION.getName(), groupId);
     }
 
-    public CompletableFuture<Long> getExpiredTimeAsync(int groupId, String permission) {
-        return database.asyncQuery(-2L, "ExpiredTime", long.class, Procedure.GET_ALL.getName(), groupId, permission);
+    public CompletableFuture<Timestamp> getExpiredAtAsync(int groupId, String permission) {
+        return database.asyncQuery(null, "ExpiredAt", Timestamp.class, Procedure.GET_ALL.getName(), groupId, permission);
     }
 
-    public CompletableFuture<String> getExpiredDateAsync(int groupId, String permission) {
-        return getExpiredTimeAsync(groupId, permission)
-                .thenApply(time -> time == -1 ? "never" : MurmelAPI.getDateFormat().format(time));
-    }
-
-    public CompletableFuture<String> setExpiredTimeAsync(int executorId, int groupId, String permission, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        return database.asyncUpdate(Procedure.SET_EXPIRED_TIME.getName(), groupId, permission, expired, executorId)
-                .thenCompose(v -> getExpiredDateAsync(groupId, permission));
+    public CompletableFuture<Void> setExpiredAtAsync(int executorId, int groupId, String permission, long time) {
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), groupId, permission, expired, executorId);
     }
 
     public CompletableFuture<Boolean> isExpiredAsync(int groupId, String permission) {
-        return database.asyncQuery((byte) 0, "Expired", byte.class, Procedure.IS_EXPIRED.getName(), groupId, permission)
+        return database.asyncQuery((byte) 0, "Archived", byte.class, Procedure.IS_EXPIRED.getName(), groupId, permission)
                 .thenApply(b -> b == 1);
     }
 
@@ -87,8 +81,8 @@ public final class GroupPermissionProvider implements GroupPermission {
         return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GET_ALL.getName(), groupId, permission);
     }
 
-    public CompletableFuture<Void> loadExpiredAsync(Group group) {
-        return CompletableFuture.runAsync(() -> {
+    public CompletableFuture<Void> loadExpiredAsync() {
+        /*return CompletableFuture.runAsync(() -> {
             List<Integer> groupIds = group.getUniqueIds();
             for (int i = groupIds.size() - 1; i >= 0; i--) {
                 int groupId = groupIds.get(i);
@@ -101,9 +95,11 @@ public final class GroupPermissionProvider implements GroupPermission {
                     }
                 }
             }
-        });
+        });*/
+        return database.asyncUpdate(Procedure.UPDATE_ARCHIVED.getName());
     }
 
+    // TODO: Fix fix this method
     public CompletableFuture<List<String>> getAllPermissionsAsync(GroupParent groupParent, int groupId) {
         return CompletableFuture.supplyAsync(() -> {
             Set<String> permissions = new LinkedHashSet<>();
@@ -135,13 +131,13 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     @Override
-    public void removePermission(int groupId, String permission) {
-        removePermissionAsync(groupId, permission).join();
+    public void removePermission(int executorId, int groupId, String permission) {
+        removePermissionAsync(executorId, groupId, permission).join();
     }
 
     @Override
-    public void clearPermission(int groupId) {
-        clearPermissionAsync(groupId).join();
+    public void clearPermission(int executorId, int groupId) {
+        clearPermissionAsync(executorId, groupId).join();
     }
 
     @Override
@@ -155,18 +151,13 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     @Override
-    public long getExpiredTime(int groupId, String permission) {
-        return getExpiredTimeAsync(groupId, permission).join();
+    public Timestamp getExpiredAt(int groupId, String permission) {
+        return getExpiredAtAsync(groupId, permission).join();
     }
 
     @Override
-    public String getExpiredDate(int groupId, String permission) {
-        return getExpiredDateAsync(groupId, permission).join();
-    }
-
-    @Override
-    public String setExpiredTime(int executorId, int groupId, String permission, long time) {
-        return setExpiredTimeAsync(executorId, groupId, permission, time).join();
+    public void setExpiredAt(int executorId, int groupId, String permission, long time) {
+        setExpiredAtAsync(executorId, groupId, permission, time).join();
     }
 
     @Override
@@ -195,21 +186,26 @@ public final class GroupPermissionProvider implements GroupPermission {
     }
 
     @Override
-    public void loadExpired(Group group) {
-        loadExpiredAsync(group).join();
+    public void loadExpired() {
+        loadExpiredAsync().join();
     }
 
     private enum Procedure {
-        CREATE("GroupPermission_Create", "gid INT, perm VARCHAR(200), et BIGINT, created INT, modified INT",
-                "INSERT INTO [TABLE] (GroupID,Permission,ExpiredTime,CreatedBy,ModifiedBy) VALUES (gid,perm,et,created,modified);"),
-        DELETE_PERMISSION("GroupPermission_DeletePermission", "gid INT, perm VARCHAR(200)", "DELETE FROM [TABLE] WHERE GroupID=gid AND Permission=perm;"),
-        DELETE_GROUP("GroupPermission_DeleteGroup", "gid INT", "DELETE FROM [TABLE] WHERE GroupID=gid;"),
+        CREATE("GroupPermission_Create", "gid INT, perm VARCHAR(200), et DATETIME, created INT, modified INT",
+                "INSERT INTO [TABLE] (GroupID,Permission,ExpiredAt,CreatedBy,ModifiedBy) VALUES (gid,perm,et,created,modified);"),
+        REMOVE_PERMISSION("GroupPermission_Remove", "gid INT, perm VARCHAR(200), modified INT",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE GroupID=gid AND Permission=perm AND Archived=0;"),
+        CLEAR_PERMISSION("GroupPermission_Clear", "gid INT, modified INT",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE [TABLE] WHERE GroupID=gid AND Archived=0;"),
         GET_ALL("GroupPermission_GetAll", "gid INT, perm VARCHAR(200)", "SELECT * FROM [TABLE] WHERE GroupID=gid AND Permission=perm;"),
-        GET_BY_GROUP("GroupPermission_GetByGroup", "gid INT", "SELECT Permission FROM [TABLE] WHERE GroupID=gid;"),
-        SET_EXPIRED_TIME("GroupPermission_SetExpiredTime", "gid INT, perm VARCHAR(200), et BIGINT, modified INT",
-                "UPDATE [TABLE] SET ExpiredTime=et, ModifiedBy=modified WHERE GroupID=gid AND Permission=perm;"),
+        GET_ACTIVE_PERMISSION("GroupPermission_GetActive", "gid INT",
+                "SELECT Permission FROM [TABLE] WHERE GroupID=gid AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP()) AND Archived=0;"),
+        SET_EXPIRED_AT("GroupPermission_SetExpiredAt", "gid INT, perm VARCHAR(200), et DATETIME, modified INT",
+                "UPDATE [TABLE] SET ExpiredAt=et, ModifiedBy=modified WHERE GroupID=gid AND Permission=perm;"),
         IS_EXPIRED("GroupPermission_IsExpired", "gid INT, perm VARCHAR(200)",
-                "SELECT IF(ExpiredTime = -1, 0, ExpiredTime <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE GroupID=gid AND Permission=perm;");
+                "SELECT Archived FROM [TABLE] WHERE GroupID=gid AND Permission=perm;"),
+        UPDATE_ARCHIVED("GroupPermission_UpdateArchived", "",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=-1 WHERE Archived=0 AND ExpiredAt IS NOT NULL AND ExpiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
         private final String name;

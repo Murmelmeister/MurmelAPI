@@ -1,6 +1,5 @@
 package de.murmelmeister.murmelapi.group.permission;
 
-import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
 
 import java.sql.Timestamp;
@@ -32,17 +31,19 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
     /**
      * Removes a specific permission from a group.
      *
+     * @param executorId The ID of the executor initiating the permission addition.
      * @param groupId    The ID of the group from which the permission is to be removed.
      * @param permission The permission to be removed from the group.
      */
-    void removePermission(int groupId, String permission);
+    void removePermission(int executorId, int groupId, String permission);
 
     /**
      * Removes all permissions associated with the specified group.
      *
-     * @param groupId The unique identifier of the group whose permissions are to be cleared.
+     * @param executorId The ID of the executor initiating the permission addition.
+     * @param groupId    The unique identifier of the group whose permissions are to be cleared.
      */
-    void clearPermission(int groupId);
+    void clearPermission(int executorId, int groupId);
 
     /**
      * Retrieves a list of permissions associated with a specified group ID.
@@ -67,19 +68,9 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      *
      * @param groupId    The ID of the group for which the permission expiration time is being retrieved.
      * @param permission The permission whose expiration time is being retrieved.
-     * @return The expiration time in milliseconds since epoch. Returns -1 if the permission has no expiration time, or -2 if the permission does not exist.
+     * @return A {@code Timestamp} object representing the expiration date and time of the association.
      */
-    long getExpiredTime(int groupId, String permission);
-
-    /**
-     * Retrieves the expiration date of a specific permission for a given group.
-     * If the permission does not expire, the method will return "never".
-     *
-     * @param groupId    The ID of the group associated with the permission.
-     * @param permission The specific permission to retrieve the expiration date for.
-     * @return A string representation of the expiration date. Returns "never" if the permission does not expire.
-     */
-    String getExpiredDate(int groupId, String permission);
+    Timestamp getExpiredAt(int groupId, String permission);
 
     /**
      * Sets the expiration time for a specific permission associated with a group.
@@ -89,9 +80,8 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param groupId    The ID of the group associated with the permission.
      * @param permission The name of the permission whose expiration time is being set.
      * @param time       The expiration time in milliseconds from the current time; use -1 for no expiration.
-     * @return A string representation of the new expiration date, or "never" if no expiration is set.
      */
-    String setExpiredTime(int executorId, int groupId, String permission, long time);
+    void setExpiredAt(int executorId, int groupId, String permission, long time);
 
     /**
      * Determines whether a specified permission for a given group is expired.
@@ -144,8 +134,6 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
     /**
      * Loads all expired permissions or entities associated with a given group
      * into the system for further processing or cleanup.
-     *
-     * @param group The group for which expired permissions or entities will be loaded.
      */
-    void loadExpired(Group group);
+    void loadExpired();
 }
