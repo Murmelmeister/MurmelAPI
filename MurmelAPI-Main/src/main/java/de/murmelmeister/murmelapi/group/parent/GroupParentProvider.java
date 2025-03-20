@@ -1,6 +1,5 @@
 package de.murmelmeister.murmelapi.group.parent;
 
-import de.murmelmeister.murmelapi.MurmelAPI;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.database.Database;
 
@@ -22,7 +21,9 @@ public final class GroupParentProvider implements GroupParent {
         database.createTable(TABLE_NAME, "GroupID INT, ParentID INT, PRIMARY KEY (GroupID, ParentID), " +
                                          "FOREIGN KEY (GroupID) REFERENCES Groups(ID), " +
                                          "FOREIGN KEY (ParentID) REFERENCES Groups(ID), " +
-                                         "ExpiredTime BIGINT, " +
+                                         "ExpiredAt DATETIME, " +
+                                         "Archived TINYINT(1) DEFAULT 0, " +
+                                         "ArchivedAt DATETIME, " +
                                          "CreatedBy INT, FOREIGN KEY (CreatedBy) REFERENCES Users(ID), " +
                                          "CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
                                          "ModifiedBy INT, FOREIGN KEY (ModifiedBy) REFERENCES Users(ID), " +
@@ -37,20 +38,20 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     public CompletableFuture<Void> addParentAsync(int executorId, int groupId, int parentId, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
         return database.asyncUpdate(Procedure.CREATE.getName(), groupId, parentId, expired, executorId, executorId);
     }
 
-    public CompletableFuture<Void> removeParentAsync(int groupId, int parentId) {
-        return database.asyncUpdate(Procedure.DELETE_PARENT.getName(), groupId, parentId);
+    public CompletableFuture<Void> removeParentAsync(int executorId, int groupId, int parentId) {
+        return database.asyncUpdate(Procedure.REMOVE_PARENT.getName(), groupId, parentId, executorId);
     }
 
-    public CompletableFuture<Void> clearParentAsync(int groupId) {
-        return database.asyncUpdate(Procedure.DELETE_GROUP.getName(), groupId);
+    public CompletableFuture<Void> clearParentAsync(int executorId, int groupId) {
+        return database.asyncUpdate(Procedure.CLEAR_PARENT.getName(), groupId, executorId);
     }
 
     public CompletableFuture<List<Integer>> getParentIdsAsync(int groupId) {
-        return database.asyncQueryList(new LinkedList<>(), "ParentID", int.class, Procedure.GET_BY_USER.getName(), groupId);
+        return database.asyncQueryList(new LinkedList<>(), "ParentID", int.class, Procedure.GET_ACTIVE_PARENT.getName(), groupId);
     }
 
     public CompletableFuture<List<String>> getParentNamesAsync(Group group, int groupId) {
@@ -59,23 +60,17 @@ public final class GroupParentProvider implements GroupParent {
         );
     }
 
-    public CompletableFuture<Long> getExpiredTimeAsync(int groupId, int parentId) {
-        return database.asyncQuery(-2L, "ExpiredTime", long.class, Procedure.GET_ALL.getName(), groupId, parentId);
+    public CompletableFuture<Timestamp> getExpiredAtAsync(int groupId, int parentId) {
+        return database.asyncQuery(null, "ExpiredAt", Timestamp.class, Procedure.GET_ALL.getName(), groupId, parentId);
     }
 
-    public CompletableFuture<String> getExpiredDateAsync(int groupId, int parentId) {
-        return getExpiredTimeAsync(groupId, parentId)
-                .thenApply(time -> time == -1 ? "never" : MurmelAPI.getDateFormat().format(time));
-    }
-
-    public CompletableFuture<String> setExpiredTimeAsync(int executorId, int groupId, int parentId, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        return database.asyncUpdate(Procedure.SET_EXPIRED_TIME.getName(), groupId, parentId, expired, executorId)
-                .thenCompose(v -> getExpiredDateAsync(groupId, parentId));
+    public CompletableFuture<Void> setExpiredAtAsync(int executorId, int groupId, int parentId, long time) {
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), groupId, parentId, expired, executorId);
     }
 
     public CompletableFuture<Boolean> isExpiredAsync(int groupId, int parentId) {
-        return database.asyncQuery((byte) 0, "Expired", byte.class, Procedure.IS_EXPIRED.getName(), groupId, parentId)
+        return database.asyncQuery((byte) 0, "Archived", byte.class, Procedure.IS_EXPIRED.getName(), groupId, parentId)
                 .thenApply(b -> b == 1);
     }
 
@@ -95,8 +90,8 @@ public final class GroupParentProvider implements GroupParent {
         return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GET_ALL.getName(), groupId, parentId);
     }
 
-    public CompletableFuture<Void> loadExpiredAsync(Group group) {
-        return CompletableFuture.runAsync(() -> {
+    public CompletableFuture<Void> loadExpiredAsync() {
+        /*return CompletableFuture.runAsync(() -> {
             List<Integer> groupIds = group.getUniqueIds();
             for (int i = groupIds.size() - 1; i >= 0; i--) {
                 int groupId = groupIds.get(i);
@@ -107,7 +102,8 @@ public final class GroupParentProvider implements GroupParent {
                         removeParentAsync(groupId, parentId).join();
                 }
             }
-        });
+        });*/
+        return database.asyncUpdate(Procedure.UPDATE_ARCHIVED.getName());
     }
 
     // === Synchrone Wrapper (Interface-Implementierung) ===
@@ -123,13 +119,13 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     @Override
-    public void removeParent(int groupId, int parentId) {
-        removeParentAsync(groupId, parentId).join();
+    public void removeParent(int executorId, int groupId, int parentId) {
+        removeParentAsync(executorId, groupId, parentId).join();
     }
 
     @Override
-    public void clearParent(int groupId) {
-        clearParentAsync(groupId).join();
+    public void clearParent(int executorId, int groupId) {
+        clearParentAsync(executorId, groupId).join();
     }
 
     @Override
@@ -143,18 +139,13 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     @Override
-    public long getExpiredTime(int groupId, int parentId) {
-        return getExpiredTimeAsync(groupId, parentId).join();
+    public Timestamp getExpiredAt(int groupId, int parentId) {
+        return getExpiredAtAsync(groupId, parentId).join();
     }
 
     @Override
-    public String getExpiredDate(int groupId, int parentId) {
-        return getExpiredDateAsync(groupId, parentId).join();
-    }
-
-    @Override
-    public String setExpiredTime(int executorId, int groupId, int parentId, long time) {
-        return setExpiredTimeAsync(executorId, groupId, parentId, time).join();
+    public void setExpiredAt(int executorId, int groupId, int parentId, long time) {
+        setExpiredAtAsync(executorId, groupId, parentId, time).join();
     }
 
     @Override
@@ -183,21 +174,26 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     @Override
-    public void loadExpired(Group group) {
-        loadExpiredAsync(group).join();
+    public void loadExpired() {
+        loadExpiredAsync().join();
     }
 
     private enum Procedure {
-        CREATE("GroupParent_Create", "gid INT, pid INT, et BIGINT, created INT, modified INT",
-                "INSERT INTO [TABLE] (GroupID,ParentID,ExpiredTime,CreatedBy,ModifiedBy) VALUES (gid,pid,et,created,modified);"),
-        DELETE_PARENT("GroupParent_DeleteParent", "gid INT, pid INT", "DELETE FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;"),
-        DELETE_GROUP("GroupParent_DeleteGroup", "gid INT", "DELETE FROM [TABLE] WHERE GroupID=gid;"),
+        CREATE("GroupParent_Create", "gid INT, pid INT, et DATETIME, created INT, modified INT",
+                "INSERT INTO [TABLE] (GroupID,ParentID,ExpiredAt,CreatedBy,ModifiedBy) VALUES (gid,pid,et,created,modified);"),
+        REMOVE_PARENT("GroupParent_Remove", "gid INT, pid INT, modified INT",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE GroupID=gid AND ParentID=pid AND Archived=0;"),
+        CLEAR_PARENT("GroupParent_Clear", "gid INT, modified INT",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE GroupID=gid AND Archived=0;"),
         GET_ALL("GroupParent_GetAll", "gid INT, pid INT", "SELECT * FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;"),
-        GET_BY_USER("GroupParent_GetByUser", "gid INT", "SELECT ParentID FROM [TABLE] WHERE GroupID=gid;"),
-        SET_EXPIRED_TIME("GroupParent_SetExpiredTime", "gid INT, pid INT, et BIGINT, modified INT",
-                "UPDATE [TABLE] SET ExpiredTime=et, ModifiedBy=modified WHERE GroupID=gid AND ParentID=pid;"),
+        GET_ACTIVE_PARENT("GroupParent_GetActive", "gid INT",
+                "SELECT ParentID FROM [TABLE] WHERE GroupID=gid AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP()) AND Archived=0;"),
+        SET_EXPIRED_AT("GroupParent_SetExpiredAt", "gid INT, pid INT, et DATETIME, modified INT",
+                "UPDATE [TABLE] SET ExpiredAt=et, ModifiedBy=modified WHERE GroupID=gid AND ParentID=pid;"),
         IS_EXPIRED("GroupParent_IsExpired", "gid INT, pid INT",
-                "SELECT IF(ExpiredTime = -1, 0, ExpiredTime <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;");
+                "SELECT Archived FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;"),
+        UPDATE_ARCHIVED("GroupParent_UpdateArchived", "",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=-1 WHERE Archived=0 AND ExpiredAt IS NOT NULL AND ExpiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
         private final String name;

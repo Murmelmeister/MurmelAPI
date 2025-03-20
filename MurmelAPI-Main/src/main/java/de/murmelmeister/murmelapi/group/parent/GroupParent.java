@@ -33,17 +33,19 @@ public sealed interface GroupParent permits GroupParentProvider {
     /**
      * Removes the association between a specified parent and a group.
      *
+     * @param executorId The unique identifier of the user performing this action.
      * @param groupId  The unique identifier of the group whose parent should be removed.
      * @param parentId The unique identifier of the parent to be removed.
      */
-    void removeParent(int groupId, int parentId);
+    void removeParent(int executorId, int groupId, int parentId);
 
     /**
      * Removes all parent associations for a specified group.
      *
+     * @param executorId The unique identifier of the user performing this action.
      * @param groupId The unique identifier of the group whose parent associations should be cleared.
      */
-    void clearParent(int groupId);
+    void clearParent(int executorId, int groupId);
 
     /**
      * Retrieves the list of IDs of all parent associations for the specified group.
@@ -67,21 +69,9 @@ public sealed interface GroupParent permits GroupParentProvider {
      *
      * @param groupId  The unique identifier of the group.
      * @param parentId The unique identifier of the parent.
-     * @return The expiration time of the association, represented as a long value in milliseconds
-     * since the epoch. If the association does not have an expiration, it may return a
-     * specific value to indicate such a case (e.g., -1).
+     * @return A {@code Timestamp} object representing the expiration date and time of the association.
      */
-    long getExpiredTime(int groupId, int parentId);
-
-    /**
-     * Retrieves the expiration date of the association between the specified group and parent.
-     *
-     * @param groupId  The unique identifier of the group.
-     * @param parentId The unique identifier of the parent.
-     * @return A string representing the expiration date of the association.
-     * If no expiration is set, it may return a specific value indicating such a case.
-     */
-    String getExpiredDate(int groupId, int parentId);
+    Timestamp getExpiredAt(int groupId, int parentId);
 
     /**
      * Updates the expiration time for the association between the specified group and parent.
@@ -91,9 +81,8 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param groupId    The unique identifier of the group whose parent association is being updated.
      * @param parentId   The unique identifier of the parent whose association expiration is being updated.
      * @param time       The new expiration time in milliseconds since the epoch. Use -1 for no expiration.
-     * @return A string representing the result of the operation, such as confirmation or error details.
      */
-    String setExpiredTime(int executorId, int groupId, int parentId, long time);
+    void setExpiredAt(int executorId, int groupId, int parentId, long time);
 
     /**
      * Determines if the association between the specified group and parent is expired.
@@ -147,9 +136,6 @@ public sealed interface GroupParent permits GroupParentProvider {
      * Loads all expired parent associations for the specified group. This operation is
      * performed on behalf of a specific user, and it handles any necessary processing related
      * to expired associations within the given group.
-     *
-     * @param group The instance of the {@code Group} representing the group for which
-     *              expired parent associations should be loaded.
      */
-    void loadExpired(Group group);
+    void loadExpired();
 }
