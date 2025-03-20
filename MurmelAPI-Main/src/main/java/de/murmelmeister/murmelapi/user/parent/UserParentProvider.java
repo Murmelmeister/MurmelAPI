@@ -39,7 +39,7 @@ public final class UserParentProvider implements UserParent {
     }
 
     public CompletableFuture<Void> addParentAsync(int executorId, int userId, int parentId, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
         return database.asyncUpdate(Procedure.CREATE.getName(), userId, parentId, expired, executorId, executorId);
     }
 
@@ -77,7 +77,7 @@ public final class UserParentProvider implements UserParent {
     }
 
     public CompletableFuture<Void> setExpiredAtAsync(int executorId, int userId, int parentId, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
         return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), userId, parentId, expired, executorId);
     }
 
