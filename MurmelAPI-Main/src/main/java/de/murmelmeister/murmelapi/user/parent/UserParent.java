@@ -1,7 +1,6 @@
 package de.murmelmeister.murmelapi.user.parent;
 
 import de.murmelmeister.murmelapi.group.Group;
-import de.murmelmeister.murmelapi.user.User;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -33,17 +32,19 @@ public sealed interface UserParent permits UserParentProvider {
     /**
      * Removes the parent-child relationship between a specified user and parent.
      *
-     * @param userId   The ID of the user whose parent relationship is being removed.
-     * @param parentId The ID of the parent to be removed from the user.
+     * @param executorId The ID of the user performing the log action.
+     * @param userId     The ID of the user whose parent relationship is being removed.
+     * @param parentId   The ID of the parent to be removed from the user.
      */
-    void removeParent(int userId, int parentId);
+    void removeParent(int executorId, int userId, int parentId);
 
     /**
      * Clears all parent-child relationships for the specified user.
      *
-     * @param userId The ID of the user whose parent relationships are being cleared.
+     * @param executorId The ID of the user performing the log action.
+     * @param userId     The ID of the user whose parent relationships are being cleared.
      */
-    void clearParent(int userId);
+    void clearParent(int executorId, int userId);
 
     /**
      * Retrieves the list of parent IDs associated with the specified user.
@@ -79,16 +80,7 @@ public sealed interface UserParent permits UserParentProvider {
      * @return The expiration timestamp of the relationship in milliseconds since the epoch.
      * Returns -1 if the relationship does not expire.
      */
-    long getExpiredTime(int userId, int parentId);
-
-    /**
-     * Retrieves the formatted expiration date of the relationship between the specified user and parent.
-     *
-     * @param userId   The ID of the user whose relationship expiration date is being retrieved.
-     * @param parentId The ID of the parent involved in the relationship.
-     * @return A string representation of the expiration date of the relationship in a human-readable format.
-     */
-    String getExpiredDate(int userId, int parentId);
+    Timestamp getExpiredAt(int userId, int parentId);
 
     /**
      * Sets the expiration time for the relationship between a specified user and parent.
@@ -98,9 +90,8 @@ public sealed interface UserParent permits UserParentProvider {
      * @param parentId   The ID of the parent associated with the user.
      * @param time       The new expiration timestamp for the relationship in milliseconds since the epoch.
      *                   Use -1 for a relationship that does not expire.
-     * @return A string message indicating the result of the operation.
      */
-    String setExpiredTime(int executorId, int userId, int parentId, long time);
+    void setExpiredTime(int executorId, int userId, int parentId, long time);
 
     /**
      * Checks if the relationship between a specified user and parent has expired.
@@ -152,8 +143,6 @@ public sealed interface UserParent permits UserParentProvider {
 
     /**
      * Loads and processes the expired parent-child relationships for a given user.
-     *
-     * @param user The user for whom expired relationships are to be loaded.
      */
-    void loadExpired(User user);
+    void loadExpired();
 }
