@@ -29,17 +29,19 @@ public sealed interface UserPermission permits UserPermissionProvider {
     /**
      * Removes a specific permission from a user.
      *
+     * @param executorId The unique identifier for the log entry of the operation.
      * @param userId     The unique identifier of the user from whom the permission will be removed.
      * @param permission The permission string to be removed from the user.
      */
-    void removePermission(int userId, String permission);
+    void removePermission(int executorId, int userId, String permission);
 
     /**
      * Clears all permissions associated with a specific user.
      *
+     * @param executorId The unique identifier for the log entry of the operation.
      * @param userId The unique identifier of the user whose permissions will be cleared.
      */
-    void clearPermission(int userId);
+    void clearPermission(int executorId, int userId);
 
     /**
      * Retrieves a list of permissions associated with a specific user.
@@ -57,18 +59,7 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @return The expiration time in milliseconds since the epoch for the specified permission and user.
      * Returns -1 if the permission has no expiration time.
      */
-    Timestamp getExpiredTime(int userId, String permission);
-
-    /**
-     * Retrieves the expiration date of a specific permission for a given user.
-     * The expiration date is returned as a formatted string representation.
-     *
-     * @param userId     The unique identifier of the user.
-     * @param permission The permission for which the expiration date is being retrieved.
-     * @return A string representation of the expiration date for the specified user and permission.
-     * Returns an empty string if the permission has no expiration date.
-     */
-    String getExpiredDate(int userId, String permission);
+    Timestamp getExpiredAt(int userId, String permission);
 
     /**
      * Sets the expiration time for a specific permission associated with a user.
@@ -78,9 +69,8 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * @param userId     The unique identifier of the user.
      * @param permission The permission for which the expiration time will be set.
      * @param time       The expiration time in milliseconds since the epoch. Use -1 for no expiration.
-     * @return A string indicating the status of the operation, such as success or an error message.
      */
-    String setExpiredTime(int executorId, int userId, String permission, long time);
+    void setExpiredAt(int executorId, int userId, String permission, long time);
 
     /**
      * Checks if a specific permission for a given user has expired.

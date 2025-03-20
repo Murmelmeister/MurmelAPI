@@ -31,7 +31,7 @@ public final class UserPermissionProvider implements UserPermission {
     // === Asynchrone API-Methoden ===
 
     public CompletableFuture<Boolean> existsPermissionAsync(int userId, String permission) {
-        return database.asyncExists(Procedure.GET_ALL.getName(), userId, permission);
+        return database.asyncExists(Procedure.GET_DATA.getName(), userId, permission);
     }
 
     public CompletableFuture<Void> addPermissionAsync(int executorId, int userId, String permission, long time) {
@@ -39,52 +39,46 @@ public final class UserPermissionProvider implements UserPermission {
         return database.asyncUpdate(Procedure.CREATE.getName(), userId, permission, new Timestamp(expired), executorId, executorId);
     }
 
-    public CompletableFuture<Void> removePermissionAsync(int userId, String permission) {
-        return database.asyncUpdate(Procedure.DELETE_PERMISSION.getName(), userId, permission);
+    public CompletableFuture<Void> removePermissionAsync(int executorId, int userId, String permission) {
+        return database.asyncUpdate(Procedure.REMOVE_PERMISSION.getName(), userId, permission, executorId);
     }
 
-    public CompletableFuture<Void> clearPermissionAsync(int userId) {
-        return database.asyncUpdate(Procedure.DELETE_USER.getName(), userId);
+    public CompletableFuture<Void> clearPermissionAsync(int executorId, int userId) {
+        return database.asyncUpdate(Procedure.CLEAR_PERMISSION.getName(), userId, executorId);
     }
 
     public CompletableFuture<List<String>> getPermissionsAsync(int userId) {
-        return database.asyncQueryList(new LinkedList<>(), "Permission", String.class, Procedure.GET_BY_USER.getName(), userId);
+        return database.asyncQueryList(new LinkedList<>(), "Permission", String.class, Procedure.GET_ACTIVE_PERMISSION.getName(), userId);
     }
 
-    public CompletableFuture<Timestamp> getExpiredTimeAsync(int userId, String permission) {
-        return database.asyncQuery(null, "ExpiredTime", Timestamp.class, Procedure.GET_ALL.getName(), userId, permission);
+    public CompletableFuture<Timestamp> getExpiredAtAsync(int userId, String permission) {
+        return database.asyncQuery(null, "ExpiredAt", Timestamp.class, Procedure.GET_DATA.getName(), userId, permission);
     }
 
-    public CompletableFuture<String> getExpiredDateAsync(int userId, String permission) {
-        return getExpiredTimeAsync(userId, permission)
-                .thenApply(time -> time == null ? "never" : time.toString());
-    }
-
-    public CompletableFuture<String> setExpiredTimeAsync(int executorId, int userId, String permission, long time) {
+    public CompletableFuture<Void> setExpiredAtAsync(int executorId, int userId, String permission, long time) {
         long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        return database.asyncUpdate(Procedure.SET_EXPIRED_TIME.getName(), userId, permission, new Timestamp(expired), executorId)
-                .thenCompose(v -> getExpiredDateAsync(userId, permission));
+        return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), userId, permission, new Timestamp(expired), executorId);
     }
 
     public CompletableFuture<Boolean> isExpiredAsync(int userId, String permission) {
-        return database.asyncQuery((byte) 0, "Expired", byte.class, Procedure.IS_EXPIRED.getName(), userId, permission)
+        return database.asyncQuery((byte) 0, "Archived", byte.class, Procedure.IS_EXPIRED.getName(), userId, permission)
                 .thenApply(b -> b == 1);
     }
 
     public CompletableFuture<Integer> getCreatedByAsync(int userId, String permission) {
-        return database.asyncQuery(-2, "CreatedBy", int.class, Procedure.GET_ALL.getName(), userId, permission);
+        return database.asyncQuery(-2, "CreatedBy", int.class, Procedure.GET_DATA.getName(), userId, permission);
     }
 
     public CompletableFuture<Timestamp> getCreatedAtAsync(int userId, String permission) {
-        return database.asyncQuery(null, "CreatedAt", Timestamp.class, Procedure.GET_ALL.getName(), userId, permission);
+        return database.asyncQuery(null, "CreatedAt", Timestamp.class, Procedure.GET_DATA.getName(), userId, permission);
     }
 
     public CompletableFuture<Integer> getModifiedByAsync(int userId, String permission) {
-        return database.asyncQuery(-2, "ModifiedBy", int.class, Procedure.GET_ALL.getName(), userId, permission);
+        return database.asyncQuery(-2, "ModifiedBy", int.class, Procedure.GET_DATA.getName(), userId, permission);
     }
 
     public CompletableFuture<Timestamp> getModifiedAtAsync(int userId, String permission) {
-        return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GET_ALL.getName(), userId, permission);
+        return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GET_DATA.getName(), userId, permission);
     }
 
     public CompletableFuture<Void> loadExpiredAsync() {
@@ -117,13 +111,13 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     @Override
-    public void removePermission(int userId, String permission) {
-        removePermissionAsync(userId, permission).join();
+    public void removePermission(int executorId, int userId, String permission) {
+        removePermissionAsync(executorId, userId, permission).join();
     }
 
     @Override
-    public void clearPermission(int userId) {
-        clearPermissionAsync(userId).join();
+    public void clearPermission(int executorId, int userId) {
+        clearPermissionAsync(executorId, userId).join();
     }
 
     @Override
@@ -132,18 +126,13 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     @Override
-    public Timestamp getExpiredTime(int userId, String permission) {
-        return getExpiredTimeAsync(userId, permission).join();
+    public Timestamp getExpiredAt(int userId, String permission) {
+        return getExpiredAtAsync(userId, permission).join();
     }
 
     @Override
-    public String getExpiredDate(int userId, String permission) {
-        return getExpiredDateAsync(userId, permission).join();
-    }
-
-    @Override
-    public String setExpiredTime(int executorId, int userId, String permission, long time) {
-        return setExpiredTimeAsync(executorId, userId, permission, time).join();
+    public void setExpiredAt(int executorId, int userId, String permission, long time) {
+        setExpiredAtAsync(executorId, userId, permission, time).join();
     }
 
     @Override
@@ -179,18 +168,17 @@ public final class UserPermissionProvider implements UserPermission {
     private enum Procedure {
         CREATE("UserPermission_Create", "uid INT, perm VARCHAR(200), et DATETIME, created INT, modified INT",
                 "INSERT INTO [TABLE] (UserID,Permission,ExpiredAt,CreatedBy,ModifiedBy) VALUES (uid,perm,et,created,modified);"),
-        DELETE_PERMISSION("UserPermission_DeletePermission", "uid INT, perm VARCHAR(200)",
-                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP() WHERE UserID=uid AND Permission=perm;"),
-        DELETE_USER("UserPermission_DeleteUser", "uid INT",
-                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP() WHERE UserID=uid;"),
-        GET_ALL("UserPermission_GetAll", "uid INT, perm VARCHAR(200)", "SELECT * FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
-        GET_BY_USER("UserPermission_GetByUser", "uid INT", "SELECT Permission FROM [TABLE] WHERE UserID=uid;"),
-        GET_ACTIVE("UserPermission_GetActive", "uid INT, perm VARCHAR(200)",
-                "SELECT * FROM [TABLE] WHERE UserID=uid AND Permission=perm AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP()) AND Archived=0;"),
-        SET_EXPIRED_TIME("UserPermission_UpdateExpiredAt", "uid INT, perm VARCHAR(200), et DATETIME, modified INT",
+        REMOVE_PERMISSION("UserPermission_Remove", "uid INT, perm VARCHAR(200), modified INT",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE UserID=uid AND Permission=perm AND Archived=0;"),
+        CLEAR_PERMISSION("UserPermission_Clear", "uid INT, modified INT",
+                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE UserID=uid AND Archived=0;"),
+        GET_DATA("UserPermission_GetData", "uid INT, perm VARCHAR(200)", "SELECT * FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
+        GET_ACTIVE_PERMISSION("UserPermission_GetActive", "uid INT",
+                "SELECT Permission FROM [TABLE] WHERE UserID=uid AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP()) AND Archived=0;"),
+        SET_EXPIRED_AT("UserPermission_UpdateExpiredAt", "uid INT, perm VARCHAR(200), et DATETIME, modified INT",
                 "UPDATE [TABLE] SET ExpiredAt=et, ModifiedBy=modified WHERE UserID=uid AND Permission=perm;"),
         IS_EXPIRED("UserPermission_IsExpired", "uid INT, perm VARCHAR(200)",
-                "SELECT IF(ExpiredAt IS NULL, 0, ExpiredAt <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
+                "SELECT Archived FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
         UPDATE_ARCHIVED("UserPermission_UpdateArchived", "",
                 "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=-1 WHERE Archived=0 AND ExpiredAt IS NOT NULL AND ExpiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
