@@ -39,7 +39,7 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * Clears all permissions associated with a specific user.
      *
      * @param executorId The unique identifier for the log entry of the operation.
-     * @param userId The unique identifier of the user whose permissions will be cleared.
+     * @param userId     The unique identifier of the user whose permissions will be cleared.
      */
     void clearPermission(int executorId, int userId);
 
@@ -56,8 +56,7 @@ public sealed interface UserPermission permits UserPermissionProvider {
      *
      * @param userId     The unique identifier of the user.
      * @param permission The permission for which the expiration time is being retrieved.
-     * @return The expiration time in milliseconds since the epoch for the specified permission and user.
-     * Returns -1 if the permission has no expiration time.
+     * @return A {@code Timestamp} object representing the expiration date and time of the association.
      */
     Timestamp getExpiredAt(int userId, String permission);
 

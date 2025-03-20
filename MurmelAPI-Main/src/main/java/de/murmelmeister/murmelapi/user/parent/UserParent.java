@@ -77,8 +77,7 @@ public sealed interface UserParent permits UserParentProvider {
      *
      * @param userId   The ID of the user whose relationship expiration time is being retrieved.
      * @param parentId The ID of the parent involved in the relationship.
-     * @return The expiration timestamp of the relationship in milliseconds since the epoch.
-     * Returns -1 if the relationship does not expire.
+     * @return A {@code Timestamp} object representing the expiration date and time of the association.
      */
     Timestamp getExpiredAt(int userId, int parentId);
 
