@@ -35,8 +35,8 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     public CompletableFuture<Void> addPermissionAsync(int executorId, int userId, String permission, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        return database.asyncUpdate(Procedure.CREATE.getName(), userId, permission, new Timestamp(expired), executorId, executorId);
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.asyncUpdate(Procedure.CREATE.getName(), userId, permission, expired, executorId, executorId);
     }
 
     public CompletableFuture<Void> removePermissionAsync(int executorId, int userId, String permission) {
@@ -56,8 +56,8 @@ public final class UserPermissionProvider implements UserPermission {
     }
 
     public CompletableFuture<Void> setExpiredAtAsync(int executorId, int userId, String permission, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), userId, permission, new Timestamp(expired), executorId);
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), userId, permission, expired, executorId);
     }
 
     public CompletableFuture<Boolean> isExpiredAsync(int userId, String permission) {
