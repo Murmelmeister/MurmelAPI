@@ -158,12 +158,12 @@ public final class GroupProvider implements Group {
         });
     }
 
-    public CompletableFuture<Void> loadExpiredAsync() {
+    /*public CompletableFuture<Void> loadExpiredAsync() {
         return getUniqueIdsAsync().thenAccept(ids -> {
-            parent.loadExpired(this);
-            permission.loadExpired(this);
+            parent.loadExpired();
+            permission.loadExpired();
         });
-    }
+    }*/
 
     // === Synchrone Wrapper (Interface-Implementierung) ===
 
@@ -259,7 +259,8 @@ public final class GroupProvider implements Group {
 
     @Override
     public void loadExpired() {
-        loadExpiredAsync().join();
+        parent.loadExpired();
+        permission.loadExpired();
     }
 
     @Override
