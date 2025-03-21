@@ -32,19 +32,17 @@ public sealed interface UserParent permits UserParentProvider {
     /**
      * Removes the parent-child relationship between a specified user and parent.
      *
-     * @param executorId The ID of the user performing the log action.
-     * @param userId     The ID of the user whose parent relationship is being removed.
-     * @param parentId   The ID of the parent to be removed from the user.
+     * @param userId   The ID of the user whose parent relationship is being removed.
+     * @param parentId The ID of the parent to be removed from the user.
      */
-    void removeParent(int executorId, int userId, int parentId);
+    void removeParent(int userId, int parentId);
 
     /**
      * Clears all parent-child relationships for the specified user.
      *
-     * @param executorId The ID of the user performing the log action.
-     * @param userId     The ID of the user whose parent relationships are being cleared.
+     * @param userId The ID of the user whose parent relationships are being cleared.
      */
-    void clearParent(int executorId, int userId);
+    void clearParent(int userId);
 
     /**
      * Retrieves the list of parent IDs associated with the specified user.
@@ -91,15 +89,6 @@ public sealed interface UserParent permits UserParentProvider {
      *                   Use -1 for a relationship that does not expire.
      */
     void setExpiredAt(int executorId, int userId, int parentId, long time);
-
-    /**
-     * Checks if the relationship between a specified user and parent has expired.
-     *
-     * @param userId   The ID of the user whose parent relationship is being checked.
-     * @param parentId The ID of the parent to check for expiration.
-     * @return True if the relationship has expired, false otherwise.
-     */
-    boolean isExpired(int userId, int parentId);
 
     /**
      * Retrieves the ID of the user who created the parent-child relationship

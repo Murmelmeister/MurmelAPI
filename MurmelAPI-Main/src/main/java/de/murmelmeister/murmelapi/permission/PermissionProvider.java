@@ -4,19 +4,25 @@ import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.user.User;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 
 public record PermissionProvider(Group group, User user) implements Permission {
     @Override
     public List<String> getPermissions(int userId) {
-        Set<String> permissions = new LinkedHashSet<>(user.getPermission().getPermissions(userId));
-        List<Integer> parentIds = user.getParent().getParentIds(userId);
+        return getPermissionsAsync(userId).join();
+    }
 
-        for (int i = parentIds.size() - 1; i >= 0; i--) {
-            int parentId = parentIds.get(i);
-            permissions.addAll(group.getPermission().getAllPermissions(group.getParent(), parentId));
-        }
-        return new LinkedList<>(permissions);
+    public CompletableFuture<List<String>> getPermissionsAsync(int userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            Set<String> permissions = new LinkedHashSet<>(user.getPermission().getPermissions(userId));
+            List<Integer> parentIds = user.getParent().getParentIds(userId);
+            for (int i = parentIds.size() - 1; i >= 0; i--) {
+                int parentId = parentIds.get(i);
+                permissions.addAll(group.getPermission().getAllPermissions(group.getParent(), parentId));
+            }
+            return new LinkedList<>(permissions);
+        });
     }
 
     @Override

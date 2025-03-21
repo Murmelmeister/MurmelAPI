@@ -33,19 +33,17 @@ public sealed interface GroupParent permits GroupParentProvider {
     /**
      * Removes the association between a specified parent and a group.
      *
-     * @param executorId The unique identifier of the user performing this action.
      * @param groupId  The unique identifier of the group whose parent should be removed.
      * @param parentId The unique identifier of the parent to be removed.
      */
-    void removeParent(int executorId, int groupId, int parentId);
+    void removeParent(int groupId, int parentId);
 
     /**
      * Removes all parent associations for a specified group.
      *
-     * @param executorId The unique identifier of the user performing this action.
      * @param groupId The unique identifier of the group whose parent associations should be cleared.
      */
-    void clearParent(int executorId, int groupId);
+    void clearParent(int groupId);
 
     /**
      * Retrieves the list of IDs of all parent associations for the specified group.
@@ -83,15 +81,6 @@ public sealed interface GroupParent permits GroupParentProvider {
      * @param time       The new expiration time in milliseconds since the epoch. Use -1 for no expiration.
      */
     void setExpiredAt(int executorId, int groupId, int parentId, long time);
-
-    /**
-     * Determines if the association between the specified group and parent is expired.
-     *
-     * @param groupId  The unique identifier of the group.
-     * @param parentId The unique identifier of the parent.
-     * @return True if the association is expired; otherwise, false.
-     */
-    boolean isExpired(int groupId, int parentId);
 
     /**
      * Retrieves the ID of the creator associated with the specified group and parent relationship.

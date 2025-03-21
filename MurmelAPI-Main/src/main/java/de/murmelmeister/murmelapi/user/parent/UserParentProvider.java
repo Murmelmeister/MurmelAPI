@@ -23,8 +23,6 @@ public final class UserParentProvider implements UserParent {
                                          "FOREIGN KEY (UserID) REFERENCES Users(ID), " +
                                          "FOREIGN KEY (ParentID) REFERENCES Groups(ID), " +
                                          "ExpiredAt DATETIME, " +
-                                         "Archived TINYINT(1) DEFAULT 0, " +
-                                         "ArchivedAt DATETIME, " +
                                          "CreatedBy INT, FOREIGN KEY (CreatedBy) REFERENCES Users(ID), " +
                                          "CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
                                          "ModifiedBy INT, FOREIGN KEY (ModifiedBy) REFERENCES Users(ID), " +
@@ -43,12 +41,12 @@ public final class UserParentProvider implements UserParent {
         return database.asyncUpdate(Procedure.CREATE.getName(), userId, parentId, expired, executorId, executorId);
     }
 
-    public CompletableFuture<Void> removeParentAsync(int executorId, int userId, int parentId) {
-        return database.asyncUpdate(Procedure.REMOVE_PARENT.getName(), userId, parentId, executorId);
+    public CompletableFuture<Void> removeParentAsync(int userId, int parentId) {
+        return database.asyncUpdate(Procedure.REMOVE_PARENT.getName(), userId, parentId);
     }
 
-    public CompletableFuture<Void> clearParentAsync(int executorId, int userId) {
-        return database.asyncUpdate(Procedure.CLEAR_PARENT.getName(), userId, executorId);
+    public CompletableFuture<Void> clearParentAsync(int userId) {
+        return database.asyncUpdate(Procedure.CLEAR_PARENT.getName(), userId);
     }
 
     public CompletableFuture<List<Integer>> getParentIdsAsync(int userId) {
@@ -81,11 +79,6 @@ public final class UserParentProvider implements UserParent {
         return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), userId, parentId, expired, executorId);
     }
 
-    public CompletableFuture<Boolean> isExpiredAsync(int userId, int parentId) {
-        return database.asyncQuery((byte) 0, "Archived", byte.class, Procedure.IS_EXPIRED.getName(), userId, parentId)
-                .thenApply(b -> b == 1);
-    }
-
     public CompletableFuture<Integer> getCreatedByAsync(int userId, int parentId) {
         return database.asyncQuery(-2, "CreatedBy", int.class, Procedure.GET_DATA.getName(), userId, parentId);
     }
@@ -115,7 +108,7 @@ public final class UserParentProvider implements UserParent {
                 }
             }
         });*/
-        return database.asyncUpdate(Procedure.UPDATE_ARCHIVED.getName());
+        return database.asyncUpdate(Procedure.UPDATE_EXPIRED.getName());
     }
 
     // === Synchrone Wrapper (Interface-Implementierung) ===
@@ -131,13 +124,13 @@ public final class UserParentProvider implements UserParent {
     }
 
     @Override
-    public void removeParent(int executorId, int userId, int parentId) {
-        removeParentAsync(executorId, userId, parentId).join();
+    public void removeParent(int userId, int parentId) {
+        removeParentAsync(userId, parentId).join();
     }
 
     @Override
-    public void clearParent(int executorId, int userId) {
-        clearParentAsync(executorId, userId).join();
+    public void clearParent(int userId) {
+        clearParentAsync(userId).join();
     }
 
     @Override
@@ -163,11 +156,6 @@ public final class UserParentProvider implements UserParent {
     @Override
     public void setExpiredAt(int executorId, int userId, int parentId, long time) {
         setExpiredAtAsync(executorId, userId, parentId, time).join();
-    }
-
-    @Override
-    public boolean isExpired(int userId, int parentId) {
-        return isExpiredAsync(userId, parentId).join();
     }
 
     @Override
@@ -198,19 +186,14 @@ public final class UserParentProvider implements UserParent {
     private enum Procedure {
         CREATE("UserParent_Create", "uid INT, pid INT, et DATETIME, created INT, modified INT",
                 "INSERT INTO [TABLE] (UserID,ParentID,ExpiredAt,CreatedBy,ModifiedBy) VALUES (uid,pid,et,created,modified);"),
-        REMOVE_PARENT("UserParent_Remove", "uid INT, pid INT, modified INT",
-                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE UserID=uid AND ParentID=pid AND Archived=0;"),
-        CLEAR_PARENT("UserParent_Clear", "uid INT, modified INT",
-                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE UserID=uid AND Archived=0;"),
+        REMOVE_PARENT("UserParent_Remove", "uid INT, pid INT", "DELETE FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
+        CLEAR_PARENT("UserParent_Clear", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
         GET_DATA("UserParent_GetData", "uid INT, pid INT", "SELECT * FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
         GET_ACTIVE_PARENT("UserParent_GetActive", "uid INT",
-                "SELECT ParentID FROM [TABLE] WHERE UserID=uid AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP()) AND Archived=0;"),
+                "SELECT ParentID FROM [TABLE] WHERE UserID=uid AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP());"),
         SET_EXPIRED_AT("UserParent_SetExpiredAt", "uid INT, pid INT, et DATETIME, modified INT",
                 "UPDATE [TABLE] SET ExpiredAt=et, ModifiedBy=modified WHERE UserID=uid AND ParentID=pid;"),
-        IS_EXPIRED("UserParent_IsExpired", "uid INT, pid INT",
-                "SELECT Archived FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
-        UPDATE_ARCHIVED("UserParent_UpdateArchived", "",
-                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=-1 WHERE Archived=0 AND ExpiredAt IS NOT NULL AND ExpiredAt <= CURRENT_TIMESTAMP();");
+        UPDATE_EXPIRED("UserParent_UpdateExpired", "", "DELETE FROM [TABLE] WHERE ExpiredAt IS NOT NULL AND ExpiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
         private final String name;

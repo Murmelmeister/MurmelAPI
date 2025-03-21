@@ -31,19 +31,17 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
     /**
      * Removes a specific permission from a group.
      *
-     * @param executorId The ID of the executor initiating the permission addition.
      * @param groupId    The ID of the group from which the permission is to be removed.
      * @param permission The permission to be removed from the group.
      */
-    void removePermission(int executorId, int groupId, String permission);
+    void removePermission(int groupId, String permission);
 
     /**
      * Removes all permissions associated with the specified group.
      *
-     * @param executorId The ID of the executor initiating the permission addition.
-     * @param groupId    The unique identifier of the group whose permissions are to be cleared.
+     * @param groupId The unique identifier of the group whose permissions are to be cleared.
      */
-    void clearPermission(int executorId, int groupId);
+    void clearPermission(int groupId);
 
     /**
      * Retrieves a list of permissions associated with a specified group ID.
@@ -82,15 +80,6 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * @param time       The expiration time in milliseconds from the current time; use -1 for no expiration.
      */
     void setExpiredAt(int executorId, int groupId, String permission, long time);
-
-    /**
-     * Determines whether a specified permission for a given group is expired.
-     *
-     * @param groupId    The ID of the group to check the permission for.
-     * @param permission The name of the permission to check for expiration.
-     * @return {@code true} if the specified permission is expired, otherwise {@code false}.
-     */
-    boolean isExpired(int groupId, String permission);
 
     /**
      * Retrieves the ID of the user who created the specified permission for the given group.

@@ -22,8 +22,6 @@ public final class GroupParentProvider implements GroupParent {
                                          "FOREIGN KEY (GroupID) REFERENCES Groups(ID), " +
                                          "FOREIGN KEY (ParentID) REFERENCES Groups(ID), " +
                                          "ExpiredAt DATETIME, " +
-                                         "Archived TINYINT(1) DEFAULT 0, " +
-                                         "ArchivedAt DATETIME, " +
                                          "CreatedBy INT, FOREIGN KEY (CreatedBy) REFERENCES Users(ID), " +
                                          "CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
                                          "ModifiedBy INT, FOREIGN KEY (ModifiedBy) REFERENCES Users(ID), " +
@@ -42,12 +40,12 @@ public final class GroupParentProvider implements GroupParent {
         return database.asyncUpdate(Procedure.CREATE.getName(), groupId, parentId, expired, executorId, executorId);
     }
 
-    public CompletableFuture<Void> removeParentAsync(int executorId, int groupId, int parentId) {
-        return database.asyncUpdate(Procedure.REMOVE_PARENT.getName(), groupId, parentId, executorId);
+    public CompletableFuture<Void> removeParentAsync(int groupId, int parentId) {
+        return database.asyncUpdate(Procedure.REMOVE_PARENT.getName(), groupId, parentId);
     }
 
-    public CompletableFuture<Void> clearParentAsync(int executorId, int groupId) {
-        return database.asyncUpdate(Procedure.CLEAR_PARENT.getName(), groupId, executorId);
+    public CompletableFuture<Void> clearParentAsync(int groupId) {
+        return database.asyncUpdate(Procedure.CLEAR_PARENT.getName(), groupId);
     }
 
     public CompletableFuture<List<Integer>> getParentIdsAsync(int groupId) {
@@ -67,11 +65,6 @@ public final class GroupParentProvider implements GroupParent {
     public CompletableFuture<Void> setExpiredAtAsync(int executorId, int groupId, int parentId, long time) {
         Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
         return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), groupId, parentId, expired, executorId);
-    }
-
-    public CompletableFuture<Boolean> isExpiredAsync(int groupId, int parentId) {
-        return database.asyncQuery((byte) 0, "Archived", byte.class, Procedure.IS_EXPIRED.getName(), groupId, parentId)
-                .thenApply(b -> b == 1);
     }
 
     public CompletableFuture<Integer> getCreatedByAsync(int groupId, int parentId) {
@@ -103,7 +96,7 @@ public final class GroupParentProvider implements GroupParent {
                 }
             }
         });*/
-        return database.asyncUpdate(Procedure.UPDATE_ARCHIVED.getName());
+        return database.asyncUpdate(Procedure.UPDATE_EXPIRED.getName());
     }
 
     // === Synchrone Wrapper (Interface-Implementierung) ===
@@ -119,13 +112,13 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     @Override
-    public void removeParent(int executorId, int groupId, int parentId) {
-        removeParentAsync(executorId, groupId, parentId).join();
+    public void removeParent(int groupId, int parentId) {
+        removeParentAsync(groupId, parentId).join();
     }
 
     @Override
-    public void clearParent(int executorId, int groupId) {
-        clearParentAsync(executorId, groupId).join();
+    public void clearParent(int groupId) {
+        clearParentAsync(groupId).join();
     }
 
     @Override
@@ -146,11 +139,6 @@ public final class GroupParentProvider implements GroupParent {
     @Override
     public void setExpiredAt(int executorId, int groupId, int parentId, long time) {
         setExpiredAtAsync(executorId, groupId, parentId, time).join();
-    }
-
-    @Override
-    public boolean isExpired(int groupId, int parentId) {
-        return isExpiredAsync(groupId, parentId).join();
     }
 
     @Override
@@ -181,19 +169,14 @@ public final class GroupParentProvider implements GroupParent {
     private enum Procedure {
         CREATE("GroupParent_Create", "gid INT, pid INT, et DATETIME, created INT, modified INT",
                 "INSERT INTO [TABLE] (GroupID,ParentID,ExpiredAt,CreatedBy,ModifiedBy) VALUES (gid,pid,et,created,modified);"),
-        REMOVE_PARENT("GroupParent_Remove", "gid INT, pid INT, modified INT",
-                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE GroupID=gid AND ParentID=pid AND Archived=0;"),
-        CLEAR_PARENT("GroupParent_Clear", "gid INT, modified INT",
-                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=modified WHERE GroupID=gid AND Archived=0;"),
+        REMOVE_PARENT("GroupParent_Remove", "gid INT, pid INT", "DELETE FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;"),
+        CLEAR_PARENT("GroupParent_Clear", "gid INT", "DELETE FROM [TABLE] WHERE GroupID=gid;"),
         GET_ALL("GroupParent_GetAll", "gid INT, pid INT", "SELECT * FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;"),
         GET_ACTIVE_PARENT("GroupParent_GetActive", "gid INT",
-                "SELECT ParentID FROM [TABLE] WHERE GroupID=gid AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP()) AND Archived=0;"),
+                "SELECT ParentID FROM [TABLE] WHERE GroupID=gid AND (ExpiredAt IS NULL OR ExpiredAt > CURRENT_TIMESTAMP());"),
         SET_EXPIRED_AT("GroupParent_SetExpiredAt", "gid INT, pid INT, et DATETIME, modified INT",
                 "UPDATE [TABLE] SET ExpiredAt=et, ModifiedBy=modified WHERE GroupID=gid AND ParentID=pid;"),
-        IS_EXPIRED("GroupParent_IsExpired", "gid INT, pid INT",
-                "SELECT Archived FROM [TABLE] WHERE GroupID=gid AND ParentID=pid;"),
-        UPDATE_ARCHIVED("GroupParent_UpdateArchived", "",
-                "UPDATE [TABLE] SET Archived=1, ArchivedAt=CURRENT_TIMESTAMP(), ModifiedBy=-1 WHERE Archived=0 AND ExpiredAt IS NOT NULL AND ExpiredAt <= CURRENT_TIMESTAMP();");
+        UPDATE_EXPIRED("GroupParent_UpdateExpired", "", "DELETE FROM [TABLE] WHERE ExpiredAt IS NOT NULL AND ExpiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
         private final String name;
