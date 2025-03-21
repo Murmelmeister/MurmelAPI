@@ -90,7 +90,7 @@ public sealed interface UserParent permits UserParentProvider {
      * @param time       The new expiration timestamp for the relationship in milliseconds since the epoch.
      *                   Use -1 for a relationship that does not expire.
      */
-    void setExpiredTime(int executorId, int userId, int parentId, long time);
+    void setExpiredAt(int executorId, int userId, int parentId, long time);
 
     /**
      * Checks if the relationship between a specified user and parent has expired.

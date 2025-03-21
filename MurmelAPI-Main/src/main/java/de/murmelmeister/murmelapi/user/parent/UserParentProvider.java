@@ -161,7 +161,7 @@ public final class UserParentProvider implements UserParent {
     }
 
     @Override
-    public void setExpiredTime(int executorId, int userId, int parentId, long time) {
+    public void setExpiredAt(int executorId, int userId, int parentId, long time) {
         setExpiredAtAsync(executorId, userId, parentId, time).join();
     }
 
