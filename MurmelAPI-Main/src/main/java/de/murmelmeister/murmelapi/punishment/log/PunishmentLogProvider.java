@@ -1,6 +1,5 @@
 package de.murmelmeister.murmelapi.punishment.log;
 
-import de.murmelmeister.murmelapi.MurmelAPI;
 import de.murmelmeister.murmelapi.database.Database;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 
@@ -26,7 +25,7 @@ public final class PunishmentLogProvider implements PunishmentLog {
                                          "FOREIGN KEY (TypeID) REFERENCES PunishmentTypes(ID), " +
                                          "UserID INT, FOREIGN KEY (UserID) REFERENCES Users(ID), " +
                                          "IPAddress INET6, " +
-                                         "ExpiredTime BIGINT, " +
+                                         "ExpiredAt DATETIME, " +
                                          "ReasonID INT, FOREIGN KEY (ReasonID) REFERENCES PunishmentReason(ReasonID), " +
                                          "CreatedBy INT, FOREIGN KEY (CreatedBy) REFERENCES Users(ID), " +
                                          "CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
@@ -44,8 +43,8 @@ public final class PunishmentLogProvider implements PunishmentLog {
     public UUID addLogIp(int executorId, int typeId, InetAddress inetAddress, int reasonId) {
         UUID logId = UUID.randomUUID(); // database.generateUniqueIdentifier(Procedure.CHECK_GENERATED_LOG_ID.getName());
         long duration = reason.getDuration(reasonId, typeId);
-        long time = duration == -1L ? duration : System.currentTimeMillis() + duration;
-        database.callUpdate(Procedure.CREATE_LOG_IP.getName(), logId.toString(), typeId, inetAddress.getHostAddress(), time, reasonId, executorId, executorId);
+        Timestamp expired = duration == -1 ? null : new Timestamp(System.currentTimeMillis() + duration);
+        database.callUpdate(Procedure.CREATE_LOG_IP.getName(), logId.toString(), typeId, inetAddress.getHostAddress(), expired, reasonId, executorId, executorId);
         return logId;
     }
 
@@ -53,8 +52,8 @@ public final class PunishmentLogProvider implements PunishmentLog {
     public UUID addLogUser(int executorId, int typeId, int userId, InetAddress inetAddress, int reasonId) {
         UUID logId = UUID.randomUUID(); // database.generateUniqueIdentifier(Procedure.CHECK_GENERATED_LOG_ID.getName());
         long duration = reason.getDuration(reasonId, typeId);
-        long time = duration == -1L ? duration : System.currentTimeMillis() + duration;
-        database.callUpdate(Procedure.CREATE_LOG_USER.getName(), logId.toString(), typeId, userId, inetAddress.getHostAddress(), time, reasonId, executorId, executorId);
+        Timestamp expired = duration == -1 ? null : new Timestamp(System.currentTimeMillis() + duration);
+        database.callUpdate(Procedure.CREATE_LOG_USER.getName(), logId.toString(), typeId, userId, inetAddress.getHostAddress(), expired, reasonId, executorId, executorId);
         return logId;
     }
 
@@ -96,21 +95,14 @@ public final class PunishmentLogProvider implements PunishmentLog {
     }
 
     @Override
-    public long getExpiredTime(UUID logId, int typeId) {
-        return database.query(-2L, "ExpiredTime", long.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+    public Timestamp getExpiredAt(UUID logId, int typeId) {
+        return database.query(null, "ExpiredAt", Timestamp.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
     }
 
     @Override
-    public String getExpiredDate(UUID logId, int typeId) {
-        long time = getExpiredTime(logId, typeId);
-        return time == -1 ? "never" : MurmelAPI.getDateFormat().format(time);
-    }
-
-    @Override
-    public String setExpiredTime(UUID logId, int typeId, int executorId, long duration) {
-        long expiredTime = duration == -1 ? duration : System.currentTimeMillis() + duration;
-        database.callUpdate(Procedure.SET_LOG_EXPIRED_TIME.getName(), logId.toString(), typeId, expiredTime, executorId);
-        return getExpiredDate(logId, typeId);
+    public void setExpiredAt(UUID logId, int typeId, int executorId, long duration) {
+        Timestamp expired = duration == -1 ? null : new Timestamp(System.currentTimeMillis() + duration);
+        database.callUpdate(Procedure.SET_LOG_EXPIRED_TIME.getName(), logId.toString(), typeId, expired, executorId);
     }
 
     @Override
@@ -139,20 +131,19 @@ public final class PunishmentLogProvider implements PunishmentLog {
     }
 
     private enum Procedure {
-        CREATE_LOG_IP("PunishmentLog_CreateIP", "lid UUID, tid INT, ip INET6, time BIGINT, rid INT, created INT, modified INT",
-                "INSERT INTO [TABLE] (LogID,TypeID,IPAddress,ExpiredTime,ReasonID,CreatedBy,ModifiedBy) VALUES (lid,tid,ip,time,rid,created,modified);"),
-        CREATE_LOG_USER("PunishmentLog_CreateUser", "lid UUID, tid INT, uid INT, ip INET6, time BIGINT, rid INT, created INT, modified INT",
-                "INSERT INTO [TABLE] (LogID,TypeID,UserID,IPAddress,ExpiredTime,ReasonID,CreatedBy,ModifiedBy) VALUES (lid,tid,uid,ip,time,rid,created,modified);"),
+        CREATE_LOG_IP("PunishmentLog_CreateIP", "lid UUID, tid INT, ip INET6, time DATETIME, rid INT, created INT, modified INT",
+                "INSERT INTO [TABLE] (LogID,TypeID,IPAddress,ExpiredAt,ReasonID,CreatedBy,ModifiedBy) VALUES (lid,tid,ip,time,rid,created,modified);"),
+        CREATE_LOG_USER("PunishmentLog_CreateUser", "lid UUID, tid INT, uid INT, ip INET6, time DATETIME, rid INT, created INT, modified INT",
+                "INSERT INTO [TABLE] (LogID,TypeID,UserID,IPAddress,ExpiredAt,ReasonID,CreatedBy,ModifiedBy) VALUES (lid,tid,uid,ip,time,rid,created,modified);"),
         DELETE_LOG_USER("PunishmentLog_DeleteUser", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
-        CHECK_GENERATED_LOG_ID("PunishmentLog_CheckGeneratedLogID", "lid UUID", "SELECT * FROM [TABLE] WHERE LogID=lid;"),
         GET_LOG_BY_ID("PunishmentLog_GetByID", "lid UUID, tid INT", "SELECT * FROM [TABLE] WHERE LogID=lid AND TypeID=tid;"),
         GET_LOG_BY_USER("PunishmentLog_GetByUser", "uid INT, tid INT", "SELECT LogID FROM [TABLE] WHERE UserID=uid AND TypeID=tid;"),
         GET_LOG_BY_IP("PunishmentLog_GetByIP", "ip INET6, tid INT", "SELECT LogID FROM [TABLE] WHERE IPAddress=ip AND TypeID=tid;"),
-        SET_LOG_EXPIRED_TIME("PunishmentLog_SetExpiredTime", "lid UUID, tid INT, time BIGINT, modified INT",
-                "UPDATE [TABLE] SET ExpiredTime=time, ModifiedBy=modified WHERE LogID=lid AND TypeID=tid;"),
+        SET_LOG_EXPIRED_TIME("PunishmentLog_SetExpiredAt", "lid UUID, tid INT, time DATETIME, modified INT",
+                "UPDATE [TABLE] SET ExpiredAt=time, ModifiedBy=modified WHERE LogID=lid AND TypeID=tid;"),
         SET_LOG_REASON("PunishmentLog_SetReason", "lid UUID, tid INT, reason TEXT, modified INT",
                 "UPDATE [TABLE] SET ReasonID=reason, ModifiedBy=modified WHERE LogID=lid AND TypeID=tid;"),
-        IS_LOG_EXPIRED("PunishmentLog_IsExpired", "lid UUID, tid INT", "SELECT IF(ExpiredTime = -1, 0, ExpiredTime <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE LogID=lid AND TypeID=tid;");
+        IS_LOG_EXPIRED("PunishmentLog_IsExpired", "lid UUID, tid INT", "SELECT IF(ExpiredAt IS NULL, 0, ExpiredAt <= CURRENT_TIMESTAMP()) AS Expired FROM [TABLE] WHERE LogID=lid AND TypeID=tid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;

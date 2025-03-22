@@ -96,18 +96,9 @@ public sealed interface PunishmentUser permits PunishmentUserProvider {
      *
      * @param userId The ID of the user associated with the punishment.
      * @param typeId The ID of the punishment type.
-     * @return The expiration time of the punishment as a timestamp in milliseconds.
+     * @return A {@code Timestamp} object representing the expiration date and time of the association.
      */
-    long getExpiredTime(int userId, int typeId);
-
-    /**
-     * Retrieves the expiration date of a punishment for a specific user and type.
-     *
-     * @param userId The unique identifier of the user
-     * @param typeId The unique identifier of the punishment type
-     * @return A string representing the expiration date of the punishment, or null if no expiration date is set
-     */
-    String getExpiredDate(int userId, int typeId);
+    Timestamp getExpiredAt(int userId, int typeId);
 
     /**
      * Sets the expiration time for a punishment record.
@@ -117,7 +108,7 @@ public sealed interface PunishmentUser permits PunishmentUserProvider {
      * @param executorId The identifier of the executor making the change
      * @param time       The expiration time of the punishment, in milliseconds since epoch
      */
-    void setExpiredTime(int userId, int typeId, int executorId, long time);
+    void setExpiredAt(int userId, int typeId, int executorId, long time);
 
     /**
      * Determines whether the specified user is currently punished for the given type.

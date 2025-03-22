@@ -95,18 +95,9 @@ public sealed interface PunishmentIP permits PunishmentIPProvider {
      *
      * @param inetAddress The IP address associated with the punishment
      * @param typeId      The identification number of the punishment type
-     * @return The expiration time of the punishment in milliseconds since epoch
+     * @return A {@code Timestamp} object representing the expiration date and time of the association.
      */
-    long getExpiredTime(InetAddress inetAddress, int typeId);
-
-    /**
-     * Retrieves the expiration date as a string for a specific punishment type and IP address.
-     *
-     * @param inetAddress The IP address associated with the punishment
-     * @param typeId      The identifier of the punishment type
-     * @return The expiration date as a string, or null if no expiration date is set
-     */
-    String getExpiredDate(InetAddress inetAddress, int typeId);
+    Timestamp getExpiredAt(InetAddress inetAddress, int typeId);
 
     /**
      * Sets the expiration time for a specific punishment on an IP address.
@@ -116,7 +107,7 @@ public sealed interface PunishmentIP permits PunishmentIPProvider {
      * @param executorId  The ID of the executor making this change.
      * @param time        The new expiration time for the punishment in milliseconds since epoch.
      */
-    void setExpiredTime(InetAddress inetAddress, int typeId, int executorId, long time);
+    void setExpiredAt(InetAddress inetAddress, int typeId, int executorId, long time);
 
     /**
      * Checks if a specific IP address is currently punished for a given type.

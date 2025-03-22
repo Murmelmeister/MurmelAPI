@@ -115,18 +115,9 @@ public sealed interface PunishmentLog permits PunishmentLogProvider {
      *
      * @param logId  The unique identifier of the punishment log entry
      * @param typeId The type ID of the punishment log
-     * @return The expiration time of the punishment log in milliseconds since epoch
+     * @return A {@code Timestamp} object representing the expiration date and time of the association.
      */
-    long getExpiredTime(UUID logId, int typeId);
-
-    /**
-     * Retrieves the expiration date of a punishment log as a string.
-     *
-     * @param logId  The unique identifier of the punishment log
-     * @param typeId The type identifier associated with the punishment log
-     * @return The expiration date of the specified punishment log in string format
-     */
-    String getExpiredDate(UUID logId, int typeId);
+    Timestamp getExpiredAt(UUID logId, int typeId);
 
     /**
      * Sets the expiration time for a specific punishment log entry.
@@ -135,9 +126,8 @@ public sealed interface PunishmentLog permits PunishmentLogProvider {
      * @param typeId     The type identifier of the punishment log entry.
      * @param executorId The identifier of the user making this change.
      * @param duration   The duration in milliseconds that determines the new expiration time.
-     * @return A string representation of the updated expiration date and time.
      */
-    String setExpiredTime(UUID logId, int typeId, int executorId, long duration);
+    void setExpiredAt(UUID logId, int typeId, int executorId, long duration);
 
     /**
      * Determines if the punishment log entry associated with the specified log ID and type ID is expired.

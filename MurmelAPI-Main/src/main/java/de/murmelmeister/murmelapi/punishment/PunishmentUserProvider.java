@@ -84,21 +84,15 @@ public final class PunishmentUserProvider implements PunishmentUser {
     }
 
     @Override
-    public long getExpiredTime(int userId, int typeId) {
+    public Timestamp getExpiredAt(int userId, int typeId) {
         UUID logId = getLogId(userId, typeId);
-        return logId != null ? log.getExpiredTime(logId, typeId) : -2;
+        return logId != null ? log.getExpiredAt(logId, typeId) : null;
     }
 
     @Override
-    public String getExpiredDate(int userId, int typeId) {
+    public void setExpiredAt(int userId, int typeId, int executorId, long time) {
         UUID logId = getLogId(userId, typeId);
-        return logId != null ? log.getExpiredDate(logId, typeId) : null;
-    }
-
-    @Override
-    public void setExpiredTime(int userId, int typeId, int executorId, long time) {
-        UUID logId = getLogId(userId, typeId);
-        log.setExpiredTime(logId, typeId, executorId, time);
+        log.setExpiredAt(logId, typeId, executorId, time);
     }
 
     @Override

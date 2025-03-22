@@ -81,21 +81,15 @@ public final class PunishmentIPProvider implements PunishmentIP {
     }
 
     @Override
-    public long getExpiredTime(InetAddress inetAddress, int typeId) {
+    public Timestamp getExpiredAt(InetAddress inetAddress, int typeId) {
         UUID logId = getLogId(inetAddress, typeId);
-        return logId != null ? log.getExpiredTime(logId, typeId) : -2;
+        return logId != null ? log.getExpiredAt(logId, typeId) : null;
     }
 
     @Override
-    public String getExpiredDate(InetAddress inetAddress, int typeId) {
+    public void setExpiredAt(InetAddress inetAddress, int typeId, int executorId, long time) {
         UUID logId = getLogId(inetAddress, typeId);
-        return logId != null ? log.getExpiredDate(logId, typeId) : null;
-    }
-
-    @Override
-    public void setExpiredTime(InetAddress inetAddress, int typeId, int executorId, long time) {
-        UUID logId = getLogId(inetAddress, typeId);
-        log.setExpiredTime(logId, typeId, executorId, time);
+        log.setExpiredAt(logId, typeId, executorId, time);
     }
 
     @Override
