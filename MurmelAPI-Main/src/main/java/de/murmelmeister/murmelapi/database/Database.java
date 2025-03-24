@@ -195,6 +195,21 @@ public final class Database {
         return CompletableFuture.supplyAsync(() -> query(defaultValue, label, type, name, objects), executor);
     }
 
+    public void queryProcess(ResultSetProcessor processor, String name, Object... objects) {
+        try (Connection connection = dataSource.getConnection();
+        CallableStatement statement = getCallableStatement(connection, name, objects);
+        ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) processor.process(resultSet);
+        } catch (SQLException e) {
+            logger.error("Error executing query: {}", name, e);
+            throw new DatabaseException("Database query error", e);
+        }
+    }
+
+    public CompletableFuture<Void> queryAsync(ResultSetProcessor processor, String name, Object... objects) {
+        return CompletableFuture.runAsync(() -> queryProcess(processor, name, objects), executor);
+    }
+
     /**
      * Executes a database query using a callable statement and populates the provided list
      * with the results. The method operates under a read lock to ensure thread safety during
