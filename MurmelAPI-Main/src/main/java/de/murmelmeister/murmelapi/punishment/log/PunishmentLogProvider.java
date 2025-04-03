@@ -96,6 +96,7 @@ public final class PunishmentLogProvider implements PunishmentLog {
 
     @Override
     public Timestamp getExpiredAt(UUID logId, int typeId) {
+        if (logId == null) return null;
         return database.query(null, "ExpiredAt", Timestamp.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
     }
 
