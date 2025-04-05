@@ -18,27 +18,27 @@ public final class PlayTimeProvider implements PlayTime {
 
     @Override
     public boolean existsUser(int userId) {
-        return database.exists(Procedure.GET_SECONDS.getName(), userId);
+        return database.existsCallable(Procedure.GET_SECONDS.getName(), userId);
     }
 
     @Override
     public void createUser(int userId) {
-        database.callUpdate(Procedure.CREATE.getName(), userId, 0);
+        database.updateCallable(Procedure.CREATE.getName(), userId, 0);
     }
 
     @Override
     public void deleteUser(int userId) {
-        database.callUpdate(Procedure.DELETE.getName(), userId);
+        database.updateCallable(Procedure.DELETE.getName(), userId);
     }
 
     @Override
     public int getTime(int userId) {
-        return database.query(-1, "Seconds", int.class, Procedure.GET_SECONDS.getName(), userId);
+        return database.queryCallable(Procedure.GET_SECONDS.getName(), -1, resultSet -> resultSet.getInt("Seconds"), userId);
     }
 
     @Override
     public void setTime(int userId, int time) {
-        database.callUpdate(Procedure.UPDATE_SECONDS.getName(), time, userId);
+        database.updateCallable(Procedure.UPDATE_SECONDS.getName(), time, userId);
     }
 
     @Override
