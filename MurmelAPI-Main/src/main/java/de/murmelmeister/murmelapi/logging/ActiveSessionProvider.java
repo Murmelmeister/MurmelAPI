@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.logging;
 import de.murmelmeister.murmelapi.database.Database;
 
 import java.net.InetAddress;
-import java.security.Timestamp;
+import java.sql.Timestamp;
 import java.util.UUID;
 
 public final class ActiveSessionProvider implements ActiveSession {
@@ -27,47 +27,50 @@ public final class ActiveSessionProvider implements ActiveSession {
 
     @Override
     public boolean existsSession(int userId) {
-        return database.exists(Procedure.IS_ONLINE.getName(), userId);
+        return database.existsCallable(Procedure.IS_ONLINE.getName(), userId);
     }
 
     @Override
     public void startSession(int userId, InetAddress inetAddress, String clientVersion, String protocolVersion) {
-        database.callUpdate(Procedure.START.getName(), UUID.randomUUID(), userId, inetAddress.getHostAddress(), clientVersion, protocolVersion);
+        database.updateCallable(Procedure.START.getName(), UUID.randomUUID(), userId, inetAddress.getHostAddress(), clientVersion, protocolVersion);
     }
 
     @Override
     public void closeSession(int userId) {
-        database.callUpdate(Procedure.CLOSE.getName(), userId);
+        database.updateCallable(Procedure.CLOSE.getName(), userId);
     }
 
     @Override
     public UUID getSessionId(int userId) {
-        return UUID.fromString(database.query(null, "SessionID", String.class, Procedure.GET_DATA.getName(), userId));
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> {
+            String sessionId = resultSet.getString("SessionID");
+            return sessionId != null ? UUID.fromString(sessionId) : null;
+        }, userId);
     }
 
     @Override
     public String getIpAddress(int userId) {
-        return database.query(null, "IPAddress", String.class, Procedure.GET_DATA.getName(), userId);
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getString("IPAddress"), userId);
     }
 
     @Override
     public Timestamp getLoginTime(int userId) {
-        return database.query(null, "LoginTime", Timestamp.class, Procedure.GET_DATA.getName(), userId);
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getTimestamp("LoginTime"), userId);
     }
 
     @Override
     public String getClientVersion(int userId) {
-        return database.query(null, "ClientVersion", String.class, Procedure.GET_DATA.getName(), userId);
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getString("ClientVersion"), userId);
     }
 
     @Override
     public String getProtocolVersion(int userId) {
-        return database.query(null, "ProtocolVersion", String.class, Procedure.GET_DATA.getName(), userId);
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getString("ProtocolVersion"), userId);
     }
 
     @Override
     public boolean isOnline(int userId) {
-        int sessions = database.query(0, "ActiveSessions", int.class, Procedure.IS_ONLINE.getName(), userId);
+        int sessions = database.queryCallable(Procedure.IS_ONLINE.getName(), 0, resultSet -> resultSet.getInt("ActiveSessions"), userId);
         return sessions > 0;
     }
 

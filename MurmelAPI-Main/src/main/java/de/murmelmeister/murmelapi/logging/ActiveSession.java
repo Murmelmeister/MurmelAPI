@@ -1,7 +1,7 @@
 package de.murmelmeister.murmelapi.logging;
 
 import java.net.InetAddress;
-import java.security.Timestamp;
+import java.sql.Timestamp;
 import java.util.UUID;
 
 /**
