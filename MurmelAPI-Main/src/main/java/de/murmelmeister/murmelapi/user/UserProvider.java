@@ -142,7 +142,6 @@ public final class UserProvider implements User {
     public CompletableFuture<Integer> deleteUserAsync(UUID uuid) {
         Objects.requireNonNull(uuid, "uuid cannot be null");
         return database.updateCallableAsync(Procedure.DELETE.getName(), uuid.toString()).thenApply(result -> {
-            ;
             String username = getUsername(uuid);
             if (username != null) usernameCache.remove(username);
             if (uuidCache.get(uuid) != null) uuidCache.remove(uuid);
