@@ -12,8 +12,11 @@ import de.murmelmeister.murmelapi.utils.CacheManager;
 import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
 
 public final class GroupProvider implements Group {
     private static final String TABLE_NAME = "Groups";
@@ -45,216 +48,293 @@ public final class GroupProvider implements Group {
         Procedure.loadAll(database);
     }
 
-    // === Asynchrone API-Methoden ===
-
-    public CompletableFuture<Boolean> existsGroupAsync(int groupId) {
-        return database.asyncExists(Procedure.GROUPS_GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Boolean> existsGroupAsync(String groupName) {
-        return database.asyncExists(Procedure.GROUPS_GET_ALL_BY_NAME.getName(), groupName);
-    }
-
-    public CompletableFuture<Void> createNewGroupAsync(String groupName, int createdBy, int priority, String teamId) {
-        String team = teamId + groupName;
-        return database.asyncUpdate(Procedure.GROUPS_CREATE.getName(), groupName, priority, team, createdBy, createdBy)
-                .thenCompose(v -> getUniqueIdAsync(groupName))
-                .thenAccept(id -> {
-                    color.createGroup(createdBy, id);
-                });
-    }
-
-    public CompletableFuture<Void> deleteGroupAsync(int executorId, int groupId) {
-        return getNameAsync(groupId).thenCompose(name ->
-                database.asyncUpdate(Procedure.GROUPS_DELETE.getName(), groupId)
-        ).thenRun(() -> {
-            String cachedName = groupIdCache.get(groupId);
-            if (cachedName != null) {
-                groupNameCache.remove(cachedName);
-            }
-            if (groupIdCache.get(groupId) != null) {
-                groupIdCache.remove(groupId);
-            }
-        });
-    }
-
-    public CompletableFuture<Integer> getUniqueIdAsync(String groupName) {
-        Integer cached = groupNameCache.get(groupName);
-        if (cached != null) {
-            return CompletableFuture.completedFuture(cached);
-        }
-        return database.asyncQuery(-1, "ID", int.class, Procedure.GROUPS_GET_ALL_BY_NAME.getName(), groupName)
-                .thenApply(id -> {
-                    groupNameCache.put(groupName, id, 1, TimeUnit.HOURS);
-                    return id;
-                });
-    }
-
-    public CompletableFuture<String> getNameAsync(int groupId) {
-        String cached = groupIdCache.get(groupId);
-        if (cached != null) {
-            return CompletableFuture.completedFuture(cached);
-        }
-        return database.asyncQuery(null, "GroupName", String.class, Procedure.GROUPS_GET_ALL_BY_ID.getName(), groupId)
-                .thenApply(name -> {
-                    groupIdCache.put(groupId, name, 1, TimeUnit.HOURS);
-                    return name;
-                });
-    }
-
-    public CompletableFuture<Void> renameAsync(int executorId, int groupId, String newName) {
-        return database.asyncUpdate(Procedure.GROUPS_SET_GROUP_NAME.getName(), newName, groupId, executorId);
-    }
-
-    public CompletableFuture<List<Integer>> getUniqueIdsAsync() {
-        return database.asyncQueryList(new LinkedList<>(), "ID", int.class, Procedure.GROUPS_GET_ALL.getName());
-    }
-
-    public CompletableFuture<List<String>> getNamesAsync() {
-        return database.asyncQueryList(new LinkedList<>(), "GroupName", String.class, Procedure.GROUPS_GET_ALL.getName());
-    }
-
-    public CompletableFuture<Integer> getPriorityAsync(int groupId) {
-        return database.asyncQuery(-1, "Priority", int.class, Procedure.GROUPS_GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Void> setPriorityAsync(int executorId, int groupId, int priority) {
-        return database.asyncUpdate(Procedure.GROUPS_SET_PRIORITY.getName(), priority, groupId, executorId);
-    }
-
-    public CompletableFuture<String> getTeamSortAsync(int groupId) {
-        return database.asyncQuery(null, "TeamSort", String.class, Procedure.GROUPS_GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Void> setTeamSortAsync(int executorId, int groupId, String teamSort) {
-        return database.asyncUpdate(Procedure.GROUPS_SET_TEAM_SORT.getName(), teamSort, groupId, executorId);
-    }
-
-    public CompletableFuture<Integer> getCreatedByAsync(int groupId) {
-        return database.asyncQuery(-2, "CreatedBy", int.class, Procedure.GROUPS_GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Timestamp> getCreatedAtAsync(int groupId) {
-        return database.asyncQuery(null, "CreatedAt", Timestamp.class, Procedure.GROUPS_GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Integer> getModifiedByAsync(int groupId) {
-        return database.asyncQuery(-2, "ModifiedBy", int.class, Procedure.GROUPS_GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Timestamp> getModifiedAtAsync(int groupId) {
-        return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GROUPS_GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Void> createDefaultGroupAsync(String groupName) {
-        return existsGroupAsync(groupName).thenCompose(exists -> {
-            if (exists) return CompletableFuture.completedFuture(null);
-            int createdBy = -1;
-            int priority = 1;
-            String teamId = 9999 + groupName;
-            return database.asyncUpdate(Procedure.GROUPS_CREATE.getName(), groupName, priority, teamId, createdBy, createdBy)
-                    .thenCompose(v -> getUniqueIdAsync(groupName))
-                    .thenAccept(id -> color.createGroup(createdBy, id, "<gray>", "", "", "", "", "<gray>", "", "", "7"));
-        });
-    }
-
-    /*public CompletableFuture<Void> loadExpiredAsync() {
-        return getUniqueIdsAsync().thenAccept(ids -> {
-            parent.loadExpired();
-            permission.loadExpired();
-        });
-    }*/
-
-    // === Synchrone Wrapper (Interface-Implementierung) ===
-
     @Override
     public boolean existsGroup(int groupId) {
-        return existsGroupAsync(groupId).join();
+        return groupId != -1 && database.existsCallable(Procedure.GET_DATA_BY_ID.getName(), groupId);
+    }
+
+    @Override
+    public CompletableFuture<Boolean> existsGroupAsync(int groupId) {
+        return groupId == -1 ? CompletableFuture.completedFuture(false) : database.existsCallableAsync(Procedure.GET_DATA_BY_ID.getName(), groupId);
     }
 
     @Override
     public boolean existsGroup(String groupName) {
-        return existsGroupAsync(groupName).join();
+        return groupName != null && database.existsCallable(Procedure.GET_ID_BY_NAME.getName(), groupName);
     }
 
     @Override
-    public void createNewGroup(String groupName, int createdBy, int priority, String teamId) {
-        createNewGroupAsync(groupName, createdBy, priority, teamId).join();
+    public CompletableFuture<Boolean> existsGroupAsync(String groupName) {
+        return groupName == null ? CompletableFuture.completedFuture(false) : database.existsCallableAsync(Procedure.GET_ID_BY_NAME.getName(), groupName);
+    }
+
+    @Override
+    public void createGroup(int executorId, String groupName, int priority, String teamId) {
+        Objects.requireNonNull(groupName, "Group name cannot be null");
+        Objects.requireNonNull(teamId, "Team ID cannot be null");
+        String team = teamId + groupName;
+        database.updateCallable(Procedure.CREATE.getName(), groupName, priority, team, executorId, executorId);
+        int groupId = getUniqueId(groupName);
+        if (groupId != -1) color.createGroup(executorId, groupId);
+    }
+
+    @Override
+    public CompletableFuture<Integer> createGroupAsync(int executorId, String groupName, int priority, String teamId) {
+        Objects.requireNonNull(groupName, "Group name cannot be null");
+        Objects.requireNonNull(teamId, "Team ID cannot be null");
+        String team = teamId + groupName;
+        return database.updateCallableAsync(Procedure.CREATE.getName(), groupName, priority, team, executorId, executorId)
+                .thenApply(result -> {
+                    int groupId = getUniqueId(groupName);
+                    if (groupId != -1) color.createGroup(executorId, groupId);
+                    return result;
+                });
     }
 
     @Override
     public void deleteGroup(int executorId, int groupId) {
-        deleteGroupAsync(executorId, groupId).join();
+        if (executorId == -2 || groupId == -1) return;
+        String name = getName(groupId);
+        database.updateCallable(Procedure.DELETE.getName(), groupId);
+        groupNameCache.remove(name);
+        groupIdCache.remove(groupId);
+    }
+
+    @Override
+    public CompletableFuture<Integer> deleteGroupAsync(int executorId, int groupId) {
+        if (executorId == -2 || groupId == -1) return CompletableFuture.completedFuture(-1);
+        String name = getName(groupId);
+        return database.updateCallableAsync(Procedure.DELETE.getName(), groupId)
+                .thenApply(result -> {
+                    groupNameCache.remove(name);
+                    groupIdCache.remove(groupId);
+                    return result;
+                });
     }
 
     @Override
     public int getUniqueId(String groupName) {
-        return getUniqueIdAsync(groupName).join();
+        if (groupName == null) return -1;
+        Integer cached = groupNameCache.get(groupName);
+        return cached != null ? cached : database.queryCallable(Procedure.GET_ID_BY_NAME.getName(), -1,
+                resultSet -> {
+                    int id = resultSet.getInt("ID");
+                    if (id != -1) groupNameCache.put(groupName, id, 1, TimeUnit.HOURS);
+                    return id;
+                }, groupName);
+    }
+
+    @Override
+    public CompletableFuture<Integer> getUniqueIdAsync(String groupName) {
+        if (groupName == null) return CompletableFuture.completedFuture(-1);
+        return database.queryCallableAsync(Procedure.GET_ID_BY_NAME.getName(), -1,
+                resultSet -> {
+                    int id = resultSet.getInt("ID");
+                    if (id != -1) groupNameCache.put(groupName, id, 1, TimeUnit.HOURS);
+                    return id;
+                }, groupName);
     }
 
     @Override
     public String getName(int groupId) {
-        return getNameAsync(groupId).join();
+        if (groupId == -1) return null;
+        String cached = groupIdCache.get(groupId);
+        return cached != null ? cached : database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), null,
+                resultSet -> {
+                    String name = resultSet.getString("GroupName");
+                    if (name != null) groupIdCache.put(groupId, name, 1, TimeUnit.HOURS);
+                    return name;
+                }, groupId);
+    }
+
+    @Override
+    public CompletableFuture<String> getNameAsync(int groupId) {
+        if (groupId == -1) return CompletableFuture.completedFuture(null);
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), null,
+                resultSet -> {
+                    String name = resultSet.getString("GroupName");
+                    if (name != null) groupIdCache.put(groupId, name, 1, TimeUnit.HOURS);
+                    return name;
+                }, groupId);
     }
 
     @Override
     public void rename(int executorId, int groupId, String newName) {
-        renameAsync(executorId, groupId, newName).join();
+        if (executorId == -2 || groupId == -1 || newName == null) return;
+        database.updateCallable(Procedure.SET_GROUP_NAME.getName(), newName, groupId, executorId);
+        rename(groupId, newName);
+    }
+
+    @Override
+    public CompletableFuture<Integer> renameAsync(int executorId, int groupId, String newName) {
+        if (executorId == -2 || groupId == -1 || newName == null) return CompletableFuture.completedFuture(-1);
+        return database.updateCallableAsync(Procedure.SET_GROUP_NAME.getName(), newName, groupId, executorId)
+                .thenApply(result -> {
+                    rename(groupId, newName);
+                    return result;
+                });
+    }
+
+    private void rename(int groupId, String newName) {
+        String oldName = groupIdCache.get(groupId);
+        if (oldName != null) {
+            groupNameCache.remove(oldName);
+            groupIdCache.remove(groupId);
+        }
+        groupNameCache.put(newName, groupId, 1, TimeUnit.HOURS);
+        groupIdCache.put(groupId, newName, 1, TimeUnit.HOURS);
     }
 
     @Override
     public List<Integer> getUniqueIds() {
-        return getUniqueIdsAsync().join();
+        return database.queryListCallable(Procedure.GET_DATA.getName(), new LinkedList<>(),
+                resultSet -> resultSet.getInt("ID"));
+    }
+
+    @Override
+    public CompletableFuture<List<Integer>> getUniqueIdsAsync() {
+        return database.queryListCallableAsync(Procedure.GET_DATA.getName(), new LinkedList<>(),
+                resultSet -> resultSet.getInt("ID"));
     }
 
     @Override
     public List<String> getNames() {
-        return getNamesAsync().join();
+        return database.queryListCallable(Procedure.GET_DATA.getName(), new LinkedList<>(),
+                resultSet -> resultSet.getString("GroupName"));
+    }
+
+    @Override
+    public CompletableFuture<List<String>> getNamesAsync() {
+        return database.queryListCallableAsync(Procedure.GET_DATA.getName(), new LinkedList<>(),
+                resultSet -> resultSet.getString("GroupName"));
     }
 
     @Override
     public int getPriority(int groupId) {
-        return getPriorityAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), -1, resultSet -> resultSet.getInt("Priority"), groupId);
+    }
+
+    @Override
+    public CompletableFuture<Integer> getPriorityAsync(int groupId) {
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), -1, resultSet -> resultSet.getInt("Priority"), groupId);
     }
 
     @Override
     public void setPriority(int executorId, int groupId, int priority) {
-        setPriorityAsync(executorId, groupId, priority).join();
+        if (executorId == -2 || groupId == -1) return;
+        database.updateCallable(Procedure.SET_PRIORITY.getName(), priority, groupId, executorId);
+    }
+
+    @Override
+    public CompletableFuture<Integer> setPriorityAsync(int executorId, int groupId, int priority) {
+        if (executorId == -2 || groupId == -1) return CompletableFuture.completedFuture(-1);
+        return database.updateCallableAsync(Procedure.SET_PRIORITY.getName(), priority, groupId, executorId);
     }
 
     @Override
     public String getTeamSort(int groupId) {
-        return getTeamSortAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> resultSet.getString("TeamSort"), groupId);
+    }
+
+    @Override
+    public CompletableFuture<String> getTeamSortAsync(int groupId) {
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> resultSet.getString("TeamSort"), groupId);
     }
 
     @Override
     public void setTeamSort(int executorId, int groupId, String teamSort) {
-        setTeamSortAsync(executorId, groupId, teamSort).join();
+        if (executorId == -2 || groupId == -1 || teamSort == null) return;
+        database.updateCallable(Procedure.SET_TEAM_SORT.getName(), teamSort, groupId, executorId);
+    }
+
+    @Override
+    public CompletableFuture<Integer> setTeamSortAsync(int executorId, int groupId, String teamSort) {
+        if (executorId == -2 || groupId == -1 || teamSort == null) return CompletableFuture.completedFuture(-1);
+        return database.updateCallableAsync(Procedure.SET_TEAM_SORT.getName(), teamSort, groupId, executorId);
     }
 
     @Override
     public int getCreatedBy(int groupId) {
-        return getCreatedByAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), -2, resultSet -> resultSet.getInt("CreatedBy"), groupId);
+    }
+
+    @Override
+    public CompletableFuture<Integer> getCreatedByAsync(int groupId) {
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), -2, resultSet -> resultSet.getInt("CreatedBy"), groupId);
     }
 
     @Override
     public Timestamp getCreatedAt(int groupId) {
-        return getCreatedAtAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("CreatedAt"), groupId);
+    }
+
+    @Override
+    public CompletableFuture<Timestamp> getCreatedAtAsync(int groupId) {
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("CreatedAt"), groupId);
+    }
+
+    @Override
+    public String getCreatedDate(int groupId) {
+        Timestamp time = getCreatedAt(groupId);
+        return time == null ? "never" : getDateFormat().format(time);
+    }
+
+    @Override
+    public CompletableFuture<String> getCreatedDateAsync(int groupId) {
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> {
+            Timestamp time = resultSet.getTimestamp("CreatedAt");
+            return time == null ? "never" : getDateFormat().format(time);
+        }, groupId);
     }
 
     @Override
     public int getModifiedBy(int groupId) {
-        return getModifiedByAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), -2, resultSet -> resultSet.getInt("ModifiedBy"), groupId);
+    }
+
+    @Override
+    public CompletableFuture<Integer> getModifiedByAsync(int groupId) {
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), -2, resultSet -> resultSet.getInt("ModifiedBy"), groupId);
     }
 
     @Override
     public Timestamp getModifiedAt(int groupId) {
-        return getModifiedAtAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("ModifiedAt"), groupId);
+    }
+
+    @Override
+    public CompletableFuture<Timestamp> getModifiedAtAsync(int groupId) {
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("ModifiedAt"), groupId);
+    }
+
+    @Override
+    public String getModifiedDate(int groupId) {
+        Timestamp time = getModifiedAt(groupId);
+        return time == null ? "never" : getDateFormat().format(time);
+    }
+
+    @Override
+    public CompletableFuture<String> getModifiedDateAsync(int groupId) {
+        return database.queryCallableAsync(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> {
+            Timestamp time = resultSet.getTimestamp("ModifiedAt");
+            return time == null ? "never" : getDateFormat().format(time);
+        }, groupId);
     }
 
     @Override
     public void createDefaultGroup(String groupName) {
-        createDefaultGroupAsync(groupName).join();
+        if (groupName == null) return;
+        if (existsGroup(groupName)) return;
+        int createdBy = -1;
+        int priority = 1;
+        String teamId = 9999 + groupName;
+        createGroup(createdBy, groupName, priority, teamId);
+        color.createGroup(createdBy, getUniqueId(groupName), "<gray>", "", "", "", "", "<gray>", "", "", "7");
+    }
+
+    @Override
+    public CompletableFuture<Void> createDefaultGroupAsync(String groupName) {
+        return CompletableFuture.runAsync(() -> createDefaultGroup(groupName));
     }
 
     @Override
@@ -282,15 +362,15 @@ public final class GroupProvider implements Group {
     }
 
     private enum Procedure {
-        GROUPS_GET_ALL_BY_ID("Groups_GetAllById", "gid INT", "SELECT * FROM [TABLE] WHERE ID=gid;"),
-        GROUPS_GET_ALL_BY_NAME("Groups_GetAllByName", "gname VARCHAR(100)", "SELECT ID FROM [TABLE] WHERE GroupName=gname;"),
-        GROUPS_GET_ALL("Groups_GetAll", "", "SELECT * FROM [TABLE];"),
-        GROUPS_CREATE("Groups_Create", "gname VARCHAR(100), prio INT, tsort VARCHAR(100), created INT, modified INT",
+        GET_DATA_BY_ID("Groups_GetDataById", "gid INT", "SELECT * FROM [TABLE] WHERE ID=gid;"),
+        GET_ID_BY_NAME("Groups_GetIdByName", "gname VARCHAR(100)", "SELECT ID FROM [TABLE] WHERE GroupName=gname;"),
+        GET_DATA("Groups_GetData", "", "SELECT ID, GroupName FROM [TABLE];"),
+        CREATE("Groups_Create", "gname VARCHAR(100), prio INT, tsort VARCHAR(100), created INT, modified INT",
                 "INSERT INTO [TABLE] (GroupName,Priority,TeamSort,CreatedBy,ModifiedBy) VALUES (gname,prio,tsort,created,modified);"),
-        GROUPS_DELETE("Groups_Delete", "gid INT", "DELETE FROM [TABLE] WHERE ID=gid;"),
-        GROUPS_SET_PRIORITY("Groups_SetPriority", "prio INT, gid INT, modified INT", "UPDATE [TABLE] SET Priority=prio, ModifiedBy=modified WHERE ID=gid;"),
-        GROUPS_SET_TEAM_SORT("Groups_SetTeamSort", "tsort VARCHAR(100), gid INT, modified INT", "UPDATE [TABLE] SET TeamSort=tsort, ModifiedBy=modified WHERE ID=gid;"),
-        GROUPS_SET_GROUP_NAME("Groups_SetGroupName", "gname VARCHAR(100), gid INT, modified INT", "UPDATE [TABLE] SET GroupName=gname, ModifiedBy=modified WHERE ID=gid;");
+        DELETE("Groups_Delete", "gid INT", "DELETE FROM [TABLE] WHERE ID=gid;"),
+        SET_PRIORITY("Groups_SetPriority", "prio INT, gid INT, modified INT", "UPDATE [TABLE] SET Priority=prio, ModifiedBy=modified WHERE ID=gid;"),
+        SET_TEAM_SORT("Groups_SetTeamSort", "tsort VARCHAR(100), gid INT, modified INT", "UPDATE [TABLE] SET TeamSort=tsort, ModifiedBy=modified WHERE ID=gid;"),
+        SET_GROUP_NAME("Groups_SetGroupName", "gname VARCHAR(100), gid INT, modified INT", "UPDATE [TABLE] SET GroupName=gname, ModifiedBy=modified WHERE ID=gid;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
