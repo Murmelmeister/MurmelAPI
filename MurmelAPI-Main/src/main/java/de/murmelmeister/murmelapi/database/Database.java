@@ -24,6 +24,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public final class Database {
     private final Logger logger = LoggerFactory.getLogger(Database.class);
+
     private volatile HikariDataSource dataSource;
     private final ReadWriteLock lock = new ReentrantReadWriteLock(true);
     private final Lock writeLock = lock.writeLock();
@@ -53,6 +54,10 @@ public final class Database {
         config.setIdleTimeout(60000);
         config.setMaxLifetime(1800000);
 
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+
         return config;
     }
 
@@ -61,16 +66,17 @@ public final class Database {
      * Connects to the database using the provided URL, username and password.
      * Note: It is not checked whether it is really connected!
      *
-     * @param url      The JDBC URL for the database.
-     * @param user     The username for the database.
-     * @param password The password for the database.
+     * @param driverClassName The class name of the JDBC driver to be used.
+     * @param url             The JDBC URL for the database.
+     * @param user            The username for the database.
+     * @param password        The password for the database.
      */
-    public void connect(String url, String user, String password) {
+    public void connect(String driverClassName, String url, String user, String password) {
         writeLock.lock();
         try {
             if (dataSource != null && !dataSource.isClosed())
                 dataSource.close();
-            HikariConfig config = getHikariConfig("com.mysql.cj.jdbc.Driver", url, user, password);
+            HikariConfig config = getHikariConfig(driverClassName, url, user, password);
             this.dataSource = new HikariDataSource(config);
         } catch (Exception e) {
             logger.error("Error connecting to database", e);
@@ -78,6 +84,18 @@ public final class Database {
         } finally {
             writeLock.unlock();
         }
+    }
+
+    /**
+     * Connects to a MySQL database using the provided URL, username and password.
+     * Note: It is not checked whether it is really connected!
+     *
+     * @param url      The JDBC URL for the MySQL database.
+     * @param user     The username for the MySQL database.
+     * @param password The password for the MySQL database.
+     */
+    public void connectMySQL(String url, String user, String password) {
+        connect("com.mysql.cj.jdbc.Driver", url, user, password);
     }
 
     /**
@@ -91,7 +109,7 @@ public final class Database {
      * @param password The password to use for authentication.
      */
     public void connect(String driver, String hostname, String port, String database, String username, String password) {
-        connect(String.format("jdbc:%s://%s:%s/%s", driver, hostname, port, database), username, password);
+        connectMySQL(String.format("jdbc:%s://%s:%s/%s", driver, hostname, port, database), username, password);
     }
 
     /**
@@ -116,44 +134,106 @@ public final class Database {
     }
 
     /**
-     * Executes an update on the database using the provided SQL query and parameters.
-     * This method acquires a write lock to ensure thread safety while performing the operation.
+     * Executes a database update using a prepared statement with the given SQL query and parameters.
+     * The method acquires a write lock before performing the operation to ensure thread-safety.
      *
-     * @param sql     The SQL query to be executed. It may contain placeholders for parameters.
-     * @param objects The arguments to be used as parameters in the SQL query. These will replace
-     *                the placeholders in the provided query.
-     * @throws DatabaseException if an error occurs during database updating, wrapping the SQLException.
+     * @param sql     The SQL query to be executed. It can contain placeholders for parameters (e.g., "?").
+     * @param objects The parameters to be set in the prepared statement. These can be any number of objects
+     *                to match the placeholders in the SQL query.
      */
     public void update(String sql, Object... objects) {
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = getPreparedStatement(connection, sql, objects)) {
-            statement.executeUpdate();
+        Connection connection = null;
+        try {
+            connection = dataSource.getConnection();
+            connection.setAutoCommit(false);
+            connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
+            try (PreparedStatement statement = getPreparedStatement(connection, sql, objects)) {
+                statement.executeUpdate();
+            }
+            connection.commit();
         } catch (SQLException e) {
+            if (connection != null)
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackException) {
+                    logger.error("Error rolling back transaction", rollbackException);
+                }
             logger.error("Error executing update: {}", sql, e);
             throw new DatabaseException("Database updating error", e);
+        } finally {
+            if (connection != null)
+                try {
+                    connection.close();
+                } catch (SQLException closeException) {
+                    logger.error("Error closing connection", closeException);
+                }
         }
     }
 
     /**
-     * Executes a database update call using a CallableStatement with the given name and parameters.
+     * Executes a database update asynchronously using a CompletableFuture.
+     * The method runs the update operation in a separate thread to avoid blocking the main thread.
+     *
+     * @param sql     The SQL query to be executed. It can contain placeholders for parameters (e.g., "?").
+     * @param objects The parameters to be set in the prepared statement. These can be any number of objects
+     *                to match the placeholders in the SQL query.
+     */
+    public void updateAsync(String sql, Object... objects) {
+        CompletableFuture.runAsync(() -> update(sql, objects), executor);
+    }
+
+    /**
+     * Executes a database update using a CallableStatement with the given name and parameters.
      * The method acquires a write lock before performing the operation to ensure thread-safety.
      *
      * @param name    The name of the database procedure or function to be called.
      * @param objects The parameters to be passed to the CallableStatement.
      *                These can be any number of objects to match the required procedure or function signature.
+     * @return The number of rows affected by the update operation.
      */
-    public void callUpdate(String name, Object... objects) {
-        try (Connection connection = dataSource.getConnection();
-             CallableStatement statement = getCallableStatement(connection, name, objects)) {
-            statement.executeUpdate();
+    public int updateCallable(String name, Object... objects) {
+        Connection connection = null;
+        try {
+            connection = dataSource.getConnection();
+            connection.setAutoCommit(false);
+            connection.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
+            try (CallableStatement statement = getCallableStatement(connection, name, objects)) {
+                int updateCount = statement.executeUpdate();
+                connection.commit();
+                return updateCount;
+            }
         } catch (SQLException e) {
-            logger.error("Error executing callUpdate: {}", name, e);
-            throw new DatabaseException("Database calling update error", e);
+            if (connection != null)
+                try {
+                    connection.rollback();
+                } catch (SQLException rollbackException) {
+                    logger.error("Error rolling back transaction", rollbackException);
+                }
+            logger.error("Error executing update: {}", name, e);
+            throw new DatabaseException("Database updating error", e);
+        } finally {
+            if (connection != null)
+                try {
+                    connection.close();
+                } catch (SQLException closeException) {
+                    logger.error("Error closing connection", closeException);
+                }
         }
     }
 
-    public CompletableFuture<Void> asyncUpdate(String name, Object... objects) {
-        return CompletableFuture.runAsync(() -> callUpdate(name, objects), executor);
+    /**
+     * Executes a database update asynchronously using a CompletableFuture.
+     * The method runs the update operation in a separate thread to avoid blocking the main thread.
+     *
+     * @param name    The name of the database procedure or function to be called.
+     * @param objects The parameters to be passed to the CallableStatement.
+     *                These can be any number of objects to match the required procedure or function signature.
+     * @return A CompletableFuture that will complete with the number of rows affected by the update operation.
+     */
+    public CompletableFuture<Integer> updateCallableAsync(String name, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> updateCallable(name, objects), executor);
     }
 
     /**
@@ -167,47 +247,129 @@ public final class Database {
     }
 
     /**
+     * Creates a new database table asynchronously if it does not already exist.
+     *
+     * @param tableName The name of the table to be created
+     * @param value     The column definitions for the table
+     */
+    public void createTableAsync(String tableName, String value) {
+        updateAsync("CREATE TABLE IF NOT EXISTS " + tableName + " (" + value + ")");
+    }
+
+    /**
      * Executes a database query using a prepared statement and retrieves a result of the specified type and label.
      *
      * @param <T>          The type of the result to be retrieved from the database query.
+     * @param sql          The SQL query to be executed. It can contain placeholders for parameters (e.g., "?").
      * @param defaultValue The default value to return in case the query does not produce a result.
-     * @param label        The label of the column in the result set to extract the value from.
-     * @param type         The class type of the expected result.
-     * @param name         The name of the stored procedure or query to execute.
+     * @param processor    A ResultSetProcessor that processes the result set and extracts the desired value.
      * @param objects      The parameters to be set in the prepared statement for the query.
      * @return The value retrieved from the database query result set, or the default value if no result is found.
      * @throws DatabaseException If there is an error while executing the database query or processing the result.
      */
-    public <T> T query(T defaultValue, String label, Class<T> type, String name, Object... objects) {
-        T value = defaultValue;
+    public <T> T query(String sql, T defaultValue, ResultSetProcessor<T> processor, Object... objects) {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement statement = getPreparedStatement(connection, sql, objects);
+             ResultSet resultSet = statement.executeQuery()) {
+            if (resultSet.next()) return processor.process(resultSet);
+            else return defaultValue;
+        } catch (SQLException e) {
+            logger.error("Error executing query: {}", sql, e);
+            throw new DatabaseException("Database query error", e);
+        }
+    }
+
+    /**
+     * Asynchronously executes a database query using a prepared statement and retrieves a result of the specified type and label.
+     *
+     * @param <T>          The type of the result to be retrieved from the database query.
+     * @param sql          The SQL query to be executed. It can contain placeholders for parameters (e.g., "?").
+     * @param defaultValue The default value to return in case the query does not produce a result.
+     * @param processor    A ResultSetProcessor that processes the result set and extracts the desired value.
+     * @param objects      The parameters to be set in the prepared statement for the query.
+     * @return A CompletableFuture that will complete with the retrieved value when the operation is finished.
+     */
+    public <T> CompletableFuture<T> queryAsync(String sql, T defaultValue, ResultSetProcessor<T> processor, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> query(sql, defaultValue, processor, objects), executor);
+    }
+
+    /**
+     * Executes a database query using a callable statement and retrieves a result of the specified type and label.
+     *
+     * @param <T>          The type of the result to be retrieved from the database query.
+     * @param name         The name of the stored procedure or query to execute.
+     * @param defaultValue The default value to return in case the query does not produce a result.
+     * @param processor    A ResultSetProcessor that processes the result set and extracts the desired value.
+     * @param objects      The parameters to be set in the prepared statement for the query.
+     * @return The value retrieved from the database query result set, or the default value if no result is found.
+     * @throws DatabaseException If there is an error while executing the database query or processing the result.
+     */
+    public <T> T queryCallable(String name, T defaultValue, ResultSetProcessor<T> processor, Object... objects) {
         try (Connection connection = dataSource.getConnection();
              CallableStatement statement = getCallableStatement(connection, name, objects);
              ResultSet resultSet = statement.executeQuery()) {
-            if (resultSet.next()) value = resultSet.getObject(label, type);
+            if (resultSet.next()) return processor.process(resultSet);
+            else return defaultValue;
         } catch (SQLException e) {
             logger.error("Error executing query: {}", name, e);
             throw new DatabaseException("Database query error", e);
         }
-        return value;
     }
 
-    public <T> CompletableFuture<T> asyncQuery(T defaultValue, String label, Class<T> type, String name, Object... objects) {
-        return CompletableFuture.supplyAsync(() -> query(defaultValue, label, type, name, objects), executor);
+    /**
+     * Asynchronously executes a database query using a callable statement and retrieves a result of the specified type and label.
+     *
+     * @param <T>          The type of the result to be retrieved from the database query.
+     * @param name         The name of the stored procedure or query to execute.
+     * @param defaultValue The default value to return in case the query does not produce a result.
+     * @param processor    A ResultSetProcessor that processes the result set and extracts the desired value.
+     * @param objects      The parameters to be set in the prepared statement for the query.
+     * @return A CompletableFuture that will complete with the retrieved value when the operation is finished.
+     */
+    public <T> CompletableFuture<T> queryCallableAsync(String name, T defaultValue, ResultSetProcessor<T> processor, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> queryCallable(name, defaultValue, processor, objects), executor);
     }
 
-    public void queryProcess(ResultSetProcessor processor, String name, Object... objects) {
+    /**
+     * Executes a database query using a prepared statement and populates the provided list
+     * with the results. The method operates under a read lock to ensure thread safety during
+     * data retrieval. The query is executed using the given SQL statement and parameters.
+     *
+     * @param <T>         The type of elements to be retrieved and added to the list.
+     * @param sql         The SQL query to be executed. It can contain placeholders for parameters (e.g., "?").
+     * @param defaultList A list to populate with the query results. The elements are cast
+     *                    to the specified type.
+     * @param processor   A ResultSetProcessor that processes each row of the result set.
+     * @param objects     A variable number of parameters to be passed to the SQL query.
+     * @return The list provided as the input, populated with elements extracted from the query result set.
+     * @throws DatabaseException If a database access error occurs while querying or processing the results.
+     */
+    public <T> List<T> queryList(String sql, List<T> defaultList, ResultSetProcessor<T> processor, Object... objects) {
         try (Connection connection = dataSource.getConnection();
-        CallableStatement statement = getCallableStatement(connection, name, objects);
-        ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) processor.process(resultSet);
+             PreparedStatement statement = getPreparedStatement(connection, sql, objects);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) defaultList.add(processor.process(resultSet));
         } catch (SQLException e) {
-            logger.error("Error executing query: {}", name, e);
+            logger.error("Error executing queryList: {}", sql, e);
             throw new DatabaseException("Database query error", e);
         }
+        return defaultList;
     }
 
-    public CompletableFuture<Void> queryAsync(ResultSetProcessor processor, String name, Object... objects) {
-        return CompletableFuture.runAsync(() -> queryProcess(processor, name, objects), executor);
+    /**
+     * Asynchronously executes a database query using a prepared statement and populates the provided list
+     * with the results. The method runs the operation in a separate thread to avoid blocking the main thread.
+     *
+     * @param <T>         The type of elements to be retrieved and added to the list.
+     * @param sql         The SQL query to be executed. It can contain placeholders for parameters (e.g., "?").
+     * @param defaultList A list to populate with the query results. The elements are cast
+     *                    to the specified type.
+     * @param processor   A ResultSetProcessor that processes each row of the result set.
+     * @param objects     A variable number of parameters to be passed to the SQL query.
+     * @return A CompletableFuture that will complete with the populated list when the operation is finished.
+     */
+    public <T> CompletableFuture<List<T>> queryListAsync(String sql, List<T> defaultList, ResultSetProcessor<T> processor, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> queryList(sql, defaultList, processor, objects), executor);
     }
 
     /**
@@ -216,20 +378,19 @@ public final class Database {
      * data retrieval. The query is executed using the given stored procedure name and parameters.
      *
      * @param <T>         The type of elements to be retrieved and added to the list.
+     * @param name        The name of the stored procedure to be executed.
      * @param defaultList A list to populate with the query results. The elements are cast
      *                    to the specified type.
-     * @param label       The label or column name from the query result set to retrieve values from.
-     * @param type        The class type of the elements to be added to the list.
-     * @param name        The name of the stored procedure to be executed.
+     * @param processor   A ResultSetProcessor that processes each row of the result set.
      * @param objects     A variable number of parameters to be passed to the stored procedure.
      * @return The list provided as the input, populated with elements extracted from the query result set.
      * @throws DatabaseException If a database access error occurs while querying or processing the results.
      */
-    public <T> List<T> queryList(List<T> defaultList, String label, Class<T> type, String name, Object... objects) {
+    public <T> List<T> queryListCallable(String name, List<T> defaultList, ResultSetProcessor<T> processor, Object... objects) {
         try (Connection connection = dataSource.getConnection();
              CallableStatement statement = getCallableStatement(connection, name, objects);
              ResultSet resultSet = statement.executeQuery()) {
-            while (resultSet.next()) defaultList.add(resultSet.getObject(label, type));
+            while (resultSet.next()) defaultList.add(processor.process(resultSet));
         } catch (SQLException e) {
             logger.error("Error executing queryList: {}", name, e);
             throw new DatabaseException("Database query error", e);
@@ -237,42 +398,55 @@ public final class Database {
         return defaultList;
     }
 
-    public <T> CompletableFuture<List<T>> asyncQueryList(List<T> defaultList, String label, Class<T> type, String name, Object... objects) {
-        return CompletableFuture.supplyAsync(() -> queryList(defaultList, label, type, name, objects), executor);
+    /**
+     * Asynchronously executes a database query using a callable statement and populates the provided list
+     * with the results. The method runs the operation in a separate thread to avoid blocking the main thread.
+     *
+     * @param <T>         The type of elements to be retrieved and added to the list.
+     * @param name        The name of the stored procedure to be executed.
+     * @param defaultList A list to populate with the query results. The elements are cast
+     *                    to the specified type.
+     * @param processor   A ResultSetProcessor that processes each row of the result set.
+     * @param objects     A variable number of parameters to be passed to the stored procedure.
+     * @return A CompletableFuture that will complete with the populated list when the operation is finished.
+     */
+    public <T> CompletableFuture<List<T>> queryListCallableAsync(String name, List<T> defaultList, ResultSetProcessor<T> processor, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> queryListCallable(name, defaultList, processor, objects), executor);
     }
 
     /**
-     * Executes a database query using a callable statement and populates the provided map
-     * with the results. The method operates under a read lock to ensure thread safety
-     * during data retrieval. The query is executed using the given stored procedure name
-     * and parameters.
+     * Checks whether a record exists in the database for a given SQL query
+     * and the provided parameters.
      *
-     * @param defaultMap A map to populate with the query results. The keys are column labels
-     *                   from the query result set, and the values are cast to the specified type.
-     * @param valueType  The class type of the values to be stored in the map.
-     * @param name       The name of the stored procedure to be executed.
-     * @param objects    A variable number of parameters to be passed to the stored procedure.
-     * @param <V>        The type of values to be stored in the map.
-     * @return The map populated with key-value pairs extracted from the query result set.
-     * @throws DatabaseException If a database access error occurs while querying or processing the results.
+     * @param sql     The SQL query to be executed for checking existence.
+     * @param objects A variable number of objects representing the parameters to be
+     *                passed to the SQL query.
+     * @return {@code true} if a record exists in the database for the specified query
+     * and parameters, {@code false} otherwise.
      */
-    public <V> Map<String, V> queryMap(Map<String, V> defaultMap, Class<V> valueType, String name, Object... objects) {
+    public boolean exists(String sql, Object... objects) {
         try (Connection connection = dataSource.getConnection();
-             CallableStatement statement = getCallableStatement(connection, name, objects);
+             PreparedStatement statement = getPreparedStatement(connection, sql, objects);
              ResultSet resultSet = statement.executeQuery()) {
-            ResultSetMetaData metaData = resultSet.getMetaData();
-            while (resultSet.next())
-                for (int i = 1; i <= metaData.getColumnCount(); i++)
-                    defaultMap.put(metaData.getColumnLabel(i), resultSet.getObject(i, valueType));
+            return resultSet.next();
         } catch (SQLException e) {
-            logger.error("Error executing queryMap: {}", name, e);
-            throw new DatabaseException("Database query error", e);
+            logger.error("Error executing exists: {}", sql, e);
+            throw new DatabaseException("Database retrieval error", e);
         }
-        return defaultMap;
     }
 
-    public <V> CompletableFuture<Map<String, V>> asyncQueryMap(Map<String, V> defaultMap, Class<V> valueType, String name, Object... objects) {
-        return CompletableFuture.supplyAsync(() -> queryMap(defaultMap, valueType, name, objects), executor);
+    /**
+     * Asynchronously checks whether a record exists in the database for a given SQL query
+     * and the provided parameters.
+     *
+     * @param sql     The SQL query to be executed for checking existence.
+     * @param objects A variable number of objects representing the parameters to be
+     *                passed to the SQL query.
+     * @return A CompletableFuture that will complete with {@code true} if a record exists,
+     * or {@code false} otherwise.
+     */
+    public CompletableFuture<Boolean> existsAsync(String sql, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> exists(sql, objects), executor);
     }
 
     /**
@@ -285,7 +459,7 @@ public final class Database {
      * @return {@code true} if a record exists in the database for the specified procedure
      * and parameters, {@code false} otherwise.
      */
-    public boolean exists(String name, Object... objects) {
+    public boolean existsCallable(String name, Object... objects) {
         try (Connection connection = dataSource.getConnection();
              CallableStatement statement = getCallableStatement(connection, name, objects);
              ResultSet resultSet = statement.executeQuery()) {
@@ -296,8 +470,18 @@ public final class Database {
         }
     }
 
-    public CompletableFuture<Boolean> asyncExists(String name, Object... objects) {
-        return CompletableFuture.supplyAsync(() -> exists(name, objects), executor);
+    /**
+     * Asynchronously checks whether a record exists in the database for a given stored procedure name
+     * and the provided parameters.
+     *
+     * @param name    The name of the stored procedure to be executed for checking existence.
+     * @param objects A variable number of objects representing the parameters to be
+     *                passed to the stored procedure.
+     * @return A CompletableFuture that will complete with {@code true} if a record exists,
+     * or {@code false} otherwise.
+     */
+    public CompletableFuture<Boolean> existsCallableAsync(String name, Object... objects) {
+        return CompletableFuture.supplyAsync(() -> existsCallable(name, objects), executor);
     }
 
     /**
@@ -311,12 +495,35 @@ public final class Database {
      * @return A universally unique identifier (UUID) that is guaranteed to be unique
      * in the specified context.
      */
-    public UUID generateUniqueIdentifier(String name) {
+    public UUID generateUniqueIdentifierCallable(String name) {
         UUID uuid;
         do {
             uuid = UUID.randomUUID();
-        } while (exists(name, uuid.toString()));
+        } while (existsCallable(name, uuid.toString()));
         return uuid;
+    }
+
+    /**
+     * Retrieves the auto-increment value for a specified table in the database.
+     * The method executes a SQL query to obtain the auto-increment value for the given table name.
+     *
+     * @param tableName The name of the table for which to retrieve the auto-increment value.
+     * @return A CompletableFuture containing the auto-increment value for the specified table.
+     */
+    public CompletableFuture<Long> getAutoIncrement(String tableName) {
+        String sql = "SHOW TABLE STATUS LIKE ?"; // TODO: Maybe use a stored procedure for this
+        return CompletableFuture.supplyAsync(() -> {
+            try (Connection connection = dataSource.getConnection();
+                 PreparedStatement statement = getPreparedStatement(connection, sql, tableName);
+                 ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next())
+                    return resultSet.getLong("Auto_increment");
+            } catch (SQLException e) {
+                logger.error("Error retrieving auto-increment value for table: {}", tableName, e);
+                throw new DatabaseException("Database retrieval error", e);
+            }
+            return null;
+        }, executor);
     }
 
     /**
