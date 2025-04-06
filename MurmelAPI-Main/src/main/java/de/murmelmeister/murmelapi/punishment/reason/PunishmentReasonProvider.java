@@ -6,6 +6,8 @@ import java.sql.Timestamp;
 import java.util.LinkedList;
 import java.util.List;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+
 public final class PunishmentReasonProvider implements PunishmentReason {
     private static final String TABLE_NAME = "PunishmentReason";
 
@@ -30,82 +32,94 @@ public final class PunishmentReasonProvider implements PunishmentReason {
 
     @Override
     public boolean exists(int reasonId, int typeId) {
-        return database.exists(Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId);
+        return database.existsCallable(Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId);
     }
 
     @Override
     public void add(int reasonId, int typeId, int executorId, String reason, long duration, boolean autoFlagIp, boolean autoPunish) {
-        database.callUpdate(Procedure.CREATE_REASON.getName(), reasonId, typeId, reason, duration, autoFlagIp, autoPunish, executorId, executorId);
+        database.updateCallable(Procedure.CREATE_REASON.getName(), reasonId, typeId, reason, duration, autoFlagIp, autoPunish, executorId, executorId);
     }
 
     @Override
     public void remove(int reasonId, int typeId) {
-        database.callUpdate(Procedure.DELETE_REASON.getName(), reasonId, typeId);
+        database.updateCallable(Procedure.DELETE_REASON.getName(), reasonId, typeId);
     }
 
     @Override
     public List<Integer> getReasons(int typeId) {
-        return database.queryList(new LinkedList<>(), "ReasonID", Integer.class, Procedure.GET_REASON_BY_TYPE.getName(), typeId);
+        return database.queryListCallable(Procedure.GET_REASON_BY_TYPE.getName(), new LinkedList<>(), resultSet -> resultSet.getInt("ReasonID"), typeId);
     }
 
     @Override
     public String getReason(int reasonId, int typeId) {
-        return database.query(null, "Reason", String.class, Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId);
+        return database.queryCallable(Procedure.GET_REASON_BY_ID.getName(), null, resultSet -> resultSet.getString("Reason"), reasonId, typeId);
     }
 
     @Override
     public void setReason(int reasonId, int typeId, int executorId, String reason) {
-        database.callUpdate(Procedure.SET_REASON.getName(), reasonId, typeId, reason, executorId);
+        database.updateCallable(Procedure.SET_REASON.getName(), reasonId, typeId, reason, executorId);
     }
 
     @Override
     public long getDuration(int reasonId, int typeId) {
-        return database.query(-1L, "Duration", long.class, Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId);
+        return database.queryCallable(Procedure.GET_REASON_BY_ID.getName(), -1L, resultSet -> resultSet.getLong("Duration"), reasonId, typeId);
     }
 
     @Override
     public void setDuration(int reasonId, int typeId, int executorId, long duration) {
-        database.callUpdate(Procedure.SET_DURATION.getName(), reasonId, typeId, duration, executorId);
+        database.updateCallable(Procedure.SET_DURATION.getName(), reasonId, typeId, duration, executorId);
     }
 
     @Override
     public boolean getAutoFlagIP(int reasonId, int typeId) {
-        return database.query((byte) 0, "AutoFlagIP", byte.class, Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId) == 1;
+        return database.queryCallable(Procedure.GET_REASON_BY_ID.getName(), (byte) 0, resultSet -> resultSet.getByte("AutoFlagIP"), reasonId, typeId) == 1;
     }
 
     @Override
     public void setAutoFlagIP(int reasonId, int typeId, int executorId, boolean autoFlagIp) {
-        database.callUpdate(Procedure.SET_AUTO_FLAG_IP.getName(), reasonId, typeId, autoFlagIp, executorId);
+        database.updateCallable(Procedure.SET_AUTO_FLAG_IP.getName(), reasonId, typeId, autoFlagIp, executorId);
     }
 
     @Override
     public boolean getAutoPunish(int reasonId, int typeId) {
-        return database.query((byte) 0, "AutoPunish", byte.class, Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId) == 1;
+        return database.queryCallable(Procedure.GET_REASON_BY_ID.getName(), (byte) 0, resultSet -> resultSet.getByte("AutoPunish"), reasonId, typeId) == 1;
     }
 
     @Override
     public void setAutoPunish(int reasonId, int typeId, int executorId, boolean autoPunish) {
-        database.callUpdate(Procedure.SET_AUTO_PUNISH.getName(), reasonId, typeId, autoPunish, executorId);
+        database.updateCallable(Procedure.SET_AUTO_PUNISH.getName(), reasonId, typeId, autoPunish, executorId);
     }
 
     @Override
     public int getCreatedBy(int reasonId, int typeId) {
-        return database.query(-2, "CreatedBy", int.class, Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId);
+        return database.query(Procedure.GET_REASON_BY_ID.getName(), -2, resultSet -> resultSet.getInt("CreatedBy"), reasonId, typeId);
     }
 
     @Override
     public Timestamp getCreatedAt(int reasonId, int typeId) {
-        return database.query(null, "CreatedAt", Timestamp.class, Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId);
+        return database.queryCallable(Procedure.GET_REASON_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("CreatedAt"), reasonId, typeId);
+    }
+
+    @Override
+    public String getCreatedDate(int reasonId, int typeId) {
+        Timestamp time = getCreatedAt(reasonId, typeId);
+        return time == null ? "" : getDateFormat().format(time);
     }
 
     @Override
     public int getModifiedBy(int reasonId, int typeId) {
-        return database.query(-2, "ModifiedBy", int.class, Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId);
+        return database.queryCallable(Procedure.GET_REASON_BY_ID.getName(), -2, resultSet -> resultSet.getInt("ModifiedBy"), reasonId, typeId);
     }
 
     @Override
     public Timestamp getModifiedAt(int reasonId, int typeId) {
-        return database.query(null, "ModifiedAt", Timestamp.class, Procedure.GET_REASON_BY_ID.getName(), reasonId, typeId);
+        return database.queryCallable(Procedure.GET_REASON_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("ModifiedAt"), reasonId, typeId);
+    }
+
+    @Override
+    public String getModifiedDate(int reasonId, int typeId) {
+        Timestamp time = getModifiedAt(reasonId, typeId);
+        return time == null ? "" : getDateFormat().format(time);
     }
 
     private enum Procedure {

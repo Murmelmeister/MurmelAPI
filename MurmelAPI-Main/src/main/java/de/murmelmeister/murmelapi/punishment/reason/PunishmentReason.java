@@ -142,6 +142,15 @@ public sealed interface PunishmentReason permits PunishmentReasonProvider {
     Timestamp getCreatedAt(int reasonId, int typeId);
 
     /**
+     * Retrieves the date when a specific punishment reason was created.
+     *
+     * @param reasonId The unique identifier of the punishment reason.
+     * @param typeId   The unique identifier of the punishment type.
+     * @return A string representing the date when the punishment reason was created.
+     */
+    String getCreatedDate(int reasonId, int typeId);
+
+    /**
      * Retrieves the user ID of the person who last modified a specific punishment reason.
      *
      * @param reasonId The unique identifier for the punishment reason.
@@ -158,4 +167,13 @@ public sealed interface PunishmentReason permits PunishmentReasonProvider {
      * @return The timestamp representing when the punishment reason was last modified
      */
     Timestamp getModifiedAt(int reasonId, int typeId);
+
+    /**
+     * Retrieves the date when a specific punishment reason was last modified.
+     *
+     * @param reasonId The unique identifier of the punishment reason.
+     * @param typeId   The unique identifier of the punishment type.
+     * @return A string representing the date when the punishment reason was last modified.
+     */
+    String getModifiedDate(int reasonId, int typeId);
 }
