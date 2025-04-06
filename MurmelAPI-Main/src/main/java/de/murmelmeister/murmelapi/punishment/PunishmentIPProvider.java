@@ -6,6 +6,7 @@ import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -31,28 +32,28 @@ public final class PunishmentIPProvider implements PunishmentIP {
 
     @Override
     public boolean exists(InetAddress inetAddress, int typeId) {
-        return database.exists(Procedure.GET_BY_ID.getName(), inetAddress.getHostAddress(), typeId);
+        return database.existsCallable(Procedure.GET_BY_ID.getName(), inetAddress.getHostAddress(), typeId);
     }
 
     @Override
     public void punish(InetAddress inetAddress, int typeId, int executorId, int reasonId) {
         UUID logId = log.addLogIp(executorId, typeId, inetAddress, reasonId);
-        database.callUpdate(Procedure.CREATE.getName(), inetAddress.getHostAddress(), typeId, logId.toString());
+        database.updateCallable(Procedure.CREATE.getName(), inetAddress.getHostAddress(), typeId, logId.toString());
     }
 
     @Override
     public void unpunished(InetAddress inetAddress, int typeId) {
-        database.callUpdate(Procedure.DELETE.getName(), inetAddress.getHostAddress(), typeId);
+        database.updateCallable(Procedure.DELETE.getName(), inetAddress.getHostAddress(), typeId);
     }
 
     @Override
     public List<String> getIps(int typeId) {
-        return database.queryList(null, "IPAddress", String.class, Procedure.GET_ALL.getName(), typeId);
+        return database.queryListCallable(Procedure.GET_ALL.getName(), new LinkedList<>(), resultSet -> resultSet.getString("IPAddress"), typeId);
     }
 
     @Override
     public UUID getLogId(InetAddress inetAddress, int typeId) {
-        String id = database.query(null, "LogID", String.class, Procedure.GET_BY_ID.getName(), inetAddress.getHostAddress(), typeId);
+        String id = database.queryCallable(Procedure.GET_BY_ID.getName(), null, resultSet -> resultSet.getString("LogID"), inetAddress.getHostAddress(), typeId);
         return id != null ? UUID.fromString(id) : null;
     }
 

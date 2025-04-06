@@ -6,6 +6,7 @@ import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,28 +35,28 @@ public final class PunishmentUserProvider implements PunishmentUser {
 
     @Override
     public boolean exists(int userId, int typeId) {
-        return database.exists(Procedure.GET_BY_ID.getName(), userId, typeId);
+        return database.existsCallable(Procedure.GET_BY_ID.getName(), userId, typeId);
     }
 
     @Override
     public void punish(int userId, int typeId, int executorId, InetAddress inetAddress, int reasonId) {
         UUID logId = log.addLogUser(executorId, typeId, userId, inetAddress, reasonId);
-        database.callUpdate(Procedure.CREATE.getName(), userId, typeId, logId.toString());
+        database.updateCallable(Procedure.CREATE.getName(), userId, typeId, logId.toString());
     }
 
     @Override
     public void unpunished(int userId, int typeId) {
-        database.callUpdate(Procedure.DELETE.getName(), userId, typeId);
+        database.updateCallable(Procedure.DELETE.getName(), userId, typeId);
     }
 
     @Override
     public List<Integer> getUsers(int typeId) {
-        return database.queryList(null, "UserID", int.class, Procedure.GET_ALL.getName(), typeId);
+        return database.queryListCallable(Procedure.GET_ALL.getName(), new LinkedList<>(), resultSet -> resultSet.getInt("UserID"), typeId);
     }
 
     @Override
     public UUID getLogId(int userId, int typeId) {
-        String id = database.query(null, "LogID", String.class, Procedure.GET_BY_ID.getName(), userId, typeId);
+        String id = database.queryCallable(Procedure.GET_BY_ID.getName(), null, resultSet -> resultSet.getString("LogID"), userId, typeId);
         return id != null ? UUID.fromString(id) : null;
     }
 
