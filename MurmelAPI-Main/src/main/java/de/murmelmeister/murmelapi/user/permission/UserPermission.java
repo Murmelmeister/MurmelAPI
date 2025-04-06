@@ -59,6 +59,15 @@ public sealed interface UserPermission permits UserPermissionProvider {
     Timestamp getExpiredAt(int userId, String permission);
 
     /**
+     * Retrieves the expiration date of a specific permission for a given user.
+     *
+     * @param userId     The unique identifier of the user.
+     * @param permission The permission for which the expiration date is being retrieved.
+     * @return A string representing the expiration date of the specified permission for the user.
+     */
+    String getExpiredDate(int userId, String permission);
+
+    /**
      * Sets the expiration time for a specific permission associated with a user.
      * Updates the expiration to the specified time in milliseconds.
      *
@@ -88,6 +97,15 @@ public sealed interface UserPermission permits UserPermissionProvider {
     Timestamp getCreatedAt(int userId, String permission);
 
     /**
+     * Retrieves the creation date of a specific permission for a given user.
+     *
+     * @param userId     The unique identifier of the user.
+     * @param permission The permission for which the creation date is being retrieved.
+     * @return A string representing the creation date of the specified permission for the user.
+     */
+    String getCreatedDate(int userId, String permission);
+
+    /**
      * Retrieves the identifier of the executor who last modified a specific permission associated with a user.
      *
      * @param userId     The unique identifier of the user whose permission modification details are being retrieved.
@@ -106,6 +124,15 @@ public sealed interface UserPermission permits UserPermissionProvider {
      * for the given user. Returns {@code null} if no modification timestamp is found.
      */
     Timestamp getModifiedAt(int userId, String permission);
+
+    /**
+     * Retrieves the modification date of a specific permission for a given user.
+     *
+     * @param userId     The unique identifier of the user.
+     * @param permission The permission for which the modification date is being retrieved.
+     * @return A string representing the modification date of the specified permission for the user.
+     */
+    String getModifiedDate(int userId, String permission);
 
     /**
      * Loads all expired permissions for the specified user and performs operations related to the expired permissions.
