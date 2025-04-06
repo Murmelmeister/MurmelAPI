@@ -72,6 +72,15 @@ public sealed interface GroupParent permits GroupParentProvider {
     Timestamp getExpiredAt(int groupId, int parentId);
 
     /**
+     * Retrieves the expiration date of the association between the specified group and parent.
+     *
+     * @param groupId  The unique identifier of the group.
+     * @param parentId The unique identifier of the parent.
+     * @return A string representing the expiration date of the association.
+     */
+    String getExpiredDate(int groupId, int parentId);
+
+    /**
      * Updates the expiration time for the association between the specified group and parent.
      * If the expiration is successfully updated, returns a confirmation status or message.
      *
@@ -101,6 +110,15 @@ public sealed interface GroupParent permits GroupParentProvider {
     Timestamp getCreatedAt(int groupId, int parentId);
 
     /**
+     * Retrieves the creation date of the association between the specified group and parent.
+     *
+     * @param groupId  The unique identifier of the group.
+     * @param parentId The unique identifier of the parent.
+     * @return A string representing the creation date of the association.
+     */
+    String getCreatedDate(int groupId, int parentId);
+
+    /**
      * Retrieves the unique identifier of the user who last modified the association
      * between the specified group and parent.
      *
@@ -120,6 +138,15 @@ public sealed interface GroupParent permits GroupParentProvider {
      * a specific value to indicate such a case.
      */
     Timestamp getModifiedAt(int groupId, int parentId);
+
+    /**
+     * Retrieves the last modified date of the association between the specified group and parent.
+     *
+     * @param groupId  The unique identifier of the group.
+     * @param parentId The unique identifier of the parent.
+     * @return A string representing the last modified date of the association.
+     */
+    String getModifiedDate(int groupId, int parentId);
 
     /**
      * Loads all expired parent associations for the specified group. This operation is
