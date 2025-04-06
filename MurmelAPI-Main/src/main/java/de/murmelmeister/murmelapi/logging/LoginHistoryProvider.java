@@ -40,13 +40,13 @@ public final class LoginHistoryProvider implements LoginHistory {
 
     @Override
     public List<UUID> getLogins(int userId) {
-        return database.queryList(Procedure.GET_HISTORY_BY_USER.getName(), new LinkedList<>(), resultSet -> resultSet.getString("LoginID"), userId)
+        return database.queryListCallable(Procedure.GET_HISTORY_BY_USER.getName(), new LinkedList<>(), resultSet -> resultSet.getString("LoginID"), userId)
                 .stream().map(UUID::fromString).toList();
     }
 
     @Override
     public List<UUID> getSortedLogins(int userId) {
-        return database.queryList(Procedure.GET_HISTORY_BY_USER_SORT.getName(), new LinkedList<>(), resultSet -> resultSet.getString("LoginID"), userId, 10)
+        return database.queryListCallable(Procedure.GET_HISTORY_BY_USER_SORT.getName(), new LinkedList<>(), resultSet -> resultSet.getString("LoginID"), userId, 10)
                 .stream().map(UUID::fromString).toList();
     }
 
@@ -65,7 +65,7 @@ public final class LoginHistoryProvider implements LoginHistory {
 
     @Override
     public List<Integer> getUserIdsByIP(String ipAddress) {
-        return database.queryList(Procedure.GET_ID_BY_IP.getName(), new LinkedList<>(), resultSet -> resultSet.getInt("UserID"), ipAddress);
+        return database.queryListCallable(Procedure.GET_ID_BY_IP.getName(), new LinkedList<>(), resultSet -> resultSet.getInt("UserID"), ipAddress);
     }
 
     @Override
