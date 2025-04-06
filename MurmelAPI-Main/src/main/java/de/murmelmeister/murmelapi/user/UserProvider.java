@@ -315,13 +315,13 @@ public final class UserProvider implements User {
 
     @Override
     public List<String> getUsernames() {
-        return database.queryListCallable(Procedure.GET_DATA.getName(), new LinkedList<>(), resultSet -> resultSet.getString("Username"), String.class)
+        return database.queryListCallable(Procedure.GET_DATA.getName(), new LinkedList<>(), resultSet -> resultSet.getString("Username"))
                 .stream().filter(Objects::nonNull).toList();
     }
 
     @Override
     public CompletableFuture<List<String>> getUsernamesAsync() {
-        return database.queryListCallableAsync(Procedure.GET_DATA.getName(), new LinkedList<>(), resultSet -> resultSet.getString("Username"), String.class)
+        return database.queryListCallableAsync(Procedure.GET_DATA.getName(), new LinkedList<>(), resultSet -> resultSet.getString("Username"))
                 .thenApply(list -> list.stream().filter(Objects::nonNull).toList());
     }
 
