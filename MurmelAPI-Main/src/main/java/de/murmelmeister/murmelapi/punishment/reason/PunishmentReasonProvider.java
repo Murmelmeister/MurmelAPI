@@ -103,7 +103,7 @@ public final class PunishmentReasonProvider implements PunishmentReason {
     @Override
     public String getCreatedDate(int reasonId, int typeId) {
         Timestamp time = getCreatedAt(reasonId, typeId);
-        return time == null ? "" : getDateFormat().format(time);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
@@ -119,7 +119,7 @@ public final class PunishmentReasonProvider implements PunishmentReason {
     @Override
     public String getModifiedDate(int reasonId, int typeId) {
         Timestamp time = getModifiedAt(reasonId, typeId);
-        return time == null ? "" : getDateFormat().format(time);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     private enum Procedure {

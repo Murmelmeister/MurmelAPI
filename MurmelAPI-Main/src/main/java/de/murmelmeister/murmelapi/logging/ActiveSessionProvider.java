@@ -63,7 +63,7 @@ public final class ActiveSessionProvider implements ActiveSession {
     @Override
     public String getLoginDate(int userId) {
         Timestamp time = getLoginTime(userId);
-        return time != null ? getDateFormat().format(time) : null;
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
