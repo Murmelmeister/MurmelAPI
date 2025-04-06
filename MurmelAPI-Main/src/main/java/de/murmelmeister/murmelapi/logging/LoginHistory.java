@@ -93,6 +93,16 @@ public sealed interface LoginHistory permits LoginHistoryProvider {
     Timestamp getFirstLoginTimeByUser(int userId, String ipAddress);
 
     /**
+     * Retrieves the formatted date of the first login associated with a specific user and IP address.
+     *
+     * @param userId    The unique identifier of the user whose first login date is to be retrieved.
+     * @param ipAddress The IP address associated with the user's login.
+     * @return A string representing the first login date in a formatted style,
+     * or null if no such record exists.
+     */
+    String getFirstLoginDateByUser(int userId, String ipAddress);
+
+    /**
      * Retrieves the first login timestamp associated with a specific IP address.
      *
      * @param ipAddress The IP address for which the first login timestamp is to be retrieved
@@ -100,6 +110,15 @@ public sealed interface LoginHistory permits LoginHistoryProvider {
      * or {@code null} if no login records exist for the given IP address
      */
     Timestamp getFirstLoginTimeByIP(String ipAddress);
+
+    /**
+     * Retrieves the formatted date of the first login associated with a specific IP address.
+     *
+     * @param ipAddress The IP address for which the first login date is to be retrieved.
+     * @return A string representing the first login date in a formatted style,
+     * or null if no login records exist for the given IP address.
+     */
+    String getFirstLoginDateByIP(String ipAddress);
 
     /**
      * Retrieves the most recent login time for a user based on their user ID and IP address.
@@ -112,6 +131,16 @@ public sealed interface LoginHistory permits LoginHistoryProvider {
     Timestamp getLastLoginTimeByUser(int userId, String ipAddress);
 
     /**
+     * Retrieves the formatted date of the last login associated with a specific user and IP address.
+     *
+     * @param userId    The unique identifier of the user whose last login date is to be retrieved.
+     * @param ipAddress The IP address associated with the user's login.
+     * @return A string representing the last login date in a formatted style,
+     * or null if no such record exists.
+     */
+    String getLastLoginDateByUser(int userId, String ipAddress);
+
+    /**
      * Retrieves the last login time associated with the specified IP address.
      *
      * @param ipAddress The IP address for which the last login time is to be retrieved.
@@ -121,12 +150,29 @@ public sealed interface LoginHistory permits LoginHistoryProvider {
     Timestamp getLastLoginTimeByIP(String ipAddress);
 
     /**
+     * Retrieves the formatted date of the last login associated with a specific IP address.
+     *
+     * @param ipAddress The IP address for which the last login date is to be retrieved.
+     * @return A string representing the last login date in a formatted style,
+     * or null if no such record exists.
+     */
+    String getLastLoginDateByIP(String ipAddress);
+
+    /**
      * Retrieves the login time for a specific login ID.
      *
      * @param loginId The unique identifier associated with the login.
      * @return The timestamp indicating the login time, or null if no record is found.
      */
     Timestamp getLoginTime(UUID loginId);
+
+    /**
+     * Retrieves the formatted login date associated with the given login ID.
+     *
+     * @param loginId The unique identifier of the login session.
+     * @return A string representing the login date in a formatted style.
+     */
+    String getLoginDate(UUID loginId);
 
     /**
      * Retrieves the logout time associated with a specific login session.

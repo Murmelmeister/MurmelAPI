@@ -7,6 +7,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+
 public final class LoginHistoryProvider implements LoginHistory {
     private static final String TABLE_NAME = "LoginHistory";
     private final Database database;
@@ -28,99 +30,128 @@ public final class LoginHistoryProvider implements LoginHistory {
 
     @Override
     public boolean existsLogin(UUID loginId) {
-        return database.exists(Procedure.GET_HISTORY_BY_ID.getName(), loginId.toString());
+        return database.existsCallable(Procedure.GET_HISTORY_BY_ID.getName(), loginId.toString());
     }
 
     @Override
     public void deleteUserLogin(int userId) {
-        database.callUpdate(Procedure.DELETE.getName(), userId);
+        database.updateCallable(Procedure.DELETE.getName(), userId);
     }
 
     @Override
     public List<UUID> getLogins(int userId) {
-        return database.queryList(new LinkedList<>(), "LoginID", String.class, Procedure.GET_HISTORY_BY_USER.getName(), userId)
-                .parallelStream().map(UUID::fromString).toList();
+        return database.queryList(Procedure.GET_HISTORY_BY_USER.getName(), new LinkedList<>(), resultSet -> resultSet.getString("LoginID"), userId)
+                .stream().map(UUID::fromString).toList();
     }
 
     @Override
     public List<UUID> getSortedLogins(int userId) {
-        return database.queryList(new LinkedList<>(), "LoginID", String.class, Procedure.GET_HISTORY_BY_USER_SORT.getName(), userId, 10)
-                .parallelStream().map(UUID::fromString).toList();
-    }
-
-    private <T> T get(UUID loginId, String columnName, T defaultValue, Class<T> type) {
-        return database.query(defaultValue, columnName, type, Procedure.GET_HISTORY_BY_ID.getName(), loginId.toString());
+        return database.queryList(Procedure.GET_HISTORY_BY_USER_SORT.getName(), new LinkedList<>(), resultSet -> resultSet.getString("LoginID"), userId, 10)
+                .stream().map(UUID::fromString).toList();
     }
 
     @Override
     public UUID getLastLoginId(int userId) {
-        return UUID.fromString(database.query(null, "LoginID", String.class, Procedure.GET_LAST_LOGIN_ID.getName(), userId));
+        return database.queryCallable(Procedure.GET_LAST_LOGIN_ID.getName(), null, resultSet -> {
+            String id = resultSet.getString("LoginID");
+            return id == null ? null : UUID.fromString(id);
+        }, userId);
     }
 
     @Override
     public Timestamp getLastQuit(int userId) {
-        return database.query(null, "LastQuit", Timestamp.class, Procedure.GET_LAST_QUIT.getName(), userId);
+        return database.queryCallable(Procedure.GET_LAST_QUIT.getName(), null, resultSet -> resultSet.getTimestamp("LastQuit"), userId);
     }
 
     @Override
     public List<Integer> getUserIdsByIP(String ipAddress) {
-        return database.queryList(new LinkedList<>(), "UserID", int.class, Procedure.GET_ID_BY_IP.getName(), ipAddress);
+        return database.queryList(Procedure.GET_ID_BY_IP.getName(), new LinkedList<>(), resultSet -> resultSet.getInt("UserID"), ipAddress);
     }
 
     @Override
     public int getUserId(UUID loginId) {
-        return get(loginId, "UserID", -2, int.class);
+        return database.queryCallable(Procedure.GET_HISTORY_BY_ID.getName(), -2, resultSet -> resultSet.getInt("UserID"), loginId.toString());
     }
 
     @Override
     public String getIPAddress(UUID loginId) {
-        return get(loginId, "IPAddress", null, String.class);
+        return database.queryCallable(Procedure.GET_HISTORY_BY_ID.getName(), null, resultSet -> resultSet.getString("IPAddress"), loginId.toString());
     }
 
     @Override
     public Timestamp getFirstLoginTimeByUser(int userId, String ipAddress) {
-        return database.query(null, "LoginTime", Timestamp.class, Procedure.LOGIN_HISTORY_GET_MIN_TIME_BY_USER.getName(), userId, ipAddress);
+        return database.queryCallable(Procedure.LOGIN_HISTORY_GET_MIN_TIME_BY_USER.getName(), null, resultSet -> resultSet.getTimestamp("LoginTime"), userId, ipAddress);
+    }
+
+    @Override
+    public String getFirstLoginDateByUser(int userId, String ipAddress) {
+        Timestamp time = getFirstLoginTimeByUser(userId, ipAddress);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public Timestamp getFirstLoginTimeByIP(String ipAddress) {
-        return database.query(null, "LoginTime", Timestamp.class, Procedure.LOGIN_HISTORY_GET_MIN_TIME_BY_IP.getName(), ipAddress);
+        return database.queryCallable(Procedure.LOGIN_HISTORY_GET_MIN_TIME_BY_IP.getName(), null, resultSet -> resultSet.getTimestamp("LoginTime"), ipAddress);
+    }
+
+    @Override
+    public String getFirstLoginDateByIP(String ipAddress) {
+        Timestamp time = getFirstLoginTimeByIP(ipAddress);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public Timestamp getLastLoginTimeByUser(int userId, String ipAddress) {
-        return database.query(null, "LoginTime", Timestamp.class, Procedure.LOGIN_HISTORY_GET_MAX_TIME_BY_USER.getName(), userId, ipAddress);
+        return database.queryCallable(Procedure.LOGIN_HISTORY_GET_MAX_TIME_BY_USER.getName(), null, resultSet -> resultSet.getTimestamp("LoginTime"), userId, ipAddress);
+    }
+
+    @Override
+    public String getLastLoginDateByUser(int userId, String ipAddress) {
+        Timestamp time = getLastLoginTimeByUser(userId, ipAddress);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public Timestamp getLastLoginTimeByIP(String ipAddress) {
-        return database.query(null, "LoginTime", Timestamp.class, Procedure.LOGIN_HISTORY_GET_MAX_TIME_BY_IP.getName(), ipAddress);
+        return database.queryCallable(Procedure.LOGIN_HISTORY_GET_MAX_TIME_BY_IP.getName(), null, resultSet -> resultSet.getTimestamp("LoginTime"), ipAddress);
+    }
+
+    @Override
+    public String getLastLoginDateByIP(String ipAddress) {
+        Timestamp time = getLastLoginTimeByIP(ipAddress);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public Timestamp getLoginTime(UUID loginId) {
-        return get(loginId, "LoginTime", null, Timestamp.class);
+        return database.queryCallable(Procedure.GET_HISTORY_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("LoginTime"), loginId.toString());
+    }
+
+    @Override
+    public String getLoginDate(UUID loginId) {
+        Timestamp time = getLoginTime(loginId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public Timestamp getLogoutTime(UUID loginId) {
-        return get(loginId, "LogoutTime", null, Timestamp.class);
+        return database.queryCallable(Procedure.GET_HISTORY_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("LogoutTime"), loginId.toString());
     }
 
     @Override
     public String getLogoutDate(UUID loginId) {
         Timestamp time = getLogoutTime(loginId);
-        return time == null ? "never" : time.toString();
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public String getClientVersion(UUID loginId) {
-        return get(loginId, "ClientVersion", null, String.class);
+        return database.queryCallable(Procedure.GET_HISTORY_BY_ID.getName(), null, resultSet -> resultSet.getString("ClientVersion"), loginId.toString());
     }
 
     @Override
     public String getProtocolVersion(UUID loginId) {
-        return get(loginId, "ProtocolVersion", null, String.class);
+        return database.queryCallable(Procedure.GET_HISTORY_BY_ID.getName(), null, resultSet -> resultSet.getString("ProtocolVersion"), loginId.toString());
     }
 
     private enum Procedure {
