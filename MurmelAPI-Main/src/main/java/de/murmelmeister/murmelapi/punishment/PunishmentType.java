@@ -56,7 +56,7 @@ public enum PunishmentType {
      * @return {@code true} if the specified punishment type exists in the database, {@code false} otherwise.
      */
     public static boolean exists(PunishmentType type) {
-        return DATABASE.exists(Procedure.GET_TYPE.getName(), type.getId());
+        return DATABASE.existsCallable(Procedure.GET_TYPE.getName(), type.getId());
     }
 
     public static void setup(Database database) {
@@ -64,7 +64,7 @@ public enum PunishmentType {
         Procedure.loadAll(database);
         for (PunishmentType type : VALUES)
             if (!exists(type))
-                database.callUpdate(Procedure.CREATE_TYPE.getName(), type.getId(), type.getName(), type.isTypeIp());
+                database.updateCallable(Procedure.CREATE_TYPE.getName(), type.getId(), type.getName(), type.isTypeIp());
     }
 
 
