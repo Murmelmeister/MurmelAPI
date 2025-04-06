@@ -59,7 +59,7 @@ public final class MurmelAPI {
      * @param password the password for authentication
      */
     public static void connect(String url, String user, String password) {
-        DATABASE.connect(url, user, password);
+        DATABASE.connectMySQL(url, user, password);
         setup();
     }
 
