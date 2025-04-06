@@ -71,6 +71,16 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
     Timestamp getExpiredAt(int groupId, String permission);
 
     /**
+     * Retrieves the expiration date of a specific permission associated with a given group.
+     *
+     * @param groupId    The ID of the group whose permission expiration date is being queried.
+     * @param permission The name of the permission for which the expiration date is being retrieved.
+     * @return A {@code String} representing the expiration date of the specified permission,
+     * or {@code null} if no expiration record exists.
+     */
+    String getExpiredDate(int groupId, String permission);
+
+    /**
      * Sets the expiration time for a specific permission associated with a group.
      * The expiration time can be specified to indicate when the permission should expire.
      *
@@ -101,6 +111,16 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
     Timestamp getCreatedAt(int groupId, String permission);
 
     /**
+     * Retrieves the creation date of a specific permission associated with a given group.
+     *
+     * @param groupId    The ID of the group whose permission creation date is being queried.
+     * @param permission The name of the permission for which the creation date is being retrieved.
+     * @return A {@code String} representing the creation date of the specified permission,
+     * or {@code null} if no creation record exists.
+     */
+    String getCreatedDate(int groupId, String permission);
+
+    /**
      * Retrieves the user ID of the user who last modified the specified permission for a given group.
      *
      * @param groupId    The ID of the group whose permission modification details are being queried.
@@ -119,6 +139,16 @@ public sealed interface GroupPermission permits GroupPermissionProvider {
      * permission, or {@code null} if no modification record exists.
      */
     Timestamp getModifiedAt(int groupId, String permission);
+
+    /**
+     * Retrieves the modification date of a specific permission associated with a given group.
+     *
+     * @param groupId    The ID of the group whose permission modification date is being queried.
+     * @param permission The name of the permission for which the modification date is being retrieved.
+     * @return A {@code String} representing the last modification date of the specified permission,
+     * or {@code null} if no modification record exists.
+     */
+    String getModifiedDate(int groupId, String permission);
 
     /**
      * Loads all expired permissions or entities associated with a given group
