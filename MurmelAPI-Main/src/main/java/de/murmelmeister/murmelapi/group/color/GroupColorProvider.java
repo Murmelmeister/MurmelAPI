@@ -1,11 +1,10 @@
 package de.murmelmeister.murmelapi.group.color;
 
 import de.murmelmeister.murmelapi.database.Database;
-import de.murmelmeister.murmelapi.group.Group;
 
 import java.sql.Timestamp;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
 
 public final class GroupColorProvider implements GroupColor {
     private static final String TABLE_NAME = "GroupColorSettings";
@@ -27,86 +26,9 @@ public final class GroupColorProvider implements GroupColor {
         Procedure.loadAll(database);
     }
 
-    // === Asynchrone API-Methoden ===
-
-    public CompletableFuture<Boolean> existsGroupAsync(int groupId) {
-        return database.asyncExists(Procedure.GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Void> createGroupAsync(int executorId, int groupId) {
-        return createGroupAsync(executorId, groupId, "", "", "", "", "", "", "", "", "7");
-    }
-
-    public CompletableFuture<Void> createGroupAsync(int executorId, int groupId,
-                                                    String chatPrefix, String chatSuffix, String chatColor,
-                                                    String tabPrefix, String tabSuffix, String tabColor,
-                                                    String teamPrefix, String teamSuffix, String teamColor) {
-        return database.asyncUpdate(Procedure.CREATE.getName(),
-                groupId, chatPrefix, chatSuffix, chatColor,
-                tabPrefix, tabSuffix, tabColor,
-                teamPrefix, teamSuffix, teamColor, executorId, executorId);
-    }
-
-    public CompletableFuture<Void> deleteGroupAsync(int groupId) {
-        return database.asyncUpdate(Procedure.DELETE.getName(), groupId);
-    }
-
-    public CompletableFuture<String> getPrefixAsync(int groupId, GroupColorType type) {
-        return database.asyncQuery(null, type.getName() + "Prefix", String.class, Procedure.GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<String> getSuffixAsync(int groupId, GroupColorType type) {
-        return database.asyncQuery(null, type.getName() + "Suffix", String.class, Procedure.GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<String> getColorAsync(int groupId, GroupColorType type) {
-        return database.asyncQuery(null, type.getName() + "Color", String.class, Procedure.GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Void> setPrefixAsync(int executorId, int groupId, GroupColorType type, String prefix) {
-        return database.asyncUpdate(Procedure.UPDATE.getName(), type.getName() + "Prefix", prefix, groupId, executorId);
-    }
-
-    public CompletableFuture<Void> setSuffixAsync(int executorId, int groupId, GroupColorType type, String suffix) {
-        return database.asyncUpdate(Procedure.UPDATE.getName(), type.getName() + "Suffix", suffix, groupId, executorId);
-    }
-
-    public CompletableFuture<Void> setColorAsync(int executorId, int groupId, GroupColorType type, String color) {
-        return database.asyncUpdate(Procedure.UPDATE.getName(), type.getName() + "Color", color, groupId, executorId);
-    }
-
-    public CompletableFuture<Integer> getCreatedByAsync(int groupId) {
-        return database.asyncQuery(-2, "CreatedBy", int.class, Procedure.GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Timestamp> getCreatedAtAsync(int groupId) {
-        return database.asyncQuery(null, "CreatedAt", Timestamp.class, Procedure.GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Integer> getModifiedByAsync(int groupId) {
-        return database.asyncQuery(-2, "ModifiedBy", int.class, Procedure.GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Timestamp> getModifiedAtAsync(int groupId) {
-        return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GET_ALL_BY_ID.getName(), groupId);
-    }
-
-    public CompletableFuture<Void> loadTablesAsync(Group group) {
-        return CompletableFuture.runAsync(() -> {
-            List<Integer> groupIds = group.getUniqueIds();
-            for (Integer groupId : groupIds) {
-                if (!existsGroupAsync(groupId).join()) {
-                    createGroupAsync(-1, groupId).join();
-                }
-            }
-        });
-    }
-
-    // === Synchrone Wrapper (Interface-Implementierung) ===
-
     @Override
     public boolean existsGroup(int groupId) {
-        return existsGroupAsync(groupId).join();
+        return groupId > 0 && database.existsCallable(Procedure.GET_ALL_BY_ID.getName(), groupId);
     }
 
     @Override
@@ -116,62 +38,77 @@ public final class GroupColorProvider implements GroupColor {
 
     @Override
     public void createGroup(int executorId, int groupId, String chatPrefix, String chatSuffix, String chatColor, String tabPrefix, String tabSuffix, String tabColor, String teamPrefix, String teamSuffix, String teamColor) {
-        createGroupAsync(executorId, groupId, chatPrefix, chatSuffix, chatColor, tabPrefix, tabSuffix, tabColor, teamPrefix, teamSuffix, teamColor).join();
+        database.updateCallable(Procedure.CREATE.getName(),
+                groupId, chatPrefix, chatSuffix, chatColor,
+                tabPrefix, tabSuffix, tabColor,
+                teamPrefix, teamSuffix, teamColor, executorId, executorId);
     }
 
     @Override
     public void deleteGroup(int groupId) {
-        deleteGroupAsync(groupId).join();
+        database.updateCallable(Procedure.DELETE.getName(), groupId);
     }
 
     @Override
     public String getPrefix(int groupId, GroupColorType type) {
-        return getPrefixAsync(groupId, type).join();
+        return database.queryCallable(Procedure.GET_ALL_BY_ID.getName(), null, resultSet -> resultSet.getString(type.getName() + "Prefix"), groupId);
     }
 
     @Override
     public String getSuffix(int groupId, GroupColorType type) {
-        return getSuffixAsync(groupId, type).join();
+        return database.queryCallable(Procedure.GET_ALL_BY_ID.getName(), null, resultSet -> resultSet.getString(type.getName() + "Suffix"), groupId);
     }
 
     @Override
     public String getColor(int groupId, GroupColorType type) {
-        return getColorAsync(groupId, type).join();
+        return database.queryCallable(Procedure.GET_ALL_BY_ID.getName(), null, resultSet -> resultSet.getString(type.getName() + "Color"), groupId);
     }
 
     @Override
     public void setPrefix(int executorId, int groupId, GroupColorType type, String prefix) {
-        setPrefixAsync(executorId, groupId, type, prefix).join();
+        database.updateCallable(Procedure.UPDATE.getName(), type.getName() + "Prefix", prefix, groupId, executorId);
     }
 
     @Override
     public void setSuffix(int executorId, int groupId, GroupColorType type, String suffix) {
-        setSuffixAsync(executorId, groupId, type, suffix).join();
+        database.updateCallable(Procedure.UPDATE.getName(), type.getName() + "Suffix", suffix, groupId, executorId);
     }
 
     @Override
     public void setColor(int executorId, int groupId, GroupColorType type, String color) {
-        setColorAsync(executorId, groupId, type, color).join();
+        database.updateCallable(Procedure.UPDATE.getName(), type.getName() + "Color", color, groupId, executorId);
     }
 
     @Override
     public int getCreatedBy(int groupId) {
-        return getCreatedByAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_ALL_BY_ID.getName(), -2, resultSet -> resultSet.getInt("CreatedBy"), groupId);
     }
 
     @Override
     public Timestamp getCreatedAt(int groupId) {
-        return getCreatedAtAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_ALL_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("CreatedAt"), groupId);
+    }
+
+    @Override
+    public String getCreatedDate(int groupId) {
+        Timestamp time = getCreatedAt(groupId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public int getModifiedBy(int groupId) {
-        return getModifiedByAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_ALL_BY_ID.getName(), -2, resultSet -> resultSet.getInt("ModifiedBy"), groupId);
     }
 
     @Override
     public Timestamp getModifiedAt(int groupId) {
-        return getModifiedAtAsync(groupId).join();
+        return database.queryCallable(Procedure.GET_ALL_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("ModifiedAt"), groupId);
+    }
+
+    @Override
+    public String getModifiedDate(int groupId) {
+        Timestamp time = getModifiedAt(groupId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     private enum Procedure {

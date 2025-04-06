@@ -123,6 +123,14 @@ public sealed interface GroupColor permits GroupColorProvider {
     Timestamp getCreatedAt(int groupId);
 
     /**
+     * Retrieves the creation date of the group with the specified group ID.
+     *
+     * @param groupId The unique identifier of the group whose creation date is to be retrieved.
+     * @return A string representing the creation date of the specified group.
+     */
+    String getCreatedDate(int groupId);
+
+    /**
      * Retrieves the ID of the user who last modified the group with the specified group ID.
      *
      * @param groupId The unique identifier of the group whose last modifier is to be retrieved.
@@ -137,4 +145,12 @@ public sealed interface GroupColor permits GroupColorProvider {
      * @return A {@code Timestamp} object representing the last modification time of the specified group.
      */
     Timestamp getModifiedAt(int groupId);
+
+    /**
+     * Retrieves the modification date of the group with the specified group ID.
+     *
+     * @param groupId The unique identifier of the group whose modification date is to be retrieved.
+     * @return A string representing the modification date of the specified group.
+     */
+    String getModifiedDate(int groupId);
 }
