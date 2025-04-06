@@ -6,6 +6,8 @@ import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.UUID;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+
 public final class ActiveSessionProvider implements ActiveSession {
     private static final String TABLE_NAME = "ActiveSessions";
 
@@ -56,6 +58,12 @@ public final class ActiveSessionProvider implements ActiveSession {
     @Override
     public Timestamp getLoginTime(int userId) {
         return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getTimestamp("LoginTime"), userId);
+    }
+
+    @Override
+    public String getLoginDate(int userId) {
+        Timestamp time = getLoginTime(userId);
+        return time != null ? getDateFormat().format(time) : null;
     }
 
     @Override

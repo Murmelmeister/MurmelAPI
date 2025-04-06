@@ -61,6 +61,15 @@ public sealed interface ActiveSession permits ActiveSessionProvider {
     Timestamp getLoginTime(int userId);
 
     /**
+     * Retrieves the date of the user's login for the active session.
+     *
+     * @param userId The unique identifier of the user whose login date is to be retrieved.
+     * @return A {@code String} representing the user's login date, or
+     * {@code null} if no active session exists for the specified user.
+     */
+    String getLoginDate(int userId);
+
+    /**
      * Retrieves the client version associated with the specified user ID.
      *
      * @param userId The unique identifier of the user whose client version is to be retrieved.
