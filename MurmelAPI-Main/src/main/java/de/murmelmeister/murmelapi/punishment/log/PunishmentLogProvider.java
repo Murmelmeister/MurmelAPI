@@ -9,6 +9,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+
 public final class PunishmentLogProvider implements PunishmentLog {
     private static final String TABLE_NAME = "PunishmentLog";
 
@@ -36,7 +38,7 @@ public final class PunishmentLogProvider implements PunishmentLog {
 
     @Override
     public boolean existsLog(UUID logId, int typeId) {
-        return database.exists(Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.existsCallable(Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
     }
 
     @Override
@@ -44,7 +46,7 @@ public final class PunishmentLogProvider implements PunishmentLog {
         UUID logId = UUID.randomUUID(); // database.generateUniqueIdentifier(Procedure.CHECK_GENERATED_LOG_ID.getName());
         long duration = reason.getDuration(reasonId, typeId);
         Timestamp expired = duration == -1 ? null : new Timestamp(System.currentTimeMillis() + duration);
-        database.callUpdate(Procedure.CREATE_LOG_IP.getName(), logId.toString(), typeId, inetAddress.getHostAddress(), expired, reasonId, executorId, executorId);
+        database.updateCallable(Procedure.CREATE_LOG_IP.getName(), logId.toString(), typeId, inetAddress.getHostAddress(), expired, reasonId, executorId, executorId);
         return logId;
     }
 
@@ -53,82 +55,100 @@ public final class PunishmentLogProvider implements PunishmentLog {
         UUID logId = UUID.randomUUID(); // database.generateUniqueIdentifier(Procedure.CHECK_GENERATED_LOG_ID.getName());
         long duration = reason.getDuration(reasonId, typeId);
         Timestamp expired = duration == -1 ? null : new Timestamp(System.currentTimeMillis() + duration);
-        database.callUpdate(Procedure.CREATE_LOG_USER.getName(), logId.toString(), typeId, userId, inetAddress.getHostAddress(), expired, reasonId, executorId, executorId);
+        database.updateCallable(Procedure.CREATE_LOG_USER.getName(), logId.toString(), typeId, userId, inetAddress.getHostAddress(), expired, reasonId, executorId, executorId);
         return logId;
     }
 
     @Override
     public void deleteUserLogs(int userId) {
-        database.callUpdate(Procedure.DELETE_LOG_USER.getName(), userId);
+        database.updateCallable(Procedure.DELETE_LOG_USER.getName(), userId);
     }
 
     @Override
     public List<UUID> getLogs(int userId, int typeId) {
-        return database.queryList(new LinkedList<>(), "LogID", String.class, Procedure.GET_LOG_BY_USER.getName(), userId, typeId)
-                .parallelStream().map(UUID::fromString).toList();
+        return database.queryListCallable(Procedure.GET_LOG_BY_USER.getName(), new LinkedList<>(), resultSet -> resultSet.getString("LogID"), userId, typeId)
+                .stream().map(UUID::fromString).toList();
     }
 
     @Override
     public List<UUID> getLogs(InetAddress inetAddress, int typeId) {
-        return database.queryList(new LinkedList<>(), "LogID", String.class, Procedure.GET_LOG_BY_IP.getName(), inetAddress.getHostAddress(), typeId)
-                .parallelStream().map(UUID::fromString).toList();
+        return database.queryListCallable(Procedure.GET_LOG_BY_IP.getName(), new LinkedList<>(), resultSet -> resultSet.getString("LogID"), inetAddress.getHostAddress(), typeId)
+                .stream().map(UUID::fromString).toList();
     }
 
     @Override
     public int getUserId(UUID logId, int typeId) {
-        return database.query(-2, "UserID", int.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.queryCallable(Procedure.GET_LOG_BY_ID.getName(), -2, resultSet -> resultSet.getInt("UserID"), logId.toString(), typeId);
     }
 
     @Override
     public String getIpAddress(UUID logId, int typeId) {
-        return database.query(null, "IPAddress", String.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.queryCallable(Procedure.GET_LOG_BY_ID.getName(), null, resultSet -> resultSet.getString("IPAddress"), logId.toString(), typeId);
     }
 
     @Override
     public int getReasonId(UUID logId, int typeId) {
-        return database.query(-1, "ReasonID", int.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.queryCallable(Procedure.GET_LOG_BY_ID.getName(), -1, resultSet -> resultSet.getInt("ReasonID"), logId.toString(), typeId);
     }
 
     @Override
     public void setReasonId(UUID logId, int typeId, int executorId, int reasonId) {
-        database.callUpdate(Procedure.SET_LOG_REASON.getName(), logId.toString(), typeId, reasonId, executorId);
+        database.updateCallable(Procedure.SET_LOG_REASON.getName(), logId.toString(), typeId, reasonId, executorId);
     }
 
     @Override
     public Timestamp getExpiredAt(UUID logId, int typeId) {
         if (logId == null) return null;
-        return database.query(null, "ExpiredAt", Timestamp.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.queryCallable(Procedure.GET_LOG_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("ExpiredAt"), logId.toString(), typeId);
+    }
+
+    @Override
+    public String getExpiredDate(UUID logId, int typeId) {
+        Timestamp time = getExpiredAt(logId, typeId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public void setExpiredAt(UUID logId, int typeId, int executorId, long duration) {
         Timestamp expired = duration == -1 ? null : new Timestamp(System.currentTimeMillis() + duration);
-        database.callUpdate(Procedure.SET_LOG_EXPIRED_TIME.getName(), logId.toString(), typeId, expired, executorId);
+        database.updateCallable(Procedure.SET_LOG_EXPIRED_TIME.getName(), logId.toString(), typeId, expired, executorId);
     }
 
     @Override
     public boolean isExpired(UUID logId, int typeId) {
-        return database.query((byte) 0, "Expired", byte.class, Procedure.IS_LOG_EXPIRED.getName(), logId.toString(), typeId) == 1;
+        return database.queryCallable(Procedure.IS_LOG_EXPIRED.getName(), (byte) 0, resultSet -> resultSet.getByte("Expired"), logId.toString(), typeId) == 1;
     }
 
     @Override
     public int getCreatedBy(UUID logId, int typeId) {
-        return database.query(-2, "CreatedBy", int.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.queryCallable(Procedure.GET_LOG_BY_ID.getName(), -2, resultSet -> resultSet.getInt("CreatedBy"), logId.toString(), typeId);
     }
 
     @Override
     public Timestamp getCreatedAt(UUID logId, int typeId) {
-        return database.query(null, "CreatedAt", Timestamp.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.queryCallable(Procedure.GET_LOG_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("CreatedAt"), logId.toString(), typeId);
+    }
+
+    @Override
+    public String getCreatedDate(UUID logId, int typeId) {
+        Timestamp time = getCreatedAt(logId, typeId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public int getModifiedBy(UUID logId, int typeId) {
-        return database.query(-2, "ModifiedBy", int.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.queryCallable(Procedure.GET_LOG_BY_ID.getName(), -2, resultSet -> resultSet.getInt("ModifiedBy"), logId.toString(), typeId);
     }
 
     @Override
     public Timestamp getModifiedAt(UUID logId, int typeId) {
-        return database.query(null, "ModifiedAt", Timestamp.class, Procedure.GET_LOG_BY_ID.getName(), logId.toString(), typeId);
+        return database.queryCallable(Procedure.GET_LOG_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("ModifiedAt"), logId.toString(), typeId);
+    }
+
+    @Override
+    public String getModifiedDate(UUID logId, int typeId) {
+        Timestamp time = getModifiedAt(logId, typeId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     private enum Procedure {

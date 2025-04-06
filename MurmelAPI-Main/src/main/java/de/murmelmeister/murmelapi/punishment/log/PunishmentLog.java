@@ -120,6 +120,15 @@ public sealed interface PunishmentLog permits PunishmentLogProvider {
     Timestamp getExpiredAt(UUID logId, int typeId);
 
     /**
+     * Retrieves the expiration date of a punishment log entry.
+     *
+     * @param logId  The unique identifier of the punishment log entry
+     * @param typeId The type identifier of the punishment log entry
+     * @return A string representing the expiration date of the punishment log entry
+     */
+    String getExpiredDate(UUID logId, int typeId);
+
+    /**
      * Sets the expiration time for a specific punishment log entry.
      *
      * @param logId      The unique identifier of the punishment log entry.
@@ -157,6 +166,15 @@ public sealed interface PunishmentLog permits PunishmentLogProvider {
     Timestamp getCreatedAt(UUID logId, int typeId);
 
     /**
+     * Retrieves the creation date of a punishment log entry.
+     *
+     * @param logId  The unique identifier of the punishment log entry
+     * @param typeId The type identifier of the punishment log entry
+     * @return A string representing the creation date of the punishment log entry
+     */
+    String getCreatedDate(UUID logId, int typeId);
+
+    /**
      * Retrieves the ID of the user who last modified the punishment log entry.
      *
      * @param logId  The unique identifier of the punishment log entry
@@ -173,4 +191,13 @@ public sealed interface PunishmentLog permits PunishmentLogProvider {
      * @return The timestamp representing the last modification date and time of the specified log.
      */
     Timestamp getModifiedAt(UUID logId, int typeId);
+
+    /**
+     * Retrieves the modification date of a punishment log entry.
+     *
+     * @param logId  The unique identifier of the punishment log entry.
+     * @param typeId The type identifier of the punishment log entry.
+     * @return A string representing the modification date of the punishment log entry.
+     */
+    String getModifiedDate(UUID logId, int typeId);
 }
