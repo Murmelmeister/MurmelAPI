@@ -80,6 +80,15 @@ public sealed interface UserParent permits UserParentProvider {
     Timestamp getExpiredAt(int userId, int parentId);
 
     /**
+     * Retrieves the expiration date of the relationship between the specified user and parent.
+     *
+     * @param userId   The ID of the user whose relationship expiration date is being retrieved.
+     * @param parentId The ID of the parent involved in the relationship.
+     * @return A string representing the expiration date of the relationship.
+     */
+    String getExpiredDate(int userId, int parentId);
+
+    /**
      * Sets the expiration time for the relationship between a specified user and parent.
      *
      * @param executorId The ID of the user performing the log action.
@@ -110,6 +119,15 @@ public sealed interface UserParent permits UserParentProvider {
     Timestamp getCreatedAt(int userId, int parentId);
 
     /**
+     * Retrieves the creation date of the relationship between the specified user and parent.
+     *
+     * @param userId   The ID of the user whose parent relationship creation date is being retrieved.
+     * @param parentId The ID of the parent involved in the relationship.
+     * @return A string representing the creation date of the relationship.
+     */
+    String getCreatedDate(int userId, int parentId);
+
+    /**
      * Retrieves the ID of the user who last modified the relationship between the specified user and parent.
      *
      * @param userId   The ID of the user associated with the relationship.
@@ -128,6 +146,15 @@ public sealed interface UserParent permits UserParentProvider {
      * of the relationship between the user and parent.
      */
     Timestamp getModifiedAt(int userId, int parentId);
+
+    /**
+     * Retrieves the modification date of the relationship between the specified user and parent.
+     *
+     * @param userId   The ID of the user whose relationship modification date is being retrieved.
+     * @param parentId The ID of the parent involved in the relationship.
+     * @return A string representing the modification date of the relationship.
+     */
+    String getModifiedDate(int userId, int parentId);
 
     /**
      * Loads and processes the expired parent-child relationships for a given user.

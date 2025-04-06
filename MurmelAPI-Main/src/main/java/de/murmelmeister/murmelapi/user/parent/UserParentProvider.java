@@ -7,8 +7,8 @@ import java.sql.Timestamp;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
+
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
 
 public final class UserParentProvider implements UserParent {
     private static final String TABLE_NAME = "UserParent";
@@ -30,157 +30,95 @@ public final class UserParentProvider implements UserParent {
         Procedure.loadAll(database);
     }
 
-    // === Asynchrone API-Methoden ===
-
-    public CompletableFuture<Boolean> existsParentAsync(int userId, int parentId) {
-        return database.asyncExists(Procedure.GET_DATA.getName(), userId, parentId);
-    }
-
-    public CompletableFuture<Void> addParentAsync(int executorId, int userId, int parentId, long time) {
-        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
-        return database.asyncUpdate(Procedure.CREATE.getName(), userId, parentId, expired, executorId, executorId);
-    }
-
-    public CompletableFuture<Void> removeParentAsync(int userId, int parentId) {
-        return database.asyncUpdate(Procedure.REMOVE_PARENT.getName(), userId, parentId);
-    }
-
-    public CompletableFuture<Void> clearParentAsync(int userId) {
-        return database.asyncUpdate(Procedure.CLEAR_PARENT.getName(), userId);
-    }
-
-    public CompletableFuture<List<Integer>> getParentIdsAsync(int userId) {
-        return database.asyncQueryList(new LinkedList<>(), "ParentID", int.class, Procedure.GET_ACTIVE_PARENT.getName(), userId);
-    }
-
-    public CompletableFuture<List<String>> getParentNamesAsync(Group group, int userId) {
-        return getParentIdsAsync(userId).thenApply(ids ->
-                ids.parallelStream()
-                        .map(group::getName)
-                        .collect(Collectors.toList())
-        );
-    }
-
-    public CompletableFuture<Integer> getHighestPriorityAsync(Group group, int userId) {
-        return getParentIdsAsync(userId).thenApply(ids ->
-                ids.parallelStream()
-                        .map(group::getPriority)
-                        .max(Comparator.naturalOrder())
-                        .orElse(-1)
-        );
-    }
-
-    public CompletableFuture<Timestamp> getExpiredAtAsync(int userId, int parentId) {
-        return database.asyncQuery(null, "ExpiredAt", Timestamp.class, Procedure.GET_DATA.getName(), userId, parentId);
-    }
-
-    public CompletableFuture<Void> setExpiredAtAsync(int executorId, int userId, int parentId, long time) {
-        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
-        return database.asyncUpdate(Procedure.SET_EXPIRED_AT.getName(), userId, parentId, expired, executorId);
-    }
-
-    public CompletableFuture<Integer> getCreatedByAsync(int userId, int parentId) {
-        return database.asyncQuery(-2, "CreatedBy", int.class, Procedure.GET_DATA.getName(), userId, parentId);
-    }
-
-    public CompletableFuture<Timestamp> getCreatedAtAsync(int userId, int parentId) {
-        return database.asyncQuery(null, "CreatedAt", Timestamp.class, Procedure.GET_DATA.getName(), userId, parentId);
-    }
-
-    public CompletableFuture<Integer> getModifiedByAsync(int userId, int parentId) {
-        return database.asyncQuery(-2, "ModifiedBy", int.class, Procedure.GET_DATA.getName(), userId, parentId);
-    }
-
-    public CompletableFuture<Timestamp> getModifiedAtAsync(int userId, int parentId) {
-        return database.asyncQuery(null, "ModifiedAt", Timestamp.class, Procedure.GET_DATA.getName(), userId, parentId);
-    }
-
-    public CompletableFuture<Void> loadExpiredAsync() {
-        /*return CompletableFuture.runAsync(() -> {
-            List<UUID> userIds = user.getUniqueIds();
-            for (int i = userIds.size() - 1; i >= 0; i--) {
-                int userId = user.getId(userIds.get(i));
-                List<Integer> parentIds = getParentIdsAsync(userId).join();
-                for (int j = parentIds.size() - 1; j >= 0; j--) {
-                    int parentId = parentIds.get(j);
-                    if (isExpiredAsync(userId, parentId).join())
-                        removeParentAsync(userId, parentId).join();
-                }
-            }
-        });*/
-        return database.asyncUpdate(Procedure.UPDATE_EXPIRED.getName());
-    }
-
-    // === Synchrone Wrapper (Interface-Implementierung) ===
-
     @Override
     public boolean existsParent(int userId, int parentId) {
-        return existsParentAsync(userId, parentId).join();
+        return database.existsCallable(Procedure.GET_DATA.getName(), userId, parentId);
     }
 
     @Override
     public void addParent(int executorId, int userId, int parentId, long time) {
-        addParentAsync(executorId, userId, parentId, time).join();
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        database.updateCallable(Procedure.CREATE.getName(), userId, parentId, expired, executorId, executorId);
     }
 
     @Override
     public void removeParent(int userId, int parentId) {
-        removeParentAsync(userId, parentId).join();
+        database.updateCallable(Procedure.REMOVE_PARENT.getName(), userId, parentId);
     }
 
     @Override
     public void clearParent(int userId) {
-        clearParentAsync(userId).join();
+        database.updateCallable(Procedure.CLEAR_PARENT.getName(), userId);
     }
 
     @Override
     public List<Integer> getParentIds(int userId) {
-        return getParentIdsAsync(userId).join();
+        return database.queryListCallable(Procedure.GET_ACTIVE_PARENT.getName(), new LinkedList<>(), resultSet -> resultSet.getInt("ParentID"), userId);
     }
 
     @Override
     public List<String> getParentNames(Group group, int userId) {
-        return getParentNamesAsync(group, userId).join();
+        return database.queryListCallable(Procedure.GET_ACTIVE_PARENT.getName(), new LinkedList<>(), resultSet -> group.getName(resultSet.getInt("ParentID")), userId);
     }
 
     @Override
     public int getHighestPriority(Group group, int userId) {
-        return getHighestPriorityAsync(group, userId).join();
+        return database.queryListCallable(Procedure.GET_ACTIVE_PARENT.getName(), new LinkedList<>(), resultSet -> group.getPriority(resultSet.getInt("ParentID")), userId)
+                .stream().max(Comparator.naturalOrder()).orElse(-1);
     }
 
     @Override
     public Timestamp getExpiredAt(int userId, int parentId) {
-        return getExpiredAtAsync(userId, parentId).join();
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getTimestamp("ExpiredAt"), userId, parentId);
+    }
+
+    @Override
+    public String getExpiredDate(int userId, int parentId) {
+        Timestamp time = getExpiredAt(userId, parentId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public void setExpiredAt(int executorId, int userId, int parentId, long time) {
-        setExpiredAtAsync(executorId, userId, parentId, time).join();
+        Timestamp expired = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        database.updateCallable(Procedure.SET_EXPIRED_AT.getName(), userId, parentId, expired, executorId);
     }
 
     @Override
     public int getCreatedBy(int userId, int parentId) {
-        return getCreatedByAsync(userId, parentId).join();
+        return database.queryCallable(Procedure.GET_DATA.getName(), -2, resultSet -> resultSet.getInt("CreatedBy"), userId, parentId);
     }
 
     @Override
     public Timestamp getCreatedAt(int userId, int parentId) {
-        return getCreatedAtAsync(userId, parentId).join();
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getTimestamp("CreatedAt"), userId, parentId);
+    }
+
+    @Override
+    public String getCreatedDate(int userId, int parentId) {
+        Timestamp time = getCreatedAt(userId, parentId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public int getModifiedBy(int userId, int parentId) {
-        return getModifiedByAsync(userId, parentId).join();
+        return database.queryCallable(Procedure.GET_DATA.getName(), -2, resultSet -> resultSet.getInt("ModifiedBy"), userId, parentId);
     }
 
     @Override
     public Timestamp getModifiedAt(int userId, int parentId) {
-        return getModifiedAtAsync(userId, parentId).join();
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getTimestamp("ModifiedAt"), userId, parentId);
+    }
+
+    @Override
+    public String getModifiedDate(int userId, int parentId) {
+        Timestamp time = getModifiedAt(userId, parentId);
+        return time == null ? "never" : getDateFormat().format(time);
     }
 
     @Override
     public void loadExpired() {
-        loadExpiredAsync().join();
+        database.updateCallable(Procedure.UPDATE_EXPIRED.getName());
     }
 
     private enum Procedure {
