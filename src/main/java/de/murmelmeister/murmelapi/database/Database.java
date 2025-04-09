@@ -148,6 +148,26 @@ public final class Database {
         } finally {
             writeLock.unlock();
         }
+
+        if (!executor.isShutdown()) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(10, TimeUnit.SECONDS))
+                    executor.shutdownNow();
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    /**
+     * Returns the ExecutorService used for asynchronous operations.
+     *
+     * @return The ExecutorService instance.
+     */
+    public ExecutorService getExecutor() {
+        return executor;
     }
 
     /**
