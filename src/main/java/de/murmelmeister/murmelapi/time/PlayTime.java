@@ -1,83 +1,56 @@
 package de.murmelmeister.murmelapi.time;
 
 /**
- * The PlayTime interface provides methods to manage and manipulate play time for users.
+ * Interface for managing playtime of users.
+ * <p>
+ * This interface provides methods to check if a user exists, create a new user, delete a user,
+ * get the playtime of a user, update the playtime of a user, and add time to a user's playtime.
  */
 public sealed interface PlayTime permits PlayTimeProvider {
     /**
-     * Checks if a user with the given user ID exists.
+     * Checks whether a playtime record exists for the given user.
      *
-     * @param userId The ID of the user to check
-     * @return true if a user with the given ID exists, false otherwise
+     * @param userId The user id to check for an existing playtime record.
+     * @return {@code true} if the user id is greater than 0 and a record exists; {@code false} otherwise.
      */
     boolean existsUser(int userId);
 
     /**
-     * Creates a new user with the given user ID.
+     * Creates a playtime record for the specified user.
      *
-     * @param userId The ID of the user to create
+     * @param userId The id of the user for whom the playtime record should be created.
+     * @return The number of rows affected by the create operation, or 0 if userId is less than 1.
      */
-    void createUser(int userId);
+    int createUser(int userId);
 
     /**
-     * Deletes a user with the given user ID from the database.
+     * Deletes the playtime record of the specified user.
      *
-     * @param userId The ID of the user to delete
+     * @param userId The id of the user whose playtime record should be deleted.
+     * @return The number of rows affected by the delete operation, or 0 if userId is less than 1.
      */
-    void deleteUser(int userId);
+    int deleteUser(int userId);
 
     /**
-     * Obtains the time for the given user ID and play time type.
+     * Retrieves the playtime (in seconds) for the specified user.
      *
-     * @param userId The ID of the user
-     * @return the time for the given user ID and play time type
+     * @param userId The id of the user whose playtime is to be retrieved.
+     * @return The playtime in seconds if found; returns -1 if userId is less than 1 or the record does not exist.
      */
     int getTime(int userId);
 
     /**
-     * Sets the play time for a user with the specified user ID.
+     * Updates the playtime (in seconds) for the specified user.
      *
-     * @param userId The ID of the user
-     * @param time   The play time to set for the user, in seconds
+     * @param userId  The id of the user whose playtime should be updated.
+     * @param seconds The new playtime value in seconds.
      */
-    void setTime(int userId, int time);
+    void updateTime(int userId, int seconds);
 
     /**
-     * Adds one unit of play time to the play time of a user with the given user ID.
+     * Increments the current playtime for the specified user by one second.
      *
-     * @param userId The ID of the user whose play time will be incremented by one unit
+     * @param userId The id of the user whose playtime should be incremented.
      */
     void addTime(int userId);
-
-    /**
-     * Adds the specified amount of time to the play time of a user with the given user ID and play time type.
-     *
-     * @param userId The ID of the user
-     * @param type   The type of play time
-     * @param time   The amount of time to add to the user's play time, in milliseconds
-     */
-    void addTime(int userId, PlayTimeType type, int time);
-
-    /**
-     * Removes one unit of play time from the play time of a user specified with the given user ID.
-     *
-     * @param userId The ID of the user whose play time will be decremented
-     */
-    void removeTime(int userId);
-
-    /**
-     * Removes the specified amount of time from the play time of a user with the given user ID and play time type.
-     *
-     * @param userId The ID of the user
-     * @param type   The type of play time
-     * @param time   The amount of time to remove from the user's play time, in milliseconds
-     */
-    void removeTime(int userId, PlayTimeType type, int time);
-
-    /**
-     * Resets the play time for a user with the given user ID to zero.
-     *
-     * @param userId The ID of the user whose play time needs to be reset
-     */
-    void resetTime(int userId);
 }
