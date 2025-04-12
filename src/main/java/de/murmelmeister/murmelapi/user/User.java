@@ -1,183 +1,186 @@
 package de.murmelmeister.murmelapi.user;
 
-import de.murmelmeister.murmelapi.time.JoinLogger;
-import de.murmelmeister.murmelapi.time.PlayTime;
-import de.murmelmeister.murmelapi.time.QuitLogger;
-import de.murmelmeister.murmelapi.user.parent.UserParent;
-import de.murmelmeister.murmelapi.user.permission.UserPermission;
-import de.murmelmeister.murmelapi.user.settings.UserSettings;
-
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * User interface to manage users.
+ * The {@code User} interface provides methods for managing user data in a database.
+ * It allows checking for user existence, creating and deleting users, and retrieving user information.
+ * This interface is designed to be implemented by classes that provide specific database interactions.
  */
 public sealed interface User permits UserProvider {
     /**
-     * Checks if a user exists.
+     * Checks if a user exists by their UUID.
      *
-     * @param uuid The unique id of the user.
-     * @return True if the user exists, otherwise false.
+     * @param uuid The unique identifier (UUID) of the user.
+     * @return {@code true} if the UUID is not null and a corresponding record exists in the database; {@code false} otherwise.
      */
     boolean existsUser(UUID uuid);
 
     /**
-     * Checks if a user exists.
+     * Checks if a user exists by their username.
      *
      * @param username The username of the user.
-     * @return True if the user exists, otherwise false.
+     * @return {@code true} if the username is not null and a corresponding record exists in the database; {@code false} otherwise.
      */
     boolean existsUser(String username);
 
     /**
-     * Create a new user and check if the user already exists.
-     * If the user already exists, the method will return without creating a new user.
+     * Creates a new user record in the database.
      *
-     * @param uuid     The unique id of the user.
-     * @param username The username of the user.
+     * @param uuid     The unique identifier (UUID) of the new user.
+     * @param username The username of the new user.
+     * @return The number of rows updated in the database; returns 0 if either {@code uuid} or {@code username} is null.
      */
-    void createNewUser(UUID uuid, String username);
+    int createUser(UUID uuid, String username);
 
     /**
-     * Deletes a user.
+     * Deletes a user record from the database.
      *
-     * @param uuid The unique id of the user.
+     * @param id The unique identifier (ID) of the user to be deleted.
+     * @return The number of rows updated in the database; returns 0 if the {@code id} is less than 1.
      */
-    void deleteUser(UUID uuid);
+    int deleteUser(int id);
 
     /**
-     * Obtains the id of a user.
+     * Retrieves the user ID based on the given UUID.
      *
-     * @param uuid The unique id of the user.
-     * @return The id of the user.
+     * @param uuid The unique identifier (UUID) of the user.
+     * @return The user ID if found; returns -2 if {@code uuid} is null or if no corresponding record exists.
      */
     int getId(UUID uuid);
 
     /**
-     * Obtains the id of a user.
+     * Retrieves the user ID based on the given username.
      *
      * @param username The username of the user.
-     * @return The id of the user.
+     * @return The user ID if found; returns -2 if {@code username} is null or if no corresponding record exists.
      */
     int getId(String username);
 
     /**
-     * Obtains the unique id of a user.
+     * Retrieves the UUID associated with a given user ID.
      *
-     * @param username The username of the user.
-     * @return The unique id of the user.
-     */
-    UUID getUniqueId(String username);
-
-    /**
-     * Obtains the unique id of a user.
-     *
-     * @param id The id of the user.
-     * @return The unique id of the user.
+     * @param id The unique identifier (ID) of the user.
+     * @return The user's UUID if found; returns {@code null} if {@code id} is less than 1.
      */
     UUID getUniqueId(int id);
 
     /**
-     * Obtains the username of a user.
+     * Retrieves the username associated with a given user ID.
      *
-     * @param uuid The unique id of the user.
-     * @return The username of the user.
-     */
-    String getUsername(UUID uuid);
-
-    /**
-     * Obtains the username of a user.
-     * If the id -1 then the method will return "CONSOLE".
-     *
-     * @param id The id of the user.
-     * @return The username of the user.
+     * @param id The unique identifier (ID) of the user.
+     * @return The username if found; returns "Console" if {@code id} equals -1, {@code null} if {@code id} is less than 1,
+     * or the corresponding username from the database.
      */
     String getUsername(int id);
 
     /**
-     * Renames a user.
+     * Renames the user by updating their username in the database.
      *
-     * @param uuid    The unique id of the user.
-     * @param newName The new username of the user.
+     * @param id       The unique identifier (ID) of the user.
+     * @param username The new username for the user.
+     * @return The number of rows updated in the database; returns 0 if {@code id} is less than 1 or {@code username} is null.
      */
-    void rename(UUID uuid, String newName);
+    int renameUser(int id, String username);
+
 
     /**
-     * Obtains a list of all unique ids.
+     * Retrieves a list of all user UUIDs from the database.
      *
-     * @return A list of all unique ids.
+     * @return A {@code List} of UUIDs; any {@code null} values are filtered out.
      */
     List<UUID> getUniqueIds();
 
     /**
-     * Obtains a list of all usernames.
+     * Retrieves a list of all usernames from the database.
      *
-     * @return A list of all usernames.
+     * @return A {@code List} of usernames; any {@code null} values are filtered out.
      */
     List<String> getUsernames();
 
     /**
-     * Obtains a list of all ids.
+     * Retrieves the timestamp representing the user's first join date from the database.
      *
-     * @return A list of all ids.
+     * @param id The unique identifier (ID) of the user.
+     * @return A {@code Timestamp} indicating the first join date; returns {@code null} if {@code id} is less than 1.
      */
-    List<Integer> getIds();
+    Timestamp getFirstJoin(int id);
 
     /**
-     * Join a user to the server.
-     * Create a new user if the user does not exist.
-     * Check if the user changes their name and rename them.
+     * Formats and returns the first join date as a {@code String}.
      *
-     * @param uuid     The unique id of the user.
-     * @param username The username of the user.
+     * @param id The unique identifier (ID) of the user.
+     * @return A formatted date string representing the first join date, or "never" if the timestamp is {@code null}.
      */
-    void joinUser(UUID uuid, String username);
+    String getFirstJoinDate(int id);
 
     /**
-     * Load all expired things.
+     * Updates the first join timestamp for a user in the database.
+     *
+     * @param id        The unique identifier (ID) of the user.
+     * @param firstJoin The {@code Timestamp} representing the first join date.
+     * @return The number of rows updated in the database; returns 0 if {@code id} is less than 1 or {@code firstJoin} is {@code null}.
      */
-    void loadExpired();
+    int setFirstJoin(int id, Timestamp firstJoin);
 
     /**
-     * Obtains the settings of a user.
+     * Checks if a user is flagged as a debug user.
      *
-     * @return The settings of the user.
+     * @param id The unique identifier (ID) of the user.
+     * @return {@code true} if the user has a debug flag set in the database and {@code id} is greater than 0; {@code false} otherwise.
      */
-    UserSettings getSettings();
+    boolean isDebugUser(int id);
 
     /**
-     * Obtains the parent of a user.
+     * Sets or unsets the debug flag for a user.
      *
-     * @return The parent of the user.
+     * @param id          The unique identifier (ID) of the user.
+     * @param isDebugUser {@code true} to set the user as a debug user, {@code false} otherwise.
+     * @return The number of rows updated in the database; returns 0 if {@code id} is less than 1.
      */
-    UserParent getParent();
+    int setDebugUser(int id, boolean isDebugUser);
 
     /**
-     * Obtains the permission of a user.
+     * Checks if the debug mode is active for a user.
      *
-     * @return The permission of the user.
+     * @param id The unique identifier (ID) of the user.
+     * @return {@code true} if the debug mode is active for the user and {@code id} is greater than 0; {@code false} otherwise.
      */
-    UserPermission getPermission();
+    boolean isDebugActive(int id);
 
     /**
-     * Obtains the play time of a user.
+     * Sets the active status of debug mode for a user.
      *
-     * @return The play time of the user.
+     * @param id            The unique identifier (ID) of the user.
+     * @param isDebugActive {@code true} to activate debug mode for the user, {@code false} to deactivate.
+     * @return The number of rows updated in the database; returns 0 if {@code id} is less than 1.
      */
-    PlayTime getPlayTime();
+    int setDebugActive(int id, boolean isDebugActive);
 
     /**
-     * Obtains the JoinLogger instance for managing and logging the join dates of users.
+     * Determines if a user is currently in debug mode by checking if they are both a debug user
+     * and have debug mode active.
      *
-     * @return The JoinLogger instance associated with the user.
+     * @param id The unique identifier (ID) of the user.
+     * @return {@code true} if both the debug user flag and debug active flag are set; {@code false} otherwise.
      */
-    JoinLogger getJoinLogger();
+    boolean isDebugMode(int id);
 
     /**
-     * Obtains the QuitLogger instance for managing and logging the quit dates of users.
+     * Manages the process for a user joining the system. This method:
+     * <ul>
+     *   <li>Retrieves the user ID for the given UUID.</li>
+     *   <li>If the user is not found (indicated by a special value), it creates a new user record.</li>
+     *   <li>If the username does not match the current one in the database, it updates the username.</li>
+     *   <li>Returns 0 if no changes are necessary or if input values are invalid.</li>
+     * </ul>
      *
-     * @return The QuitLogger instance associated with the user.
+     * @param uuid     The unique identifier (UUID) of the user joining.
+     * @param username The username of the user joining.
+     * @return The result of the performed database update operation (e.g., number of rows updated),
+     * or 0 if the operation was not applicable.
      */
-    QuitLogger getQuitLogger();
+    int joinUser(UUID uuid, String username);
 }
