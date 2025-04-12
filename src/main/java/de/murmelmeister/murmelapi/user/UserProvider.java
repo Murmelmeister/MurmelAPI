@@ -166,17 +166,17 @@ public final class UserProvider implements User {
 
     private enum Procedure {
         CREATE("users_create", "p_mojangId VARCHAR(36), p_username VARCHAR(16)",
-                "INSERT INTO [TABLE] (mojangId, username) VALUES (p_mojangId, p_username)"),
-        CREATE_CONSOLE("users_createConsole", "p_id INT", "INSERT INTO [TABLE] VALUES (p_id, NULL, NULL, NULL, TRUE, TRUE)"),
-        DELETE("users_delete", "p_id INT", "DELETE FROM [TABLE] WHERE id=p_id"),
-        GET_DATA("users_getData", "", "SELECT id, mojangId, username FROM [TABLE]"),
-        GET_DATA_BY_ID("users_getDataById", "p_id INT", "SELECT mojangId, username, firstJoin, isDebugUser, isDebugActive FROM [TABLE] WHERE id=p_id"),
-        GET_ID_BY_MOJANG_ID("users_getIdByMojangId", "p_mojangId VARCHAR(36)", "SELECT id FROM [TABLE] WHERE mojangId=p_mojangId"),
-        GET_ID_BY_USERNAME("users_getIdByUsername", "p_username VARCHAR(16)", "SELECT id FROM [TABLE] WHERE username=p_username"),
-        UPDATE_USERNAME("users_updateUsername", "p_id INT, p_username VARCHAR(16)", "UPDATE [TABLE] SET username=p_username WHERE id=p_id"),
-        UPDATE_FIRST_JOIN("users_updateFirstJoin", "p_id INT, p_firstJoin DATETIME", "UPDATE [TABLE] SET firstJoin=p_firstJoin WHERE id=p_id"),
-        UPDATE_DEBUG_USER("users_updateDebugUser", "p_id INT, p_isDebugUser BOOLEAN", "UPDATE [TABLE] SET isDebugUser=p_isDebugUser WHERE id=p_id"),
-        UPDATE_DEBUG_ACTIVE("users_updateDebugActive", "p_id INT, p_isDebugActive BOOLEAN", "UPDATE [TABLE] SET isDebugActive=p_isDebugActive WHERE id=p_id");
+                "INSERT INTO [TABLE] (mojangId, username) VALUES (p_mojangId, p_username);"),
+        CREATE_CONSOLE("users_createConsole", "p_id INT", "INSERT INTO [TABLE] VALUES (p_id, NULL, NULL, NULL, TRUE, TRUE);"),
+        DELETE("users_delete", "p_id INT", "DELETE FROM [TABLE] WHERE id=p_id;"),
+        GET_DATA("users_getData", "", "SELECT id, mojangId, username FROM [TABLE];"),
+        GET_DATA_BY_ID("users_getDataById", "p_id INT", "SELECT mojangId, username, firstJoin, isDebugUser, isDebugActive FROM [TABLE] WHERE id=p_id;"),
+        GET_ID_BY_MOJANG_ID("users_getIdByMojangId", "p_mojangId VARCHAR(36)", "SELECT id FROM [TABLE] WHERE mojangId=p_mojangId;"),
+        GET_ID_BY_USERNAME("users_getIdByUsername", "p_username VARCHAR(16)", "SELECT id FROM [TABLE] WHERE username=p_username;"),
+        UPDATE_USERNAME("users_updateUsername", "p_id INT, p_username VARCHAR(16)", "UPDATE [TABLE] SET username=p_username WHERE id=p_id;"),
+        UPDATE_FIRST_JOIN("users_updateFirstJoin", "p_id INT, p_firstJoin DATETIME", "UPDATE [TABLE] SET firstJoin=p_firstJoin WHERE id=p_id;"),
+        UPDATE_DEBUG_USER("users_updateDebugUser", "p_id INT, p_isDebugUser BOOLEAN", "UPDATE [TABLE] SET isDebugUser=p_isDebugUser WHERE id=p_id;"),
+        UPDATE_DEBUG_ACTIVE("users_updateDebugActive", "p_id INT, p_isDebugActive BOOLEAN", "UPDATE [TABLE] SET isDebugActive=p_isDebugActive WHERE id=p_id;");
         private static final Procedure[] VALUES = values();
 
         private final String name;
