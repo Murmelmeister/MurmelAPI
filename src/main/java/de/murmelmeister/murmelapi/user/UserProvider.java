@@ -1,196 +1,203 @@
 package de.murmelmeister.murmelapi.user;
 
-import de.murmelmeister.murmelapi.time.*;
-import de.murmelmeister.murmelapi.user.parent.UserParent;
-import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
-import de.murmelmeister.murmelapi.user.permission.UserPermission;
-import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
-import de.murmelmeister.murmelapi.user.settings.UserSettings;
-import de.murmelmeister.murmelapi.user.settings.UserSettingsProvider;
-import de.murmelmeister.murmelapi.utils.Database;
+import de.murmelmeister.murmelapi.database.Database;
 
+import java.sql.Timestamp;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+
+/**
+ * UserProvider class to manage users in the database.
+ * This class implements the User interface and provides methods to interact with user data.
+ */
 public final class UserProvider implements User {
-    private final UserSettings settings;
-    private final UserParent parent;
-    private final UserPermission permission;
+    private static final String TABLE_NAME = "users";
 
-    private final PlayTime playTime;
-    private final JoinLogger joinLogger;
-    private final QuitLogger quitLogger;
+    private final Database database;
 
-    public UserProvider() {
-        String tableName = "User";
-        createTable(tableName);
-        Procedure.loadAll(tableName);
-        this.settings = new UserSettingsProvider(this);
-        this.parent = new UserParentProvider();
-        this.permission = new UserPermissionProvider();
-        this.playTime = new PlayTimeProvider(this);
-        this.joinLogger = new JoinLoggerProvider();
-        this.quitLogger = new QuitLoggerProvider();
+    public UserProvider(Database database) {
+        this.database = database;
     }
 
-    private void createTable(String tableName) {
-        Database.createTable(tableName, "ID INT PRIMARY KEY AUTO_INCREMENT, UUID VARCHAR(36), Username VARCHAR(100)");
+    public static void setup(Database database) {
+        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
+                                         "mojangId VARCHAR(36) UNIQUE, " +
+                                         "username VARCHAR(16), " +
+                                         "firstJoin DATETIME, " +
+                                         "isDebugUser BOOLEAN DEFAULT FALSE, " +
+                                         "isDebugActive BOOLEAN DEFAULT FALSE");
+        database.update("CREATE INDEX IF NOT EXISTS username_index ON " + TABLE_NAME + " (username)");
+        Procedure.loadAll(database);
+        createConsoleUser(database);
+    }
+
+    private static void createConsoleUser(Database database) {
+        int id = -1;
+        if (database.existsCallable(Procedure.GET_DATA_BY_ID.getName(), id)) return;
+        database.updateCallable(Procedure.CREATE_CONSOLE.getName(), id);
     }
 
     @Override
     public boolean existsUser(UUID uuid) {
-        return Database.callExists(Procedure.USER_UNIQUE_ID.getName(), uuid);
+        return uuid != null && database.existsCallable(Procedure.GET_ID_BY_MOJANG_ID.getName(), uuid.toString());
     }
 
     @Override
     public boolean existsUser(String username) {
-        return Database.callExists(Procedure.USER_USERNAME.getName(), username);
+        return username != null && database.existsCallable(Procedure.GET_ID_BY_USERNAME.getName(), username);
     }
 
     @Override
-    public void createNewUser(UUID uuid, String username) {
-        if (existsUser(uuid)) return;
-        Database.callUpdate(Procedure.USER_INSERT.getName(), uuid, username);
-        int id = getId(uuid);
-        settings.createUser(id);
-        playTime.createUser(id);
+    public int createUser(UUID uuid, String username) {
+        if (uuid == null || username == null) return 0;
+        return database.updateCallable(Procedure.CREATE.getName(), uuid.toString(), username);
     }
 
     @Override
-    public void deleteUser(UUID uuid) {
-        int id = getId(uuid);
-        playTime.deleteUser(id);
-        permission.clearPermission(id);
-        parent.clearParent(id);
-        settings.deleteUser(id);
-        joinLogger.deleteUser(id);
-        quitLogger.deleteUser(id);
-        Database.callUpdate(Procedure.USER_DELETE.getName(), id);
+    public int deleteUser(int id) {
+        if (id < 1) return 0;
+        return database.updateCallable(Procedure.DELETE.getName(), id);
     }
 
     @Override
     public int getId(UUID uuid) {
-        return Database.callQuery(-2, "ID", int.class, Procedure.USER_UNIQUE_ID.getName(), uuid);
+        return uuid == null ? -2 : database.queryCallable(Procedure.GET_ID_BY_MOJANG_ID.getName(), -2, resultSet -> resultSet.getInt("id"), uuid.toString());
     }
 
     @Override
     public int getId(String username) {
-        return Database.callQuery(-2, "ID", int.class, Procedure.USER_USERNAME.getName(), username);
-    }
-
-    @Override
-    public UUID getUniqueId(String username) {
-        int id = getId(username);
-        return Database.callQuery(null, "UUID", UUID.class, Procedure.USER_ID.getName(), id);
+        return username == null ? -2 : database.queryCallable(Procedure.GET_ID_BY_USERNAME.getName(), -2, resultSet -> resultSet.getInt("id"), username);
     }
 
     @Override
     public UUID getUniqueId(int id) {
-        return id == -1 ? null : Database.callQuery(null, "UUID", UUID.class, Procedure.USER_ID.getName(), id);
-    }
-
-    @Override
-    public String getUsername(UUID uuid) {
-        int id = getId(uuid);
-        return Database.callQuery(null, "Username", String.class, Procedure.USER_ID.getName(), id);
+        return id < 1 ? null : database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> UUID.fromString(resultSet.getString("mojangId")), id);
     }
 
     @Override
     public String getUsername(int id) {
-        return id == -1 ? "CONSOLE" : Database.callQuery(null, "Username", String.class, Procedure.USER_ID.getName(), id);
+        return id == -1 ? "Console" :
+                id < 1 ? null : database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> resultSet.getString("username"), id);
     }
 
     @Override
-    public void rename(UUID uuid, String newName) {
-        int id = getId(uuid);
-        Database.callUpdate(Procedure.USER_RENAME.getName(), id, newName);
+    public int renameUser(int id, String username) {
+        if (id < 1 || username == null) return 0;
+        return database.updateCallable(Procedure.UPDATE_USERNAME.getName(), id, username);
     }
 
     @Override
     public List<UUID> getUniqueIds() {
-        return Database.callQueryList("UUID", UUID.class, Procedure.USER_ALL.getName());
+        return database.queryListCallable(Procedure.GET_DATA.getName(), resultSet -> UUID.fromString(resultSet.getString("mojangId")))
+                .stream().filter(Objects::nonNull).toList();
     }
 
     @Override
     public List<String> getUsernames() {
-        return Database.callQueryList("Username", String.class, Procedure.USER_ALL.getName());
+        return database.queryListCallable(Procedure.GET_DATA.getName(), resultSet -> resultSet.getString("username"))
+                .stream().filter(Objects::nonNull).toList();
     }
 
     @Override
-    public List<Integer> getIds() {
-        return Database.callQueryList("ID", int.class, Procedure.USER_ALL.getName());
+    public Timestamp getFirstJoin(int id) {
+        return id < 1 ? null : database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), null, resultSet -> resultSet.getTimestamp("firstJoin"), id);
     }
 
     @Override
-    public void joinUser(UUID uuid, String username) {
-        createNewUser(uuid, username);
-        if (!getUsername(uuid).equals(username)) rename(uuid, username);
+    public String getFirstJoinDate(int id) {
+        Timestamp firstJoin = getFirstJoin(id);
+        return firstJoin == null ? "never" : getDateFormat().format(firstJoin);
     }
 
     @Override
-    public void loadExpired() {
-        parent.loadExpired(this);
-        permission.loadExpired(this);
+    public int setFirstJoin(int id, Timestamp firstJoin) {
+        if (id < 1 || firstJoin == null) return 0;
+        return database.updateCallable(Procedure.UPDATE_FIRST_JOIN.getName(), id, firstJoin);
     }
 
     @Override
-    public UserSettings getSettings() {
-        return settings;
+    public boolean isDebugUser(int id) {
+        return id > 0 && database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), false, resultSet -> resultSet.getBoolean("isDebugUser"), id);
     }
 
     @Override
-    public UserParent getParent() {
-        return parent;
+    public int setDebugUser(int id, boolean isDebugUser) {
+        if (id < 1) return 0;
+        return database.updateCallable(Procedure.UPDATE_DEBUG_USER.getName(), id, isDebugUser);
     }
 
     @Override
-    public UserPermission getPermission() {
-        return permission;
+    public boolean isDebugActive(int id) {
+        return id > 0 && database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), false, resultSet -> resultSet.getBoolean("isDebugActive"), id);
     }
 
     @Override
-    public PlayTime getPlayTime() {
-        return playTime;
+    public int setDebugActive(int id, boolean isDebugActive) {
+        if (id < 1) return 0;
+        return database.updateCallable(Procedure.UPDATE_DEBUG_ACTIVE.getName(), id, isDebugActive);
     }
 
     @Override
-    public JoinLogger getJoinLogger() {
-        return joinLogger;
+    public boolean isDebugMode(int id) {
+        return isDebugUser(id) && isDebugActive(id);
     }
 
     @Override
-    public QuitLogger getQuitLogger() {
-        return quitLogger;
+    public int joinUser(UUID uuid, String username) {
+        if (uuid == null || username == null) return 0;
+
+        int userId = getId(uuid);
+
+        if (userId == -1) return 0;
+        if (userId == -2)
+            return createUser(uuid, username);
+
+        String currentUsername = getUsername(userId);
+        if (currentUsername == null)
+            return renameUser(userId, username);
+
+        if (!currentUsername.equals(username))
+            return renameUser(userId, username);
+        return 0;
     }
 
     private enum Procedure {
-        USER_UNIQUE_ID("User_UniqueID", "uid VARCHAR(36)", "SELECT * FROM [TABLE] WHERE UUID=uid;"),
-        USER_USERNAME("User_Username", "user VARCHAR(100)", "SELECT * FROM [TABLE] WHERE Username=user;"),
-        USER_ID("User_ID", "uid INT", "SELECT * FROM [TABLE] WHERE ID=uid;"),
-        USER_ALL("User_All", "", "SELECT * FROM [TABLE];"),
-        USER_INSERT("User_Insert", "uid VARCHAR(36), user VARCHAR(100)", "INSERT INTO [TABLE] (UUID, Username) VALUES (uid, user);"),
-        USER_DELETE("User_Delete", "uid VARCHAR(36)", "DELETE FROM [TABLE] WHERE UUID=uid;"),
-        USER_RENAME("User_Rename", "uid INT, user VARCHAR(100)", "UPDATE [TABLE] SET Username=user WHERE ID=uid;");
+        CREATE("users_create", "p_mojangId VARCHAR(36), p_username VARCHAR(16)",
+                "INSERT INTO [TABLE] (mojangId, username) VALUES (p_mojangId, p_username)"),
+        CREATE_CONSOLE("users_createConsole", "p_id INT", "INSERT INTO [TABLE] VALUES (p_id, NULL, NULL, NULL, TRUE, TRUE)"),
+        DELETE("users_delete", "p_id INT", "DELETE FROM [TABLE] WHERE id=p_id"),
+        GET_DATA("users_getData", "", "SELECT id, mojangId, username FROM [TABLE]"),
+        GET_DATA_BY_ID("users_getDataById", "p_id INT", "SELECT mojangId, username, firstJoin, isDebugUser, isDebugActive FROM [TABLE] WHERE id=p_id"),
+        GET_ID_BY_MOJANG_ID("users_getIdByMojangId", "p_mojangId VARCHAR(36)", "SELECT id FROM [TABLE] WHERE mojangId=p_mojangId"),
+        GET_ID_BY_USERNAME("users_getIdByUsername", "p_username VARCHAR(16)", "SELECT id FROM [TABLE] WHERE username=p_username"),
+        UPDATE_USERNAME("users_updateUsername", "p_id INT, p_username VARCHAR(16)", "UPDATE [TABLE] SET username=p_username WHERE id=p_id"),
+        UPDATE_FIRST_JOIN("users_updateFirstJoin", "p_id INT, p_firstJoin DATETIME", "UPDATE [TABLE] SET firstJoin=p_firstJoin WHERE id=p_id"),
+        UPDATE_DEBUG_USER("users_updateDebugUser", "p_id INT, p_isDebugUser BOOLEAN", "UPDATE [TABLE] SET isDebugUser=p_isDebugUser WHERE id=p_id"),
+        UPDATE_DEBUG_ACTIVE("users_updateDebugActive", "p_id INT, p_isDebugActive BOOLEAN", "UPDATE [TABLE] SET isDebugActive=p_isDebugActive WHERE id=p_id");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(final String name, final String input, final String query) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
+            this.query = Database.getProcedureQuery(name, input, query);
         }
 
         public String getName() {
             return name;
         }
 
-        public String getQuery(String tableName) {
-            return query.replace("[TABLE]", tableName);
+        public String getQuery() {
+            return query.replace("[TABLE]", TABLE_NAME);
         }
 
-        public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
+        public static void loadAll(Database database) {
+            for (Procedure procedure : VALUES)
+                database.update(procedure.getQuery());
         }
     }
 }
