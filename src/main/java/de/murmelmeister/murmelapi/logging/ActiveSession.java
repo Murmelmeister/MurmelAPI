@@ -47,8 +47,9 @@ public sealed interface ActiveSession permits ActiveSessionProvider {
      * The session is archived (e.g. inserted into the login history) and then removed from the active sessions table.
      *
      * @param userId The user id for which the session should be closed.
+     * @return The number of rows affected by the session close operation, or 0 if userId is less than 1.
      */
-    void closeSession(int userId);
+    int closeSession(int userId);
 
     /**
      * Retrieves the session ID for the active session of the specified user.

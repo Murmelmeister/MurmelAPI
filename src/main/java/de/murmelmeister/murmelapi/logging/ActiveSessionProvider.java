@@ -48,9 +48,9 @@ public final class ActiveSessionProvider implements ActiveSession {
     }
 
     @Override
-    public void closeSession(int userId) {
-        if (userId < 1) return;
-        database.updateCallable(Procedure.CLOSE.getName(), userId);
+    public int closeSession(int userId) {
+        if (userId < 1) return 0;
+        return database.updateCallable(Procedure.CLOSE.getName(), userId);
     }
 
     @Override
