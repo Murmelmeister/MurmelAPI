@@ -1,134 +1,149 @@
 package de.murmelmeister.murmelapi.user.permission;
 
-import de.murmelmeister.murmelapi.user.User;
-
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
- * User permission interface to manage user permissions.
+ * This interface defines methods for managing user permissions.
+ * It allows checking, adding, removing, and retrieving permissions for users.
+ * It also provides methods to manage permission expiration and track who created or updated a permission.
  */
 public sealed interface UserPermission permits UserPermissionProvider {
     /**
-     * Checks if a permission exists.
+     * Checks if the specified permission exists for the given user.
      *
      * @param userId     The id of the user.
-     * @param permission The permission.
-     * @return True if the permission exists, otherwise false.
+     * @param permission The permission string to check.
+     * @return {@code true} if the user id is greater than 0, the permission is not null and a matching record exists; {@code false} otherwise.
      */
     boolean existsPermission(int userId, String permission);
 
     /**
-     * Adds a permission to a user.
+     * Adds a permission record for the specified user with an optional expiry time.
+     * If the provided time is -1, the permission does not expire.
      *
      * @param userId     The id of the user.
-     * @param creatorId  The id of the creator.
-     * @param permission The permission.
-     * @param time       The time the permission was added.
+     * @param permission The permission to add.
+     * @param time       The duration (in milliseconds) after which the permission expires, or -1 for no expiration.
+     * @param createdBy  The id of the user creating the permission.
+     * @return The number of rows affected by the insertion, or 0 if the input parameters are invalid.
      */
-    void addPermission(int userId, int creatorId, String permission, long time);
+    int addPermission(int userId, String permission, long time, int createdBy);
 
     /**
-     * Removes a permission from a user.
+     * Removes the specified permission for the given user.
      *
      * @param userId     The id of the user.
-     * @param permission The permission.
+     * @param permission The permission to remove.
+     * @return The number of rows affected by the deletion, or 0 if the input parameters are invalid.
      */
-    void removePermission(int userId, String permission);
+    int removePermission(int userId, String permission);
 
     /**
-     * Clears all permissions from a user.
+     * Clears all permissions for the specified user.
      *
-     * @param userId The id of the user.
+     * @param userId The id of the user whose permissions should be cleared.
+     * @return The number of rows affected by the deletion, or 0 if the user id is invalid.
      */
-    void clearPermission(int userId);
+    int clearPermission(int userId);
 
     /**
-     * Obtains all permissions of a user.
+     * Retrieves all active permissions for the specified user.
+     * Active permissions are those that do not have an expiration time or have an expiration time in the future.
      *
      * @param userId The id of the user.
-     * @return A list of all permissions of the user.
+     * @return A list of permission strings, or {@code null} if the user id is invalid.
      */
     List<String> getPermissions(int userId);
 
     /**
-     * Obtains the creator id of a permission.
+     * Retrieves the expiration timestamp for the specified permission of the given user.
      *
      * @param userId     The id of the user.
-     * @param permission The permission.
-     * @return The creator id of the permission.
+     * @param permission The permission whose expiration time is to be retrieved.
+     * @return The expiration timestamp, or {@code null} if the user id is invalid or permission is null.
      */
-    int getCreatorId(int userId, String permission);
+    Timestamp getExpiredAt(int userId, String permission);
 
     /**
-     * Obtains the created time of a permission.
+     * Returns a formatted date string representing the expiration time for the specified permission of the user.
      *
      * @param userId     The id of the user.
-     * @param permission The permission.
-     * @return The created time of the permission.
-     */
-    long getCreatedTime(int userId, String permission);
-
-    /**
-     * Obtains the created date of a permission.
-     *
-     * @param userId     The id of the user.
-     * @param permission The permission.
-     * @return The created date of the permission.
-     */
-    String getCreatedDate(int userId, String permission);
-
-    /**
-     * Obtains the expired time of a permission.
-     *
-     * @param userId     The id of the user.
-     * @param permission The permission.
-     * @return The expired time of the permission.
-     */
-    long getExpiredTime(int userId, String permission);
-
-    /**
-     * Obtains the expired date of a permission.
-     *
-     * @param userId     The id of the user.
-     * @param permission The permission.
-     * @return The expired date of the permission.
+     * @param permission The permission whose expiration date is to be formatted.
+     * @return The formatted expiration date, or {@code null} if no expiration date is available.
      */
     String getExpiredDate(int userId, String permission);
 
     /**
-     * Sets the expired time of a permission.
+     * Updates the expiration timestamp for the specified permission of the given user.
+     * If the provided time is -1, the permission is set to never expire.
      *
      * @param userId     The id of the user.
-     * @param permission The permission.
-     * @param time       The time the permission will expire.
-     * @return The expired date of the permission.
+     * @param permission The permission to update.
+     * @param time       The duration (in milliseconds) after which the permission should expire, or -1 for no expiration.
+     * @param updatedBy  The id of the user performing the update.
+     * @return The number of rows affected by the update, or 0 if the input parameters are invalid.
      */
-    String setExpiredTime(int userId, String permission, long time);
+    int setExpiredAt(int userId, String permission, long time, int updatedBy);
 
     /**
-     * Adds an expired time to a permission.
+     * Retrieves the id of the user who created the specified permission record.
      *
      * @param userId     The id of the user.
-     * @param permission The permission.
-     * @param time       The time to add to the expired time.
-     * @return The expired date of the permission.
+     * @param permission The permission to check.
+     * @return The creator's user id, or -2 if the input parameters are invalid.
      */
-    String addExpiredTime(int userId, String permission, long time);
+    int getCreatedBy(int userId, String permission);
 
     /**
-     * Removes an expired time from a permission.
+     * Retrieves the creation timestamp for the specified permission record.
      *
      * @param userId     The id of the user.
-     * @param permission The permission.
-     * @param time       The time to remove from the expired time.
-     * @return The expired date of the permission.
+     * @param permission The permission whose creation time is to be retrieved.
+     * @return The creation timestamp, or {@code null} if the input parameters are invalid.
      */
-    String removeExpiredTime(int userId, String permission, long time);
+    Timestamp getCreatedAt(int userId, String permission);
 
     /**
-     * Loads all expired permissions of a user.
+     * Returns a formatted date string representing the creation date of the specified permission record.
      *
-     * @param user The user.
+     * @param userId     The id of the user.
+     * @param permission The permission whose creation date is to be formatted.
+     * @return The formatted creation date, or {@code null} if the creation timestamp is unavailable.
      */
-    void loadExpired(User user);
+    String getCreatedDate(int userId, String permission);
+
+    /**
+     * Retrieves the id of the user who last updated the specified permission record.
+     *
+     * @param userId     The id of the user.
+     * @param permission The permission whose updater is to be retrieved.
+     * @return The updater's user id, or -2 if the input parameters are invalid.
+     */
+    int getUpdatedBy(int userId, String permission);
+
+    /**
+     * Retrieves the last update timestamp for the specified permission record.
+     *
+     * @param userId     The id of the user.
+     * @param permission The permission whose update time is to be retrieved.
+     * @return The update timestamp, or {@code null} if the input parameters are invalid.
+     */
+    Timestamp getUpdatedAt(int userId, String permission);
+
+    /**
+     * Returns a formatted date string representing the last update date of the specified permission record.
+     *
+     * @param userId     The id of the user.
+     * @param permission The permission whose update date is to be formatted.
+     * @return The formatted update date, or {@code null} if the update timestamp is unavailable.
+     */
+    String getUpdatedDate(int userId, String permission);
+
+    /**
+     * Removes all permission records that have expired.
+     *
+     * @return The number of rows affected by the removal of expired permissions.
+     */
+    int loadExpired();
 }
