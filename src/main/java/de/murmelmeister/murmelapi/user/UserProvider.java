@@ -176,7 +176,7 @@ public final class UserProvider implements User {
     public int loadExpired() {
         int parentRows = parent.loadExpired();
         int permissionRows = permission.loadExpired();
-        return parentRows * permissionRows;
+        return parentRows + permissionRows;
     }
 
     @Override
