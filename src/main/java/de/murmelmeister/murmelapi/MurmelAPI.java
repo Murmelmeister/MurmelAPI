@@ -13,6 +13,8 @@ import de.murmelmeister.murmelapi.logging.LoginHistoryProvider;
 import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.permission.PermissionProvider;
 import de.murmelmeister.murmelapi.punishment.PunishmentType;
+import de.murmelmeister.murmelapi.punishment.log.PunishmentLog;
+import de.murmelmeister.murmelapi.punishment.log.PunishmentLogProvider;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
 import de.murmelmeister.murmelapi.time.PlayTime;
@@ -40,6 +42,7 @@ public final class MurmelAPI {
     private static PlayTime playTime;
     private static Permission permission;
     private static PunishmentReason punishmentReason;
+    private static PunishmentLog punishmentLog;
     // TODO: Punishment
 
     static {
@@ -78,6 +81,7 @@ public final class MurmelAPI {
         playTime = getPlayTime();
         permission = getPermission(group, user);
         punishmentReason = getPunishmentReason();
+        punishmentLog = getPunishmentLog(punishmentReason);
         // TODO: Punishment
     }
 
@@ -95,8 +99,9 @@ public final class MurmelAPI {
         if (userId < 1) return 0;
         int softDeleteRow = deleteUserSoft(userId);
         // TODO: Punishment
+        int logsRow = punishmentLog.deleteUserLogs(userId);
         int userRow = user.deleteUser(userId);
-        return softDeleteRow + userRow;
+        return softDeleteRow + logsRow + userRow;
     }
 
     public static Database getDatabase() {
@@ -163,5 +168,15 @@ public final class MurmelAPI {
         if (punishmentReason == null)
             punishmentReason = new PunishmentReasonProvider(DATABASE);
         return punishmentReason;
+    }
+
+    public static PunishmentLog getPunishmentLog(PunishmentReason reason) {
+        if (punishmentLog == null)
+            punishmentLog = new PunishmentLogProvider(DATABASE, reason);
+        return punishmentLog;
+    }
+
+    public static PunishmentLog getPunishmentLog() {
+        return getPunishmentLog(getPunishmentReason());
     }
 }
