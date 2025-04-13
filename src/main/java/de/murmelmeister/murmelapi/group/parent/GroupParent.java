@@ -2,142 +2,161 @@ package de.murmelmeister.murmelapi.group.parent;
 
 import de.murmelmeister.murmelapi.group.Group;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 /**
- * Group parent interface to manage group parents.
+ * GroupParent is an interface that provides methods to manage group parents in the database.
+ * It defines methods for checking existence, adding, removing, and retrieving parent groups.
+ * It also provides methods for managing expiration dates and user information related to group parents.
  */
 public sealed interface GroupParent permits GroupParentProvider {
     /**
-     * Checks if a parent exists.
+     * Checks if a parent relationship exists between the specified group and parent.
      *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @return True if the parent exists, otherwise false.
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return {@code true} if both IDs are greater than 0 and a corresponding relationship exists; {@code false} otherwise.
      */
     boolean existsParent(int groupId, int parentId);
 
     /**
-     * Adds a parent to a group.
+     * Adds a parent relationship between the specified group and parent.
+     * An expiration time can be set for the relationship; if the provided time is -1, then no expiration is set.
      *
-     * @param groupId   The id of the group.
-     * @param creatorId The id of the creator.
-     * @param parentId  The id of the parent.
-     * @param time      The time the parent was added.
+     * @param groupId   The ID of the child group.
+     * @param parentId  The ID of the parent group.
+     * @param time      The duration in milliseconds until expiration, or -1 for no expiration.
+     * @param createdBy The ID of the user creating the relationship.
+     * @return The number of rows affected by the insertion, or 0 if input parameters are invalid.
      */
-    void addParent(int groupId, int creatorId, int parentId, long time);
+    int addParent(int groupId, int parentId, long time, int createdBy);
 
     /**
-     * Removes a parent from a group.
+     * Removes the specified parent relationship between the given group and parent.
      *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return The number of rows affected by the deletion, or 0 if input parameters are invalid.
      */
-    void removeParent(int groupId, int parentId);
+    int removeParent(int groupId, int parentId);
 
     /**
-     * Clears all parents from a group.
+     * Clears all parent relationships for the specified group.
      *
-     * @param groupId The id of the group.
+     * @param groupId The ID of the child group.
+     * @return The number of rows affected by the deletion, or 0 if the group ID is invalid.
      */
-    void clearParent(int groupId);
+    int clearParent(int groupId);
 
     /**
-     * Obtains all parent ids of a group.
+     * Retrieves a list of active parent IDs for the specified group.
+     * A parent relationship is considered active if it has no expiration or its expiration time is in the future.
      *
-     * @param groupId The id of the group.
-     * @return A list of all parent ids of the group.
+     * @param groupId The ID of the child group.
+     * @return A List of parent IDs, or {@code null} if the group ID is invalid.
      */
     List<Integer> getParentIds(int groupId);
 
     /**
-     * Obtains all parent names of a group.
+     * Retrieves a list of active parent group names for the specified group.
+     * The provided Group instance is used to convert parent IDs to group names.
      *
-     * @param group   The group.
-     * @param groupId The id of the group.
-     * @return A list of all parent names of the group.
+     * @param group   A Group instance used to retrieve group names.
+     * @param groupId The ID of the child group.
+     * @return A List of parent group names, or {@code null} if the group ID is invalid.
      */
     List<String> getParentNames(Group group, int groupId);
 
     /**
-     * Obtains the creator id of a parent.
+     * Retrieves the expiration timestamp for the specified parent relationship.
      *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @return The creator id of the parent.
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return The expiration timestamp, or {@code null} if input parameters are invalid.
      */
-    int getCreatorId(int groupId, int parentId);
+    Timestamp getExpiredAt(int groupId, int parentId);
 
     /**
-     * Obtains the time the parent was created.
+     * Returns a formatted date string for the expiration time of the specified parent relationship.
      *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @return The time the parent was created.
-     */
-    long getCreatedTime(int groupId, int parentId);
-
-    /**
-     * Obtains the date the parent was created.
-     *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @return The date the parent was created.
-     */
-    String getCreatedDate(int groupId, int parentId);
-
-    /**
-     * Obtains the time the parent will expire.
-     *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @return The time the parent will expire.
-     */
-    long getExpiredTime(int groupId, int parentId);
-
-    /**
-     * Obtains the date the parent will expire.
-     *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @return The date the parent will expire.
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return A formatted expiration date string, or {@code null} if no expiration is set.
      */
     String getExpiredDate(int groupId, int parentId);
 
     /**
-     * Sets the time the parent will expire.
+     * Updates the expiration timestamp for the specified parent relationship.
+     * If the provided time is -1, the expiration timestamp is set to {@code null}.
      *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @param time     The time the parent will expire.
-     * @return The date the parent will expire.
+     * @param groupId   The ID of the child group.
+     * @param parentId  The ID of the parent group.
+     * @param time      The duration in milliseconds until expiration, or -1 for no expiration.
+     * @param updatedBy The ID of the user performing the update.
+     * @return The number of rows affected by the update, or 0 if input parameters are invalid.
      */
-    String setExpiredTime(int groupId, int parentId, long time);
+    int setExpiredAt(int groupId, int parentId, long time, int updatedBy);
 
     /**
-     * Adds time to the parent expiration.
+     * Retrieves the ID of the user who created the specified parent relationship.
      *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @param time     The time to add to the expiration.
-     * @return The date the parent will expire.
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return The creator's user ID, or -2 if input parameters are invalid.
      */
-    String addExpiredTime(int groupId, int parentId, long time);
+    int getCreatedBy(int groupId, int parentId);
 
     /**
-     * Removes time from the parent expiration.
+     * Retrieves the creation timestamp for the specified parent relationship.
      *
-     * @param groupId  The id of the group.
-     * @param parentId The id of the parent.
-     * @param time     The time to remove from the expiration.
-     * @return The date the parent will expire.
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return The creation timestamp, or {@code null} if input parameters are invalid.
      */
-    String removeExpiredTime(int groupId, int parentId, long time);
+    Timestamp getCreatedAt(int groupId, int parentId);
 
     /**
-     * Loads all expired parents of a group.
+     * Returns a formatted date string representing the creation date of the specified parent relationship.
      *
-     * @param group The group.
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return The formatted creation date string, or {@code null} if unavailable.
      */
-    void loadExpired(Group group);
+    String getCreatedDate(int groupId, int parentId);
+
+    /**
+     * Retrieves the ID of the user who last updated the specified parent relationship.
+     *
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return The updater's user ID, or -2 if input parameters are invalid.
+     */
+    int getUpdatedBy(int groupId, int parentId);
+
+    /**
+     * Retrieves the last update timestamp for the specified parent relationship.
+     *
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return The update timestamp, or {@code null} if input parameters are invalid.
+     */
+    Timestamp getUpdatedAt(int groupId, int parentId);
+
+    /**
+     * Returns a formatted date string representing the last update date of the specified parent relationship.
+     *
+     * @param groupId  The ID of the child group.
+     * @param parentId The ID of the parent group.
+     * @return The formatted update date string, or {@code null} if the update timestamp is unavailable.
+     */
+    String getUpdatedDate(int groupId, int parentId);
+
+    /**
+     * Removes all expired parent relationships from the database.
+     * Expired relationships are those with a non-null expiration timestamp that is in the past.
+     *
+     * @return The number of rows affected by the removal of expired relationships.
+     */
+    int loadExpired();
 }
