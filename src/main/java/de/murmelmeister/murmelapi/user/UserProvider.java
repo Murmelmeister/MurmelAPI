@@ -1,6 +1,10 @@
 package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.murmelapi.user.parent.UserParent;
+import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
+import de.murmelmeister.murmelapi.user.permission.UserPermission;
+import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -17,9 +21,13 @@ public final class UserProvider implements User {
     private static final String TABLE_NAME = "users";
 
     private final Database database;
+    private UserParent parent;
+    private UserPermission permission;
 
     public UserProvider(Database database) {
         this.database = database;
+        this.parent = getParent();
+        this.permission = getPermission();
     }
 
     public static void setup(Database database) {
@@ -162,6 +170,27 @@ public final class UserProvider implements User {
         if (!currentUsername.equals(username))
             return renameUser(userId, username);
         return 0;
+    }
+
+    @Override
+    public int loadExpired() {
+        int parentRows = parent.loadExpired();
+        int permissionRows = permission.loadExpired();
+        return parentRows * permissionRows;
+    }
+
+    @Override
+    public UserParent getParent() {
+        if (parent == null)
+            parent = new UserParentProvider(database);
+        return parent;
+    }
+
+    @Override
+    public UserPermission getPermission() {
+        if (permission == null)
+            permission = new UserPermissionProvider(database);
+        return permission;
     }
 
     private enum Procedure {

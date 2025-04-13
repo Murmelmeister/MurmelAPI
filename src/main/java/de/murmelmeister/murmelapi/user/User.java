@@ -1,5 +1,8 @@
 package de.murmelmeister.murmelapi.user;
 
+import de.murmelmeister.murmelapi.user.parent.UserParent;
+import de.murmelmeister.murmelapi.user.permission.UserPermission;
+
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
@@ -183,4 +186,23 @@ public sealed interface User permits UserProvider {
      * or 0 if the operation was not applicable.
      */
     int joinUser(UUID uuid, String username);
+
+    /**
+     * Removes all permission and parents records that have expired.
+     */
+    int loadExpired();
+
+    /**
+     * Retrieves the {@code UserParent} instance associated with this user.
+     *
+     * @return The {@code UserParent} instance.
+     */
+    UserParent getParent();
+
+    /**
+     * Retrieves the {@code UserPermission} instance associated with this user.
+     *
+     * @return The {@code UserPermission} instance.
+     */
+    UserPermission getPermission();
 }
