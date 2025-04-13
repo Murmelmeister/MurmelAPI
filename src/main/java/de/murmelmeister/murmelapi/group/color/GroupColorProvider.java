@@ -21,9 +21,9 @@ public final class GroupColorProvider implements GroupColor {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "groupId INT PRIMARY KEY, " +
-                                         "chatPrefix VARCHAR(300), chatSuffix VARCHAR(300), chatColor(30), " +
-                                         "tabPrefix VARCHAR(300), tabSuffix VARCHAR(300), tabColor VARCHAR(30), " +
-                                         "teamPrefix VARCHAR(300), teamSuffix VARCHAR(300), teamColor VARCHAR(30), " +
+                                         "chatPrefix VARCHAR(200), chatSuffix VARCHAR(200), chatColor(50), " +
+                                         "tabPrefix VARCHAR(200), tabSuffix VARCHAR(200), tabColor VARCHAR(50), " +
+                                         "teamPrefix VARCHAR(200), teamSuffix VARCHAR(200), teamColor VARCHAR(50), " +
                                          "createdBy INT, FOREIGN KEY (createdBy) REFERENCES users(id), " +
                                          "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
                                          "updatedBy INT, FOREIGN KEY (updatedBy) REFERENCES users(id), " +
