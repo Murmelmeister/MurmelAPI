@@ -109,7 +109,7 @@ public final class UserProvider implements User {
     @Override
     public String getFirstJoinDate(int id) {
         Timestamp firstJoin = getFirstJoin(id);
-        return firstJoin == null ? "never" : getDateFormat().format(firstJoin);
+        return firstJoin == null ? null : getDateFormat().format(firstJoin);
     }
 
     @Override
