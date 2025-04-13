@@ -3,6 +3,10 @@ package de.murmelmeister.murmelapi.group;
 import de.murmelmeister.murmelapi.database.Database;
 import de.murmelmeister.murmelapi.group.color.GroupColor;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
+import de.murmelmeister.murmelapi.group.parent.GroupParent;
+import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
+import de.murmelmeister.murmelapi.group.permission.GroupPermission;
+import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -18,10 +22,14 @@ public final class GroupProvider implements Group {
 
     private final Database database;
     private GroupColor color;
+    private GroupParent parent;
+    private GroupPermission permission;
 
     public GroupProvider(Database database) {
         this.database = database;
         this.color = getColor();
+        this.parent = getParent();
+        this.permission = getPermission();
     }
 
     public static void setup(Database database) {
@@ -151,10 +159,31 @@ public final class GroupProvider implements Group {
     }
 
     @Override
+    public int loadExpired() {
+        int parentRows = parent.loadExpired();
+        int permissionRows = permission.loadExpired();
+        return parentRows + permissionRows;
+    }
+
+    @Override
     public GroupColor getColor() {
         if (color == null)
             color = new GroupColorProvider(database);
         return color;
+    }
+
+    @Override
+    public GroupParent getParent() {
+        if (parent == null)
+            parent = new GroupParentProvider(database);
+        return parent;
+    }
+
+    @Override
+    public GroupPermission getPermission() {
+        if (permission == null)
+            permission = new GroupPermissionProvider(database);
+        return permission;
     }
 
     private enum Procedure {

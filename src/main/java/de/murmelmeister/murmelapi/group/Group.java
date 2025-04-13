@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.group;
 
 import de.murmelmeister.murmelapi.group.color.GroupColor;
+import de.murmelmeister.murmelapi.group.parent.GroupParent;
+import de.murmelmeister.murmelapi.group.permission.GroupPermission;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -184,10 +186,34 @@ public sealed interface Group permits GroupProvider {
     void createDefaultGroup(String groupName);
 
     /**
+     * Loads expired groups from the database.
+     * This method is used to clean up or archive groups that are no longer active.
+     *
+     * @return The number of expired groups loaded.
+     */
+    int loadExpired();
+
+    /**
      * Returns the GroupColor instance associated with this GroupProvider.
      * If the instance is not already initialized, a new GroupColorProvider is created.
      *
      * @return The GroupColor instance.
      */
     GroupColor getColor();
+
+    /**
+     * Returns the GroupParent instance associated with this GroupProvider.
+     * If the instance is not already initialized, a new GroupParentProvider is created.
+     *
+     * @return The GroupParent instance.
+     */
+    GroupParent getParent();
+
+    /**
+     * Returns the GroupPermission instance associated with this GroupProvider.
+     * If the instance is not already initialized, a new GroupPermissionProvider is created.
+     *
+     * @return The GroupPermission instance.
+     */
+    GroupPermission getPermission();
 }
