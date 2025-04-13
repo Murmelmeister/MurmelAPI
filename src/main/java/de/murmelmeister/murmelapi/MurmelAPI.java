@@ -1,19 +1,26 @@
 package de.murmelmeister.murmelapi;
 
-import de.murmelmeister.murmelapi.bansystem.ban.Ban;
-import de.murmelmeister.murmelapi.bansystem.ban.BanProvider;
-import de.murmelmeister.murmelapi.bansystem.mute.Mute;
-import de.murmelmeister.murmelapi.bansystem.mute.MuteProvider;
 import de.murmelmeister.murmelapi.database.Database;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.GroupProvider;
+import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
+import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
+import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
+import de.murmelmeister.murmelapi.logging.ActiveSession;
+import de.murmelmeister.murmelapi.logging.ActiveSessionProvider;
+import de.murmelmeister.murmelapi.logging.LoginHistory;
+import de.murmelmeister.murmelapi.logging.LoginHistoryProvider;
 import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.permission.PermissionProvider;
-import de.murmelmeister.murmelapi.time.JoinLogger;
+import de.murmelmeister.murmelapi.punishment.PunishmentType;
+import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
+import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
 import de.murmelmeister.murmelapi.time.PlayTime;
-import de.murmelmeister.murmelapi.time.QuitLogger;
+import de.murmelmeister.murmelapi.time.PlayTimeProvider;
+import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.UserProvider;
-import de.murmelmeister.murmelapi.user.UserProviderImpl;
+import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
+import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
 
 import java.text.SimpleDateFormat;
 
@@ -26,27 +33,70 @@ public final class MurmelAPI {
     private static String databaseName = "MurmelAPI";
     private static SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
 
-    private static final Group GROUP;
-    private static final UserProvider USER;
-    private static final Permission PERMISSION;
-    private static final PlayTime PLAY_TIME;
-    private static final JoinLogger JOIN_LOGGER;
-    private static final QuitLogger QUIT_LOGGER;
-
-    private static final Mute MUTE;
-    private static final Ban BAN;
+    private static LoginHistory loginHistory;
+    private static ActiveSession activeSession;
+    private static User user;
+    private static Group group;
+    private static PlayTime playTime;
+    private static Permission permission;
+    private static PunishmentReason punishmentReason;
+    // TODO: Punishment
 
     static {
         DATABASE = new Database();
+    }
 
-        GROUP = new GroupProvider();
-        USER = new UserProviderImpl();
-        PERMISSION = new PermissionProvider(GROUP, USER);
-        PLAY_TIME = USER.getPlayTime();
-        JOIN_LOGGER = USER.getJoinLogger();
-        QUIT_LOGGER = USER.getQuitLogger();
-        MUTE = new MuteProvider();
-        BAN = new BanProvider();
+    public static void connect(String url, String user, String password) {
+        DATABASE.connectMySQL(url, user, password);
+        setup();
+    }
+
+    public static void disconnect() {
+        DATABASE.disconnect();
+    }
+
+    public static void setup() {
+        // Create all tables
+        UserProvider.setup(DATABASE);
+        GroupProvider.setup(DATABASE);
+        LoginHistoryProvider.setup(DATABASE);
+        ActiveSessionProvider.setup(DATABASE);
+        PlayTimeProvider.setup(DATABASE);
+        GroupColorProvider.setup(DATABASE);
+        GroupParentProvider.setup(DATABASE);
+        GroupPermissionProvider.setup(DATABASE);
+        UserParentProvider.setup(DATABASE);
+        UserPermissionProvider.setup(DATABASE);
+        PunishmentType.setup(DATABASE);
+        PunishmentReasonProvider.setup(DATABASE);
+        // TODO: Punishment
+        // Initialize all providers
+        loginHistory = getLoginHistory();
+        activeSession = getActiveSession();
+        user = getUser();
+        group = getGroup();
+        playTime = getPlayTime();
+        permission = getPermission(group, user);
+        punishmentReason = getPunishmentReason();
+        // TODO: Punishment
+    }
+
+    public static int deleteUserSoft(int userId) {
+        if (userId < 1) return 0;
+        int sessionRow = activeSession.closeSession(userId);
+        int loginRows = loginHistory.deleteUserLogins(userId);
+        int permissionRow = user.getPermission().clearPermission(userId);
+        int parentRow = user.getParent().clearParent(userId);
+        int playTimeRow = playTime.deleteUser(userId);
+        return sessionRow + loginRows + permissionRow + parentRow + playTimeRow;
+    }
+
+    public static int deleteUserHard(int userId) {
+        if (userId < 1) return 0;
+        int softDeleteRow = deleteUserSoft(userId);
+        // TODO: Punishment
+        int userRow = user.deleteUser(userId);
+        return softDeleteRow + userRow;
     }
 
     public static Database getDatabase() {
@@ -69,75 +119,49 @@ public final class MurmelAPI {
         MurmelAPI.dateFormat = dateFormat;
     }
 
-    /**
-     * Get the group provider.
-     *
-     * @return the group provider
-     */
+    public static LoginHistory getLoginHistory() {
+        if (loginHistory == null)
+            loginHistory = new LoginHistoryProvider(DATABASE);
+        return loginHistory;
+    }
+
+    public static ActiveSession getActiveSession() {
+        if (activeSession == null)
+            activeSession = new ActiveSessionProvider(DATABASE);
+        return activeSession;
+    }
+
+    public static User getUser() {
+        if (user == null)
+            user = new UserProvider(DATABASE);
+        return user;
+    }
+
     public static Group getGroup() {
-        return GROUP;
+        if (group == null)
+            group = new GroupProvider(DATABASE);
+        return group;
     }
 
-    /**
-     * Get the user provider.
-     *
-     * @return the user provider
-     */
-    public static UserProvider getUser() {
-        return USER;
-    }
-
-    /**
-     * Get the permission provider.
-     *
-     * @return the permission provider
-     */
-    public static Permission getPermission() {
-        return PERMISSION;
-    }
-
-    /**
-     * Get the play time provider.
-     *
-     * @return the play time provider
-     */
     public static PlayTime getPlayTime() {
-        return PLAY_TIME;
+        if (playTime == null)
+            playTime = new PlayTimeProvider(DATABASE);
+        return playTime;
     }
 
-    /**
-     * Get the join logger provider.
-     *
-     * @return the join logger provider
-     */
-    public static JoinLogger getJoinLogger() {
-        return JOIN_LOGGER;
+    public static Permission getPermission(Group group, User user) {
+        if (permission == null)
+            permission = new PermissionProvider(group, user);
+        return permission;
     }
 
-    /**
-     * Get the quit logger provider.
-     *
-     * @return the quit logger provider
-     */
-    public static QuitLogger getQuitLogger() {
-        return QUIT_LOGGER;
+    public static Permission getPermission() {
+        return getPermission(getGroup(), getUser());
     }
 
-    /**
-     * Get the mute provider.
-     *
-     * @return the mute provider
-     */
-    public static Mute getMute() {
-        return MUTE;
-    }
-
-    /**
-     * Get the ban provider.
-     *
-     * @return the ban provider
-     */
-    public static Ban getBan() {
-        return BAN;
+    public static PunishmentReason getPunishmentReason() {
+        if (punishmentReason == null)
+            punishmentReason = new PunishmentReasonProvider(DATABASE);
+        return punishmentReason;
     }
 }
