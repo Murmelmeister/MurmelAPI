@@ -1,137 +1,160 @@
 package de.murmelmeister.murmelapi.user.permission;
 
-import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.utils.Database;
+import de.murmelmeister.murmelapi.database.Database;
 
-import java.text.SimpleDateFormat;
+import java.sql.Timestamp;
 import java.util.List;
 
-public final class UserPermissionProvider implements UserPermission {
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
 
-    public UserPermissionProvider() {
-        String tableName = "UserPermission";
-        createTable(tableName);
-        Procedure.loadAll(tableName);
+/**
+ * UserPermissionProvider class to manage user permissions in the database.
+ * This class implements the UserPermission interface and provides methods to interact with user permission data.
+ */
+public final class UserPermissionProvider implements UserPermission {
+    private static final String TABLE_NAME = "user_permission";
+
+    private final Database database;
+
+    public UserPermissionProvider(Database database) {
+        this.database = database;
     }
 
-    private void createTable(String tableName) {
-        Database.createTable(tableName, "UserID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT, ExpiredTime BIGINT");
+    public static void setup(Database database) {
+        database.createTable(TABLE_NAME, "userId INT, permission VARCHAR(200), " +
+                                         "PRIMARY KEY (userId, permission), " +
+                                         "FOREIGN KEY (userId) REFERENCES users(id), " +
+                                         "expiredAt DATETIME, " +
+                                         "createdBy INT, FOREIGN KEY (createdBy) REFERENCES users(id), " +
+                                         "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
+                                         "updatedBy INT, FOREIGN KEY (updatedBy) REFERENCES users(id), " +
+                                         "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP()");
+        Procedure.loadAll(database);
     }
 
     @Override
     public boolean existsPermission(int userId, String permission) {
-        return Database.callExists(Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
+        return userId > 0 && permission != null && database.existsCallable(Procedure.GET_DATA.getName(), userId, permission);
     }
 
     @Override
-    public void addPermission(int userId, int creatorId, String permission, long time) {
-        if (existsPermission(userId, permission)) return;
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.USER_PERMISSION_ADD.getName(), userId, creatorId, permission, System.currentTimeMillis(), expired);
+    public int addPermission(int userId, String permission, long time, int createdBy) {
+        if (userId < 1 || permission == null || createdBy == -2) return 0;
+        Timestamp expiredAt = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.updateCallable(Procedure.CREATE.getName(), userId, permission, expiredAt, createdBy, createdBy);
     }
 
     @Override
-    public void removePermission(int userId, String permission) {
-        Database.callUpdate(Procedure.USER_PERMISSION_REMOVE.getName(), userId, permission);
+    public int removePermission(int userId, String permission) {
+        if (userId < 1 || permission == null) return 0;
+        return database.updateCallable(Procedure.REMOVE_PERMISSION.getName(), userId, permission);
     }
 
     @Override
-    public void clearPermission(int userId) {
-        Database.callUpdate(Procedure.USER_PERMISSION_CLEAR.getName(), userId);
+    public int clearPermission(int userId) {
+        if (userId < 1) return 0;
+        return database.updateCallable(Procedure.CLEAR_PERMISSION.getName(), userId);
     }
 
     @Override
     public List<String> getPermissions(int userId) {
-        return Database.callQueryList("Permission", String.class, Procedure.USER_PERMISSION_USER_ID.getName(), userId);
+        if (userId < 1) return null;
+        return database.queryListCallable(Procedure.GET_ACTIVE_PERMISSION.getName(), result -> result.getString("permission"), userId);
     }
 
     @Override
-    public int getCreatorId(int userId, String permission) {
-        return Database.callQuery(-2, "CreatorID", int.class, Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
-    }
-
-    @Override
-    public long getCreatedTime(int userId, String permission) {
-        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
-    }
-
-    @Override
-    public String getCreatedDate(int userId, String permission) {
-        return dateFormat.format(getCreatedTime(userId, permission));
-    }
-
-    @Override
-    public long getExpiredTime(int userId, String permission) {
-        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.USER_PERMISSION_PERMISSION.getName(), userId, permission);
+    public Timestamp getExpiredAt(int userId, String permission) {
+        if (userId < 1 || permission == null) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, result -> result.getTimestamp("expiredAt"), userId, permission);
     }
 
     @Override
     public String getExpiredDate(int userId, String permission) {
-        long time = getExpiredTime(userId, permission);
-        return time == -1 ? "never" : dateFormat.format(time);
+        Timestamp time = getExpiredAt(userId, permission);
+        return time == null ? null : getDateFormat().format(time);
     }
 
     @Override
-    public String setExpiredTime(int userId, String permission, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
-        return getExpiredDate(userId, permission);
+    public int setExpiredAt(int userId, String permission, long time, int updatedBy) {
+        if (userId < 1 || permission == null || updatedBy == -2) return 0;
+        Timestamp expiredAt = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.updateCallable(Procedure.UPDATE_EXPIRED_AT.getName(), userId, permission, expiredAt, updatedBy);
     }
 
     @Override
-    public String addExpiredTime(int userId, String permission, long time) {
-        long current = getExpiredTime(userId, permission);
-        long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.callUpdate(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
-        return getExpiredDate(userId, permission);
+    public int getCreatedBy(int userId, String permission) {
+        if (userId < 1 || permission == null) return -2;
+        return database.queryCallable(Procedure.GET_DATA.getName(), -2, result -> result.getInt("createdBy"), userId, permission);
     }
 
     @Override
-    public String removeExpiredTime(int userId, String permission, long time) {
-        long current = getExpiredTime(userId, permission);
-        long expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.callUpdate(Procedure.USER_PERMISSION_EXPIRED.getName(), userId, permission, expired);
-        return getExpiredDate(userId, permission);
+    public Timestamp getCreatedAt(int userId, String permission) {
+        if (userId < 1 || permission == null) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, result -> result.getTimestamp("createdAt"), userId, permission);
     }
 
     @Override
-    public void loadExpired(User user) {
-        for (int userId : user.getIds())
-            for (String permission : getPermissions(userId)) {
-                long time = getExpiredTime(userId, permission);
-                if (time == -1) continue;
-                if (time <= System.currentTimeMillis()) removePermission(userId, permission);
-            }
+    public String getCreatedDate(int userId, String permission) {
+        Timestamp time = getCreatedAt(userId, permission);
+        return time == null ? null : getDateFormat().format(time);
+    }
+
+    @Override
+    public int getUpdatedBy(int userId, String permission) {
+        if (userId < 1 || permission == null) return -2;
+        return database.queryCallable(Procedure.GET_DATA.getName(), -2, result -> result.getInt("updatedBy"), userId, permission);
+    }
+
+    @Override
+    public Timestamp getUpdatedAt(int userId, String permission) {
+        if (userId < 1 || permission == null) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, result -> result.getTimestamp("updatedAt"), userId, permission);
+    }
+
+    @Override
+    public String getUpdatedDate(int userId, String permission) {
+        Timestamp time = getUpdatedAt(userId, permission);
+        return time == null ? null : getDateFormat().format(time);
+    }
+
+    @Override
+    public int loadExpired() {
+        return database.updateCallable(Procedure.UPDATE_EXPIRED.getName());
     }
 
     private enum Procedure {
-        USER_PERMISSION_USER_ID("UserPermission_UserID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
-        USER_PERMISSION_PERMISSION("UserPermission_Permission", "uid INT, perm VARCHAR(1000)", "SELECT * FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
-        USER_PERMISSION_ADD("UserPermission_Add", "uid INT, creator INT, perm VARCHAR(1000), created BIGINT, expired BIGINT", "INSERT INTO [TABLE] VALUES (uid, creator, perm, created, expired);"),
-        USER_PERMISSION_REMOVE("UserPermission_Remove", "uid INT, perm VARCHAR(1000)", "DELETE FROM [TABLE] WHERE UserID=uid AND Permission=perm;"),
-        USER_PERMISSION_CLEAR("UserPermission_Clear", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
-        USER_PERMISSION_EXPIRED("UserPermission_Expired", "uid INT, perm VARCHAR(1000), expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE UserID=uid AND Permission=perm;");
+        CREATE("userPermission_create", "p_userId INT, p_permission VARCHAR(200), p_expiredAt DATETIME, p_createdBy INT, p_updatedBy INT",
+                "INSERT INTO [TABLE] (userId, permission, expiredAt, createdBy, updatedBy) VALUES (p_userId, p_permission, p_expiredAt, p_createdBy, p_updatedBy);"),
+        REMOVE_PERMISSION("userPermission_remove", "p_userId INT, p_permission VARCHAR(200)", "DELETE FROM [TABLE] WHERE userId=p_userId AND permission=p_permission;"),
+        CLEAR_PERMISSION("userPermission_clear", "p_userId INT", "DELETE FROM [TABLE] WHERE userId=p_userId;"),
+        GET_DATA("userPermission_getData", "p_userId INT, p_permission VARCHAR(200)", "SELECT * FROM [TABLE] WHERE userId=p_userId AND permission=p_permission;"),
+        GET_ACTIVE_PERMISSION("userPermission_getActive", "p_userId INT",
+                "SELECT Permission FROM [TABLE] WHERE userId=p_userId AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP());"),
+        UPDATE_EXPIRED_AT("userPermission_updateExpiredAt", "p_userId INT, p_permission VARCHAR(200), p_expiredAt DATETIME, p_updatedBy INT",
+                "UPDATE [TABLE] SET expiredAt=p_expiredAt, updatedBy=p_updatedBy WHERE userId=p_userId AND permission=p_permission;"),
+        UPDATE_EXPIRED("userPermission_updateExpired", "",
+                "DELETE FROM [TABLE] WHERE expiredAt IS NOT NULL AND expiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(final String name, final String input, final String query) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
+            this.query = Database.getProcedureQuery(name, input, query);
         }
 
         public String getName() {
             return name;
         }
 
-        public String getQuery(String tableName) {
-            return query.replace("[TABLE]", tableName);
+        public String getQuery() {
+            return query.replace("[TABLE]", TABLE_NAME);
         }
 
-        public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
+        public static void loadAll(Database database) {
+            for (Procedure procedure : VALUES)
+                database.update(procedure.getQuery());
         }
     }
 }
