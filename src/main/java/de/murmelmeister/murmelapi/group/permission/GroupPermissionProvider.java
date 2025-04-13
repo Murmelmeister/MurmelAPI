@@ -1,145 +1,171 @@
 package de.murmelmeister.murmelapi.group.permission;
 
-import de.murmelmeister.murmelapi.group.Group;
+import de.murmelmeister.murmelapi.database.Database;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
-import de.murmelmeister.murmelapi.utils.Database;
 
-import java.text.SimpleDateFormat;
-import java.util.*;
+import java.sql.Timestamp;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Set;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+
+/**
+ * GroupPermissionProvider is a class that provides methods to manage group permissions in the database.
+ * It implements the GroupPermission interface and uses the Database class to interact with the database.
+ */
 public final class GroupPermissionProvider implements GroupPermission {
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+    private static final String TABLE_NAME = "group_permissions";
 
-    public GroupPermissionProvider() {
-        String tableName = "GroupPermission";
-        createTable(tableName);
-        Procedure.loadAll(tableName);
+    private final Database database;
+
+    public GroupPermissionProvider(Database database) {
+        this.database = database;
     }
 
-    private void createTable(String tableName) {
-        Database.createTable(tableName, "GroupID INT, CreatorID INT, Permission VARCHAR(1000), CreatedTime BIGINT, ExpiredTime BIGINT");
+    public static void setup(Database database) {
+        database.createTable(TABLE_NAME, "groupId INT, permission VARCHAR(200), " +
+                                         "PRIMARY KEY (groupId, permission), " +
+                                         "FOREIGN KEY (groupId) REFERENCES groups(id), " +
+                                         "expiredAt DATETIME, " +
+                                         "createdBy INT, FOREIGN KEY (createdBy) REFERENCES users(id), " +
+                                         "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
+                                         "updatedBy INT, FOREIGN KEY (updatedBy) REFERENCES users(id), " +
+                                         "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP()");
+        Procedure.loadAll(database);
     }
 
     @Override
     public boolean existsPermission(int groupId, String permission) {
-        return Database.callExists(Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
+        return groupId > 0 && permission != null && database.existsCallable(Procedure.GET_DATA.getName(), groupId, permission);
     }
 
     @Override
-    public void addPermission(int groupId, int creatorId, String permission, long time) {
-        if (existsPermission(groupId, permission)) return;
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.GROUP_PERMISSION_ADD.getName(), groupId, creatorId, permission, System.currentTimeMillis(), expired);
+    public int addPermission(int groupId, String permission, long time, int createdBy) {
+        if (groupId < 1 || permission == null || createdBy == -2) return 0;
+        Timestamp expiredAt = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.updateCallable(Procedure.CREATE.getName(), groupId, permission, expiredAt, createdBy, createdBy);
     }
 
     @Override
-    public void removePermission(int groupId, String permission) {
-        Database.callUpdate(Procedure.GROUP_PERMISSION_REMOVE.getName(), groupId, permission);
+    public int removePermission(int groupId, String permission) {
+        if (groupId < 1 || permission == null) return 0;
+        return database.updateCallable(Procedure.REMOVE_PERMISSION.getName(), groupId, permission);
     }
 
     @Override
-    public void clearPermission(int groupId) {
-        Database.callUpdate(Procedure.GROUP_PERMISSION_CLEAR.getName(), groupId);
+    public int clearPermission(int groupId) {
+        if (groupId < 1) return 0;
+        return database.updateCallable(Procedure.CLEAR_PERMISSION.getName(), groupId);
     }
 
     @Override
     public List<String> getPermissions(int groupId) {
-        return Database.callQueryList("Permission", String.class, Procedure.GROUP_PERMISSION_GROUP_ID.getName(), groupId);
+        return database.queryListCallable(Procedure.GET_ACTIVE_PERMISSION.getName(), resultSet -> resultSet.getString("permission"), groupId);
     }
 
     @Override
     public List<String> getAllPermissions(GroupParent groupParent, int groupId) {
-        Set<String> permissions = Collections.synchronizedSet(new LinkedHashSet<>(getPermissions(groupId)));
-        groupParent.getParentIds(groupId).parallelStream().map(parentId -> getAllPermissions(groupParent, parentId)).forEach(permissions::addAll);
-        return new ArrayList<>(permissions);
+        Set<String> permissions = new LinkedHashSet<>(getPermissions(groupId));
+        for (int parentId : groupParent.getParentIds(groupId))
+            permissions.addAll(getAllPermissions(groupParent, parentId));
+        return new LinkedList<>(permissions);
     }
 
     @Override
-    public int getCreatorId(int groupId, String permission) {
-        return Database.callQuery(-2, "CreatorID", int.class, Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
-    }
-
-    @Override
-    public long getCreatedTime(int groupId, String permission) {
-        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
-    }
-
-    @Override
-    public String getCreatedDate(int groupId, String permission) {
-        return dateFormat.format(getCreatedTime(groupId, permission));
-    }
-
-    @Override
-    public long getExpiredTime(int groupId, String permission) {
-        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.GROUP_PERMISSION_PERMISSION.getName(), groupId, permission);
+    public Timestamp getExpiredAt(int groupId, String permission) {
+        if (groupId < 1 || permission == null) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getTimestamp("expiredAt"), groupId, permission);
     }
 
     @Override
     public String getExpiredDate(int groupId, String permission) {
-        long time = getExpiredTime(groupId, permission);
-        return time == -1 ? "never" : dateFormat.format(time);
+        Timestamp expiredAt = getExpiredAt(groupId, permission);
+        return expiredAt == null ? null : getDateFormat().format(expiredAt);
     }
 
     @Override
-    public String setExpiredTime(int groupId, String permission, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
-        return getExpiredDate(groupId, permission);
+    public int setExpiredAt(int groupId, String permission, long time, int updatedBy) {
+        if (groupId < 1 || permission == null || updatedBy == -2) return 0;
+        Timestamp expiredAt = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.updateCallable(Procedure.UPDATE_EXPIRED_AT.getName(), groupId, permission, expiredAt, updatedBy);
     }
 
     @Override
-    public String addExpiredTime(int groupId, String permission, long time) {
-        long current = getExpiredTime(groupId, permission);
-        long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.callUpdate(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
-        return getExpiredDate(groupId, permission);
+    public int getCreatedBy(int groupId, String permission) {
+        if (groupId < 1 || permission == null) return -2;
+        return database.queryCallable(Procedure.GET_DATA.getName(), -2, resultSet -> resultSet.getInt("createdBy"), groupId, permission);
     }
 
     @Override
-    public String removeExpiredTime(int groupId, String permission, long time) {
-        long current = getExpiredTime(groupId, permission);
-        long expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.callUpdate(Procedure.GROUP_PERMISSION_EXPIRED.getName(), groupId, permission, expired);
-        return getExpiredDate(groupId, permission);
+    public Timestamp getCreatedAt(int groupId, String permission) {
+        if (groupId < 1 || permission == null) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getTimestamp("createdAt"), groupId, permission);
     }
 
     @Override
-    public void loadExpired(Group group) {
-        for (int groupId : group.getUniqueIds())
-            for (String permission : getPermissions(groupId)) {
-                long time = getExpiredTime(groupId, permission);
-                if (time == -1) continue;
-                if (time <= System.currentTimeMillis()) removePermission(groupId, permission);
-            }
+    public String getCreatedDate(int groupId, String permission) {
+        Timestamp createdAt = getCreatedAt(groupId, permission);
+        return createdAt == null ? null : getDateFormat().format(createdAt);
+    }
+
+    @Override
+    public int getUpdatedBy(int groupId, String permission) {
+        if (groupId < 1 || permission == null) return -2;
+        return database.queryCallable(Procedure.GET_DATA.getName(), -2, resultSet -> resultSet.getInt("updatedBy"), groupId, permission);
+    }
+
+    @Override
+    public Timestamp getUpdatedAt(int groupId, String permission) {
+        if (groupId < 1 || permission == null) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getTimestamp("updatedAt"), groupId, permission);
+    }
+
+    @Override
+    public String getUpdatedDate(int groupId, String permission) {
+        Timestamp updatedAt = getUpdatedAt(groupId, permission);
+        return updatedAt == null ? null : getDateFormat().format(updatedAt);
+    }
+
+    @Override
+    public int loadExpired() {
+        return database.updateCallable(Procedure.UPDATE_EXPIRED.getName());
     }
 
     private enum Procedure {
-        GROUP_PERMISSION_GROUP_ID("GroupPermission_GroupID", "gid INT", "SELECT * FROM [TABLE] WHERE GroupID=gid;"),
-        GROUP_PERMISSION_PERMISSION("GroupPermission_Permission", "gid INT, perm VARCHAR(1000)", "SELECT * FROM [TABLE] WHERE GroupID=gid AND Permission=perm;"),
-        GROUP_PERMISSION_ADD("GroupPermission_Add", "gid INT, creator INT, perm VARCHAR(1000), created BIGINT, expired BIGINT", "INSERT INTO [TABLE] VALUES (gid, creator, perm, created, expired);"),
-        GROUP_PERMISSION_REMOVE("GroupPermission_Remove", "gid INT, perm VARCHAR(1000)", "DELETE FROM [TABLE] WHERE GroupID=gid AND Permission=perm;"),
-        GROUP_PERMISSION_CLEAR("GroupPermission_Clear", "gid INT", "DELETE FROM [TABLE] WHERE GroupID=gid;"),
-        GROUP_PERMISSION_EXPIRED("GroupPermission_Expired", "gid INT, perm VARCHAR(1000), expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE GroupID=gid AND Permission=perm;");
+        CREATE("groupPermission_create", "p_groupId INT, p_permission VARCHAR(200), p_expiredAt DATETIME, p_createdBy INT, p_updatedBy INT",
+                "INSERT INTO [TABLE] (groupId, permission, expiredAt, createdBy, updatedBy) VALUES (p_groupId, p_permission, p_expiredAt, p_createdBy, p_updatedBy);"),
+        REMOVE_PERMISSION("groupPermission_remove", "p_groupId INT, p_permission VARCHAR(200)", "DELETE FROM [TABLE] WHERE groupId=p_groupId AND permission=p_permission;"),
+        CLEAR_PERMISSION("groupPermission_clear", "p_groupId INT", "DELETE FROM [TABLE] WHERE groupId=p_groupId;"),
+        GET_DATA("groupPermission_getData", "p_groupId INT, p_permission VARCHAR(200)", "SELECT * FROM [TABLE] WHERE groupId=p_groupId AND permission=p_permission;"),
+        GET_ACTIVE_PERMISSION("groupPermission_getActive", "p_groupId INT",
+                "SELECT permission FROM [TABLE] WHERE groupId=p_groupId AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP());"),
+        UPDATE_EXPIRED_AT("groupPermission_updateExpiredAt", "p_groupId INT, p_permission VARCHAR(200), p_expiredAt DATETIME, p_updatedBy INT",
+                "UPDATE [TABLE] SET expiredAt=p_expiredAt, updatedBy=p_updatedBy WHERE groupId=p_groupId AND permission=p_permission;"),
+        UPDATE_EXPIRED("userPermission_updateExpired", "",
+                "DELETE FROM [TABLE] WHERE expiredAt IS NOT NULL AND expiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(final String name, final String input, final String query) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
+            this.query = Database.getProcedureQuery(name, input, query);
         }
 
         public String getName() {
             return name;
         }
 
-        public String getQuery(String tableName) {
-            return query.replace("[TABLE]", tableName);
+        public String getQuery() {
+            return query.replace("[TABLE]", TABLE_NAME);
         }
 
-        public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
+        public static void loadAll(Database database) {
+            for (Procedure procedure : VALUES)
+                database.update(procedure.getQuery());
         }
     }
 }
