@@ -1,149 +1,178 @@
 package de.murmelmeister.murmelapi.user.parent;
 
+import de.murmelmeister.murmelapi.database.Database;
 import de.murmelmeister.murmelapi.group.Group;
-import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.utils.Database;
 
-import java.text.SimpleDateFormat;
+import java.sql.Timestamp;
+import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+
+/**
+ * UserParentProvider is a class that provides methods to manage user-parent relationships in the database.
+ * It implements the UserParent interface and uses the Database class to interact with the database.
+ */
 public final class UserParentProvider implements UserParent {
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+    private static final String TABLE_NAME = "user_parent";
 
-    public UserParentProvider() {
-        String tableName = "UserParent";
-        createTable(tableName);
-        Procedure.loadAll(tableName);
+    private final Database database;
+
+    public UserParentProvider(Database database) {
+        this.database = database;
     }
 
-    private void createTable(String tableName) {
-        Database.createTable(tableName, "UserID INT, CreatorID INT, ParentID INT, CreatedTime BIGINT, ExpiredTime BIGINT");
+    public static void setup(Database database) {
+        database.createTable(TABLE_NAME, "userId INT, parentId INT, " +
+                                         "PRIMARY KEY (userId, parentId), " +
+                                         "FOREIGN KEY (userId) REFERENCES users(id), " +
+                                         "FOREIGN KEY (parentId) REFERENCES groups(id)," +
+                                         "expiredAt DATETIME, " +
+                                         "createdBy INT, FOREIGN KEY (createdBy) REFERENCES users(id), " +
+                                         "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
+                                         "updatedBy INT, FOREIGN KEY (updatedBy) REFERENCES users(id), " +
+                                         "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP()");
+        Procedure.loadAll(database);
     }
 
     @Override
     public boolean existsParent(int userId, int parentId) {
-        return Database.callExists(Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+        return userId > 0 && parentId > 0 && database.existsCallable(Procedure.GET_DATA.getName(), userId, parentId);
     }
 
     @Override
-    public void addParent(int userId, int creatorId, int parentId, long time) {
-        if (existsParent(userId, parentId)) return;
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.USER_PARENT_ADD.getName(), userId, creatorId, parentId, System.currentTimeMillis(), expired);
+    public int addParent(int userId, int parentId, long time, int createdBy) {
+        if (userId < 1 || parentId < 1 || createdBy == -2) return 0;
+        Timestamp expiredAt = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.updateCallable(Procedure.CREATE.getName(), userId, parentId, expiredAt, createdBy, createdBy);
     }
 
     @Override
-    public void removeParent(int userId, int parentId) {
-        Database.callUpdate(Procedure.USER_PARENT_REMOVE.getName(), userId, parentId);
+    public int removeParent(int userId, int parentId) {
+        if (userId < 1 || parentId < 1) return 0;
+        return database.updateCallable(Procedure.REMOVE_PARENT.getName(), userId, parentId);
     }
 
     @Override
-    public void clearParent(int userId) {
-        Database.callUpdate(Procedure.USER_PARENT_CLEAR.getName(), userId);
-    }
-
-    @Override
-    public int getParentId(int userId) {
-        return Database.callQuery(-1, "ParentID", int.class, Procedure.USER_PARENT_USER_ID.getName(), userId);
+    public int clearParent(int userId) {
+        if (userId < 1) return 0;
+        return database.updateCallable(Procedure.CLEAR_PARENT.getName(), userId);
     }
 
     @Override
     public List<Integer> getParentIds(int userId) {
-        return Database.callQueryList("ParentID", int.class, Procedure.USER_PARENT_USER_ID.getName(), userId);
+        if (userId < 1) return null;
+        return database.queryListCallable(Procedure.GET_ACTIVE_PARENT.getName(), result -> result.getInt("parentId"), userId);
     }
 
     @Override
     public List<String> getParentNames(Group group, int userId) {
-        return getParentIds(userId).parallelStream().map(group::getName).collect(Collectors.toList());
+        if (userId < 1) return null;
+        return database.queryListCallable(Procedure.GET_ACTIVE_PARENT.getName(), result -> group.getGroupName(result.getInt("parentId")), userId);
     }
 
     @Override
-    public int getCreatorId(int userId, int parentId) {
-        return Database.callQuery(-2, "CreatorID", int.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+    public int getHighestPriority(Group group, int userId) {
+        if (userId < 1) return -1;
+        return database.queryListCallable(Procedure.GET_ACTIVE_PARENT.getName(), result -> group.getPriority(result.getInt("parentId")), userId)
+                .stream()
+                .max(Comparator.naturalOrder())
+                .orElse(-1);
     }
 
     @Override
-    public long getCreatedTime(int userId, int parentId) {
-        return Database.callQuery(-1L, "CreatedTime", long.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
-    }
-
-    @Override
-    public String getCreatedDate(int userId, int parentId) {
-        return dateFormat.format(getCreatedTime(userId, parentId));
-    }
-
-    @Override
-    public long getExpiredTime(int userId, int parentId) {
-        return Database.callQuery(-2L, "ExpiredTime", long.class, Procedure.USER_PARENT_PARENT.getName(), userId, parentId);
+    public Timestamp getExpiredAt(int userId, int parentId) {
+        if (userId < 1 || parentId < 1) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, result -> result.getTimestamp("expiredAt"), userId, parentId);
     }
 
     @Override
     public String getExpiredDate(int userId, int parentId) {
-        long time = getExpiredTime(userId, parentId);
-        return time == -1 ? "never" : dateFormat.format(time);
+        Timestamp expiredAt = getExpiredAt(userId, parentId);
+        return expiredAt == null ? null : getDateFormat().format(expiredAt);
     }
 
     @Override
-    public String setExpiredTime(int userId, int parentId, long time) {
-        long expired = time == -1 ? time : System.currentTimeMillis() + time;
-        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
-        return getExpiredDate(userId, parentId);
+    public int setExpiredAt(int userId, int parentId, long time, int updatedBy) {
+        if (userId < 1 || parentId < 1 || updatedBy == -2) return 0;
+        Timestamp expiredAt = time == -1 ? null : new Timestamp(System.currentTimeMillis() + time);
+        return database.updateCallable(Procedure.UPDATE_EXPIRED_AT.getName(), userId, parentId, expiredAt, updatedBy);
     }
 
     @Override
-    public String addExpiredTime(int userId, int parentId, long time) {
-        long current = getExpiredTime(userId, parentId);
-        long expired = current == -1 ? System.currentTimeMillis() + time : current + time;
-        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
-        return getExpiredDate(userId, parentId);
+    public int getCreatedBy(int userId, int parentId) {
+        if (userId < 1 || parentId < 1) return -2;
+        return database.queryCallable(Procedure.GET_DATA.getName(), -2, result -> result.getInt("createdBy"), userId, parentId);
     }
 
     @Override
-    public String removeExpiredTime(int userId, int parentId, long time) {
-        long current = getExpiredTime(userId, parentId);
-        long expired = current == -1 ? System.currentTimeMillis() : current - time;
-        Database.callUpdate(Procedure.USER_PARENT_EXPIRED.getName(), userId, parentId, expired);
-        return getExpiredDate(userId, parentId);
+    public Timestamp getCreatedAt(int userId, int parentId) {
+        if (userId < 1 || parentId < 1) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, result -> result.getTimestamp("createdAt"), userId, parentId);
     }
 
     @Override
-    public void loadExpired(User user) {
-        for (int userId : user.getIds())
-            for (int parentId : getParentIds(userId)) {
-                long time = getExpiredTime(userId, parentId);
-                if (time == -1) continue;
-                if (time <= System.currentTimeMillis()) removeParent(userId, parentId);
-            }
+    public String getCreatedDate(int userId, int parentId) {
+        Timestamp createdAt = getCreatedAt(userId, parentId);
+        return createdAt == null ? null : getDateFormat().format(createdAt);
+    }
+
+    @Override
+    public int getUpdatedBy(int userId, int parentId) {
+        if (userId < 1 || parentId < 1) return -2;
+        return database.queryCallable(Procedure.GET_DATA.getName(), -2, result -> result.getInt("updatedBy"), userId, parentId);
+    }
+
+    @Override
+    public Timestamp getUpdatedAt(int userId, int parentId) {
+        if (userId < 1 || parentId < 1) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, result -> result.getTimestamp("updatedAt"), userId, parentId);
+    }
+
+    @Override
+    public String getUpdatedDate(int userId, int parentId) {
+        Timestamp updatedAt = getUpdatedAt(userId, parentId);
+        return updatedAt == null ? null : getDateFormat().format(updatedAt);
+    }
+
+    @Override
+    public int loadExpired() {
+        return database.updateCallable(Procedure.UPDATE_EXPIRED.getName());
     }
 
     private enum Procedure {
-        USER_PARENT_USER_ID("UserParent_UserID", "uid INT", "SELECT * FROM [TABLE] WHERE UserID=uid;"),
-        USER_PARENT_PARENT("UserParent_Parent", "uid INT, pid INT", "SELECT * FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
-        USER_PARENT_ADD("UserParent_Add", "uid INT, creator INT, pid INT, created BIGINT, expired BIGINT", "INSERT INTO [TABLE] VALUES (uid, creator, pid, created, expired);"),
-        USER_PARENT_REMOVE("UserParent_Remove", "uid INT, pid INT", "DELETE FROM [TABLE] WHERE UserID=uid AND ParentID=pid;"),
-        USER_PARENT_CLEAR("UserParent_Clear", "uid INT", "DELETE FROM [TABLE] WHERE UserID=uid;"),
-        USER_PARENT_EXPIRED("UserParent_Expired", "uid INT, pid INT, expired BIGINT", "UPDATE [TABLE] SET ExpiredTime=expired WHERE UserID=uid AND ParentID=pid;");
+        CREATE("userParent_create", "p_userId INT, p_parentId INT, p_expiredAt DATETIME, p_createdBy INT, p_updatedBy INT",
+                "INSERT INTO [TABLE] (userId, parentId, expiredAt, createdBy, updatedBy) VALUES (p_userId, p_parentId, p_expiredAt, p_createdBy, p_updatedBy);"),
+        REMOVE_PARENT("userParent_remove", "p_userId INT, p_parentId INT", "DELETE FROM [TABLE] WHERE userId=p_userId AND parentId=p_parentId;"),
+        CLEAR_PARENT("userParent_clear", "p_userId INT", "DELETE FROM [TABLE] WHERE userId=p_userId;"),
+        GET_DATA("userParent_getData", "p_userId INT, p_parentId INT", "SELECT * FROM [TABLE] WHERE userId=p_userId AND parentId=p_parentId;"),
+        GET_ACTIVE_PARENT("userParent_getActive", "p_userId INT",
+                "SELECT parentId FROM [TABLE] WHERE userId=p_userId AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP());"),
+        UPDATE_EXPIRED_AT("userParent_updateExpiredAt", "p_userId INT, p_parentId INT, p_expiredAt DATETIME, p_updatedBy INT",
+                "UPDATE [TABLE] SET expiredAt=p_expiredAt, updatedBy=p_updatedBy WHERE userId=p_userId AND parentId=p_parentId;"),
+        UPDATE_EXPIRED("userParent_updateExpired", "",
+                "DELETE FROM [TABLE] WHERE expiredAt IS NOT NULL AND expiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
         private final String name;
         private final String query;
 
-        Procedure(final String name, final String input, final String query) {
+        Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = Database.getProcedureQueryWithoutObjects(name, input, query);
+            this.query = Database.getProcedureQuery(name, input, query);
         }
 
         public String getName() {
             return name;
         }
 
-        public String getQuery(String tableName) {
-            return query.replace("[TABLE]", tableName);
+        public String getQuery() {
+            return query.replace("[TABLE]", TABLE_NAME);
         }
 
-        public static void loadAll(String tableName) {
-            for (Procedure procedure : VALUES) Database.update(procedure.getQuery(tableName));
+        public static void loadAll(Database database) {
+            for (Procedure procedure : VALUES)
+                database.update(procedure.getQuery());
         }
     }
 }
