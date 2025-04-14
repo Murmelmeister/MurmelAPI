@@ -12,7 +12,7 @@ import de.murmelmeister.murmelapi.logging.LoginHistory;
 import de.murmelmeister.murmelapi.logging.LoginHistoryProvider;
 import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.permission.PermissionProvider;
-import de.murmelmeister.murmelapi.punishment.PunishmentType;
+import de.murmelmeister.murmelapi.punishment.*;
 import de.murmelmeister.murmelapi.punishment.log.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.log.PunishmentLogProvider;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -43,7 +43,8 @@ public final class MurmelAPI {
     private static Permission permission;
     private static PunishmentReason punishmentReason;
     private static PunishmentLog punishmentLog;
-    // TODO: Punishment
+    private static PunishmentIP punishmentIP;
+    private static PunishmentUser punishmentUser;
 
     static {
         DATABASE = new Database();
@@ -72,7 +73,9 @@ public final class MurmelAPI {
         UserPermissionProvider.setup(DATABASE);
         PunishmentType.setup(DATABASE);
         PunishmentReasonProvider.setup(DATABASE);
-        // TODO: Punishment
+        PunishmentLogProvider.setup(DATABASE);
+        PunishmentIPProvider.setup(DATABASE);
+        PunishmentUserProvider.setup(DATABASE);
         // Initialize all providers
         loginHistory = getLoginHistory();
         activeSession = getActiveSession();
@@ -82,7 +85,8 @@ public final class MurmelAPI {
         permission = getPermission(group, user);
         punishmentReason = getPunishmentReason();
         punishmentLog = getPunishmentLog(punishmentReason);
-        // TODO: Punishment
+        punishmentIP = getPunishmentIP(punishmentLog);
+        punishmentUser = getPunishmentUser(punishmentLog);
     }
 
     public static int deleteUserSoft(int userId) {
@@ -98,10 +102,10 @@ public final class MurmelAPI {
     public static int deleteUserHard(int userId) {
         if (userId < 1) return 0;
         int softDeleteRow = deleteUserSoft(userId);
-        // TODO: Punishment
+        int punishmentRow = punishmentUser.unpunish(userId);
         int logsRow = punishmentLog.deleteUserLogs(userId);
         int userRow = user.deleteUser(userId);
-        return softDeleteRow + logsRow + userRow;
+        return softDeleteRow + punishmentRow + logsRow + userRow;
     }
 
     public static Database getDatabase() {
@@ -178,5 +182,25 @@ public final class MurmelAPI {
 
     public static PunishmentLog getPunishmentLog() {
         return getPunishmentLog(getPunishmentReason());
+    }
+
+    public static PunishmentIP getPunishmentIP(PunishmentLog log) {
+        if (punishmentIP == null)
+            punishmentIP = new PunishmentIPProvider(DATABASE, log);
+        return punishmentIP;
+    }
+
+    public static PunishmentIP getPunishmentIP() {
+        return getPunishmentIP(getPunishmentLog());
+    }
+
+    public static PunishmentUser getPunishmentUser(PunishmentLog log) {
+        if (punishmentUser == null)
+            punishmentUser = new PunishmentUserProvider(DATABASE, log);
+        return punishmentUser;
+    }
+
+    public static PunishmentUser getPunishmentUser() {
+        return getPunishmentUser(getPunishmentLog());
     }
 }
