@@ -60,7 +60,7 @@ public final class PlayTimeProvider implements PlayTime {
     }
 
     private enum Procedure {
-        CREATE("playtime_create", "p_userId INT", "INSERT INTO [TABLE] (userId) VALUES (uid);"),
+        CREATE("playtime_create", "p_userId INT", "INSERT INTO [TABLE] (userId) VALUES (p_userId);"),
         DELETE("playtime_delete", "p_userId INT", "DELETE FROM [TABLE] WHERE userId=p_userId;"),
         GET_DATA("playtime_getData", "p_userId INT", "SELECT * FROM [TABLE] WHERE userId=p_userId;"),
         UPDATE_SECONDS("playtime_updateSeconds", "p_userId INT, p_seconds INT",
