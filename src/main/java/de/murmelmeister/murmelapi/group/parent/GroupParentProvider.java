@@ -25,7 +25,7 @@ public final class GroupParentProvider implements GroupParent {
         database.createTable(TABLE_NAME, "groupId INT, parentId INT, " +
                                          "PRIMARY KEY (groupId, parentId), " +
                                          "FOREIGN KEY (groupId) REFERENCES groups(id), " +
-                                         "FOREIGN KEY (parentId) REFERENCES groups(id)" +
+                                         "FOREIGN KEY (parentId) REFERENCES groups(id), " +
                                          "expiredAt DATETIME, " +
                                          "createdBy INT, FOREIGN KEY (createdBy) REFERENCES users(id), " +
                                          "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
@@ -149,7 +149,7 @@ public final class GroupParentProvider implements GroupParent {
 
         Procedure(String name, String input, String query) {
             this.name = name;
-            this.query = query;
+            this.query = Database.getProcedureQuery(name, input, query);
         }
 
         public String getName() {

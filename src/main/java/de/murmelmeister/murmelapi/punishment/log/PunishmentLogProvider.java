@@ -170,18 +170,18 @@ public final class PunishmentLogProvider implements PunishmentLog {
     private enum Procedure {
         CREATE_LOG_USER("punishmentLog_createUser", "p_id VARCHAR(36), p_reasonId INT, p_userId INT, p_ipAddress VARCHAR(45), p_expiredAt DATETIME, p_createdBy INT, p_updatedBy INT",
                 "INSERT INTO [TABLE] (id, reasonId, userId, ipAddress, expiredAt, createdBy, updatedBy) " +
-                "VALUES (p_id, p_reasonId, p_userId, p_ipAddress, p_expiredAt, p_createdBy, p_updatedBy)"),
+                "VALUES (p_id, p_reasonId, p_userId, p_ipAddress, p_expiredAt, p_createdBy, p_updatedBy);"),
         CREATE_LOG_IP("punishmentLog_createIp", "p_id VARCHAR(36), p_reasonId INT, p_ipAddress VARCHAR(45), p_expiredAt DATETIME, p_createdBy INT, p_updatedBy INT",
                 "INSERT INTO [TABLE] (id, reasonId, ipAddress, expiredAt, createdBy, updatedBy) " +
-                "VALUES (p_id, p_reasonId, p_ipAddress, p_expiredAt, p_createdBy, p_updatedBy)"),
-        DELETE_LOG_USER("punishmentLog_deleteUser", "p_userId INT", "DELETE FROM [TABLE] WHERE userId=p_userId"),
-        GET_DATA_BY_ID("punishmentLog_getDataById", "p_id VARCHAR(36)", "SELECT * FROM [TABLE] WHERE id=p_id"),
-        GET_DATA_BY_USER("punishmentLog_getDataByUser", "p_userId INT", "SELECT id FROM [TABLE] WHERE userId=p_userId"),
-        GET_DATA_BY_IP("punishmentLog_getDataByIp", "p_ipAddress VARCHAR(45)", "SELECT id FROM [TABLE] WHERE ipAddress=p_ipAddress"),
+                "VALUES (p_id, p_reasonId, p_ipAddress, p_expiredAt, p_createdBy, p_updatedBy);"),
+        DELETE_LOG_USER("punishmentLog_deleteUser", "p_userId INT", "DELETE FROM [TABLE] WHERE userId=p_userId;"),
+        GET_DATA_BY_ID("punishmentLog_getDataById", "p_id VARCHAR(36)", "SELECT * FROM [TABLE] WHERE id=p_id;"),
+        GET_DATA_BY_USER("punishmentLog_getDataByUser", "p_userId INT", "SELECT id FROM [TABLE] WHERE userId=p_userId;"),
+        GET_DATA_BY_IP("punishmentLog_getDataByIp", "p_ipAddress VARCHAR(45)", "SELECT id FROM [TABLE] WHERE ipAddress=p_ipAddress;"),
         UPDATE_EXPIRED_TIME("punishmentLog_updateExpiredTime", "p_id VARCHAR(36), p_expiredAt DATETIME, p_updatedBy INT",
-                "UPDATE [TABLE] SET expiredAt=p_expiredAt, updatedBy=p_updatedBy WHERE id=p_id"),
+                "UPDATE [TABLE] SET expiredAt=p_expiredAt, updatedBy=p_updatedBy WHERE id=p_id;"),
         UPDATE_REASON("punishmentLog_updateReason", "p_id VARCHAR(36), p_reasonId INT, p_updatedBy INT",
-                "UPDATE [TABLE] SET reasonId=p_reasonId, updatedBy=p_updatedBy WHERE id=p_id"),
+                "UPDATE [TABLE] SET reasonId=p_reasonId, updatedBy=p_updatedBy WHERE id=p_id;"),
         IS_EXPIRED("punishmentLog_isExpired", "p_id VARCHAR(36)",
                 "SELECT IF(expiredAt IS NULL, 0, expiredAt <= CURRENT_TIMESTAMP()) AS expired FROM [TABLE] WHERE id=p_id;");
         private static final Procedure[] VALUES = values();
