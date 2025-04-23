@@ -71,6 +71,7 @@ public final class MurmelAPI {
         GroupPermissionProvider.setup(DATABASE);
         UserParentProvider.setup(DATABASE);
         UserPermissionProvider.setup(DATABASE);
+        PermissionProvider.setup(DATABASE);
         PunishmentType.setup(DATABASE);
         PunishmentReasonProvider.setup(DATABASE);
         PunishmentLogProvider.setup(DATABASE);
@@ -160,7 +161,7 @@ public final class MurmelAPI {
 
     public static Permission getPermission(Group group, User user) {
         if (permission == null)
-            permission = new PermissionProvider(group, user);
+            permission = new PermissionProvider(DATABASE, group, user);
         return permission;
     }
 
