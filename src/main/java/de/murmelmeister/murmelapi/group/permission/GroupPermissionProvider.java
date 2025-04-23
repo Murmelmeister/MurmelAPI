@@ -16,7 +16,7 @@ import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
  * It implements the GroupPermission interface and uses the Database class to interact with the database.
  */
 public final class GroupPermissionProvider implements GroupPermission {
-    private static final String TABLE_NAME = "group_permissions";
+    private static final String TABLE_NAME = "group_permission";
 
     private final Database database;
 
