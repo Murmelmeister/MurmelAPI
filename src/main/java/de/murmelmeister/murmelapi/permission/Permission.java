@@ -2,12 +2,30 @@ package de.murmelmeister.murmelapi.permission;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * The Permission interface provides methods to manage and check user permissions.
  * It is designed to be implemented by classes that handle permission management.
  */
 public sealed interface Permission permits PermissionProvider {
+    /**
+     * Asynchronously reloads the permission set for the given user and stores
+     * it in the local cache.
+     *
+     * @param userId Internal numeric user id
+     * @return Future that completes once the cache is populated
+     */
+    CompletableFuture<Void> preloadAsync(int userId);
+
+    /**
+     * Invalidates the cached permissions of the given user so that the next
+     * access triggers a fresh DB load.
+     *
+     * @param userId Internal numeric id of the user (primary key)
+     */
+    void invalidate(int userId);
+
     /**
      * Retrieves all effective permissions for the specified user.
      * <p>
