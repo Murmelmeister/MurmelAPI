@@ -31,6 +31,7 @@ public final class GroupParentProvider implements GroupParent {
                                          "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
                                          "updatedBy INT, FOREIGN KEY (updatedBy) REFERENCES users(id), " +
                                          "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP()");
+        database.update("CREATE INDEX IF NOT EXISTS idx_group_parent_groupId_exp ON " + TABLE_NAME + " (groupId, expiredAt)");
         Procedure.loadAll(database);
     }
 

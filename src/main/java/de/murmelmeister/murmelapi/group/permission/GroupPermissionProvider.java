@@ -33,6 +33,7 @@ public final class GroupPermissionProvider implements GroupPermission {
                                          "createdAt DATETIME DEFAULT CURRENT_TIMESTAMP(), " +
                                          "updatedBy INT, FOREIGN KEY (updatedBy) REFERENCES users(id), " +
                                          "updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP()");
+        database.update("CREATE INDEX IF NOT EXISTS idx_group_perm_groupId_exp ON " + TABLE_NAME + " (groupId, expiredAt)");
         Procedure.loadAll(database);
     }
 
