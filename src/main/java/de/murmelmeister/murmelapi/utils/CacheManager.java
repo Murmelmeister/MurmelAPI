@@ -22,6 +22,10 @@ public class CacheManager<K, V> {
         cache.remove(key);
     }
 
+    public void clear() {
+        cache.clear();
+    }
+
     private static class CacheValue<V> {
         private final V value;
         private final long expiryTime;
