@@ -2,7 +2,7 @@ package de.murmelmeister.murmelapi.utils.update;
 
 /**
  * The RefreshListener interface represents a functional interface that defines a single method
- * {@link #onRefreshOccurred()} for notifying when a refresh event has occurred.
+ * {@link #onRefreshOccurred(String)} for notifying when a refresh event has occurred.
  * <p>
  * This interface is typically used in conjunction with the {@link RefreshUtil} class, which provides
  * a way to manage refresh listeners and trigger the onRefreshOccurred event.
@@ -18,5 +18,5 @@ package de.murmelmeister.murmelapi.utils.update;
  */
 @FunctionalInterface
 public interface RefreshListener {
-    void onRefreshOccurred();
+    void onRefreshOccurred(String cacheName);
 }
