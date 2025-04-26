@@ -4,6 +4,7 @@ import de.murmelmeister.murmelapi.database.Database;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.utils.CacheManager;
+import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -16,6 +17,13 @@ import java.util.concurrent.TimeUnit;
 public record PermissionProvider(Database database, Group group, User user) implements Permission {
     private static final CacheManager<Integer, Set<String>> CACHE = new CacheManager<>();
     private static final long CACHE_TTL = 15; // 15 minutes
+
+    static {
+        RefreshUtil.register(cacheName -> {
+            if ("permissions".equals(cacheName) || "global".equals(cacheName))
+                CACHE.clear();
+        });
+    }
 
     public static void setup(Database database) {
         Procedure.loadAll(database);
