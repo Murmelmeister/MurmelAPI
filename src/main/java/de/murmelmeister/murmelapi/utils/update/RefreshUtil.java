@@ -12,7 +12,7 @@ public final class RefreshUtil {
     private static final Lock READ_LOCK = LOCK.readLock();
     private static final Lock WRITE_LOCK = LOCK.writeLock();
 
-    public static void setRefreshListener(final RefreshListener listener) {
+    public static void register(RefreshListener listener) {
         WRITE_LOCK.lock();
         try {
             LISTENERS.add(listener);
@@ -21,10 +21,19 @@ public final class RefreshUtil {
         }
     }
 
+    public static void unregister(RefreshListener listener) {
+        WRITE_LOCK.lock();
+        try {
+            LISTENERS.remove(listener);
+        } finally {
+            WRITE_LOCK.unlock();
+        }
+    }
+
     public static void markAsRefreshed(String cacheName) {
         READ_LOCK.lock();
         try {
-            for (final RefreshListener listener : LISTENERS)
+            for (RefreshListener listener : LISTENERS)
                 listener.onRefreshOccurred(cacheName);
         } finally {
             READ_LOCK.unlock();
