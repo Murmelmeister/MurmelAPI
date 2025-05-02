@@ -128,7 +128,7 @@ public final class UserProvider implements User {
 
     @Override
     public boolean isDebugUser(int id) {
-        return id > 0 && database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), false, resultSet -> resultSet.getBoolean("isDebugUser"), id);
+        return id != -2 && database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), false, resultSet -> resultSet.getBoolean("isDebugUser"), id);
     }
 
     @Override
@@ -139,7 +139,7 @@ public final class UserProvider implements User {
 
     @Override
     public boolean isDebugActive(int id) {
-        return id > 0 && database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), false, resultSet -> resultSet.getBoolean("isDebugActive"), id);
+        return id != -2 && database.queryCallable(Procedure.GET_DATA_BY_ID.getName(), false, resultSet -> resultSet.getBoolean("isDebugActive"), id);
     }
 
     @Override
