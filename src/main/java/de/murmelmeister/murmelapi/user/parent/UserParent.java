@@ -55,6 +55,14 @@ public sealed interface UserParent permits UserParentProvider {
     int clearParent(int userId);
 
     /**
+     * Clears all relationships associated with a specific parent group, excluding other relevant parent relationships.
+     *
+     * @param parentId The id of the parent group for which relationships should be cleared.
+     * @return The number of rows affected by the operation, or 0 if the parent id is invalid.
+     */
+    int clearOtherParent(int parentId);
+
+    /**
      * Retrieves a list of active parent ids for the specified user.
      * Only parent relationships that have not expired are returned.
      *

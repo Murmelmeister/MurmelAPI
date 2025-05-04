@@ -61,6 +61,12 @@ public final class UserParentProvider implements UserParent {
     }
 
     @Override
+    public int clearOtherParent(int parentId) {
+        if (parentId < 1) return 0;
+        return database.updateCallable(Procedure.CLEAR_OTHER_PARENT.getName(), parentId);
+    }
+
+    @Override
     public List<Integer> getParentIds(int userId) {
         if (userId < 1) return null;
         return database.queryListCallable(Procedure.GET_ACTIVE_PARENT.getName(), result -> result.getInt("parentId"), userId);
@@ -146,6 +152,8 @@ public final class UserParentProvider implements UserParent {
                 "INSERT INTO [TABLE] (userId, parentId, expiredAt, createdBy, updatedBy) VALUES (p_userId, p_parentId, p_expiredAt, p_createdBy, p_updatedBy);"),
         REMOVE_PARENT("userParent_remove", "p_userId INT, p_parentId INT", "DELETE FROM [TABLE] WHERE userId=p_userId AND parentId=p_parentId;"),
         CLEAR_PARENT("userParent_clear", "p_userId INT", "DELETE FROM [TABLE] WHERE userId=p_userId;"),
+        CLEAR_OTHER_PARENT("userParent_clearOther", "p_parentId INT",
+                "DELETE FROM [TABLE] WHERE parentId=p_parentId;"),
         GET_DATA("userParent_getData", "p_userId INT, p_parentId INT", "SELECT * FROM [TABLE] WHERE userId=p_userId AND parentId=p_parentId;"),
         GET_ACTIVE_PARENT("userParent_getActive", "p_userId INT",
                 "SELECT parentId FROM [TABLE] WHERE userId=p_userId AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP());"),

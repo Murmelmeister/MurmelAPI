@@ -50,6 +50,14 @@ public sealed interface GroupParent permits GroupParentProvider {
     int clearParent(int groupId);
 
     /**
+     * Clears all parent relationships for groups other than the specified parent.
+     *
+     * @param parentId The ID of the parent group whose relationships should not be cleared.
+     * @return The number of rows affected by the operation, or 0 if the provided parent ID is invalid.
+     */
+    int clearOtherParent(int parentId);
+
+    /**
      * Retrieves a list of active parent IDs for the specified group.
      * A parent relationship is considered active if it has no expiration or its expiration time is in the future.
      *

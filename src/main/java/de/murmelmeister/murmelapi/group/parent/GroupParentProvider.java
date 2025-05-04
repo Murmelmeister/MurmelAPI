@@ -60,6 +60,12 @@ public final class GroupParentProvider implements GroupParent {
     }
 
     @Override
+    public int clearOtherParent(int parentId) {
+        if (parentId < 1) return 0;
+        return database.updateCallable(Procedure.CLEAR_OTHER_PARENT.getName(), parentId);
+    }
+
+    @Override
     public List<Integer> getParentIds(int groupId) {
         if (groupId < 1) return null;
         return database.queryListCallable(Procedure.GET_ACTIVE_PARENT.getName(), result -> result.getInt("parentId"), groupId);
@@ -136,6 +142,8 @@ public final class GroupParentProvider implements GroupParent {
                 "INSERT INTO [TABLE] (groupId, parentId, expiredAt, createdBy, updatedBy) VALUES (p_groupId, p_parentId, p_expiredAt, p_createdBy, p_updatedBy);"),
         REMOVE_PARENT("groupParent_remove", "p_groupId INT, p_parentId INT", "DELETE FROM [TABLE] WHERE groupId=p_groupId AND parentId=p_parentId;"),
         CLEAR_PARENT("groupParent_clear", "p_groupId INT", "DELETE FROM [TABLE] WHERE groupId=p_groupId;"),
+        CLEAR_OTHER_PARENT("groupParent_clearOther", "p_parentId INT",
+                "DELETE FROM [TABLE] WHERE parentId=p_parentId;"),
         GET_DATA("groupParent_getData", "p_groupId INT, p_parentId INT", "SELECT * FROM [TABLE] WHERE groupId=p_groupId AND parentId=p_parentId;"),
         GET_ACTIVE_PARENT("groupParent_getActiveParent", "p_groupId INT",
                 "SELECT parentId FROM [TABLE] WHERE groupId=p_groupId AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP());"),
