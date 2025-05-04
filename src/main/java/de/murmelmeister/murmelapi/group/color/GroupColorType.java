@@ -14,6 +14,7 @@ package de.murmelmeister.murmelapi.group.color;
  */
 public enum GroupColorType {
     CHAT("chat"),
+    CHAT_MESSAGE("chatMessage"),
     TAB("tab"),
     TEAM("team");
     private final String name;
