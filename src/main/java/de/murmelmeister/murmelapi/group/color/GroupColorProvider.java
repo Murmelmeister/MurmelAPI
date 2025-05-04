@@ -141,7 +141,7 @@ public final class GroupColorProvider implements GroupColor {
 
     private enum Procedure {
         CREATE("groupColor_create", "p_groupId INT, " +
-                                    "p_chatPrefix VARCHAR(200), p_chatSuffix VARCHAR(200), p_chatColor VARCHAR(200), p_chatMessageColor VARCHAR(50) " +
+                                    "p_chatPrefix VARCHAR(200), p_chatSuffix VARCHAR(200), p_chatColor VARCHAR(200), p_chatMessageColor VARCHAR(50), " +
                                     "p_tabPrefix VARCHAR(200), p_tabSuffix VARCHAR(200), p_tabColor VARCHAR(200), " +
                                     "p_teamPrefix VARCHAR(200), p_teamSuffix VARCHAR(200), p_teamColor VARCHAR(50), " +
                                     "p_createdBy INT, p_updatedBy INT",
