@@ -5,7 +5,7 @@ package de.murmelmeister.murmelapi.group.color;
  * categories. Each type corresponds to a specific category of group color settings,
  * particularly for Chat, Tab, or Team configurations.
  * <p>
- * This enum is utilized as a parameter in methods of the {@link GroupColor} interface
+ * This enum is used as a parameter in methods of the {@link GroupColor} interface
  * and its implementation {@link GroupColorProvider} to specify which
  * category (e.g., Chat, Tab, or Team) is being accessed or modified.
  * <p>
