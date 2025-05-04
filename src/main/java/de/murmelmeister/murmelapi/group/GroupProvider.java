@@ -155,7 +155,8 @@ public final class GroupProvider implements Group {
         int priority = 1; // Default priority
         String teamSort = String.valueOf(9999);
         createGroup(groupName, priority, teamSort, createdBy);
-        color.createGroup(getId(groupName), "<gray>", null, null, null, null, "<gray>", null, null, "7", createdBy);
+        color.createGroup(getId(groupName), null, null, "gray", null,
+                null, null, "gray", null, null, "gray", createdBy);
     }
 
     @Override
