@@ -24,21 +24,21 @@ public sealed interface GroupColor permits GroupColorProvider {
     /**
      * Creates a new group color record with the provided color settings.
      *
-     * @param groupId          The id of the group.
-     * @param chatPrefix       The chat prefix.
-     * @param chatSuffix       The chat suffix.
-     * @param chatColor        The chat color.
-     * @param chatMessageColor The chat message color.
-     * @param tabPrefix        The tab prefix.
-     * @param tabSuffix        The tab suffix.
-     * @param tabColor         The tab color.
-     * @param teamPrefix       The team prefix.
-     * @param teamSuffix       The team suffix.
-     * @param teamColor        The team color.
-     * @param createdBy        The id of the user creating this record.
+     * @param groupId     The id of the group.
+     * @param chatPrefix  The chat prefix.
+     * @param chatSuffix  The chat suffix.
+     * @param chatColor   The chat color.
+     * @param chatMessage The chat message.
+     * @param tabPrefix   The tab prefix.
+     * @param tabSuffix   The tab suffix.
+     * @param tabColor    The tab color.
+     * @param teamPrefix  The team prefix.
+     * @param teamSuffix  The team suffix.
+     * @param teamColor   The team color.
+     * @param createdBy   The id of the user creating this record.
      * @return The number of rows affected by the insertion, or 0 if the group id is invalid or the creator is invalid.
      */
-    int createGroup(int groupId, String chatPrefix, String chatSuffix, String chatColor, String chatMessageColor,
+    int createGroup(int groupId, String chatPrefix, String chatSuffix, String chatColor, String chatMessage,
                     String tabPrefix, String tabSuffix, String tabColor,
                     String teamPrefix, String teamSuffix, String teamColor,
                     int createdBy);
@@ -83,10 +83,18 @@ public sealed interface GroupColor permits GroupColorProvider {
      * Retrieves the color value for a given group and color type.
      *
      * @param groupId The id of the group.
-     * @param type    The GroupColorType specifying which context (e.g., Chat, ChatMessage, Tab, Team) to retrieve.
+     * @param type    The GroupColorType specifying which context (e.g., Chat, Tab, Team) to retrieve.
      * @return The color as a String, or {@code null} if the group id is invalid.
      */
     String getColor(int groupId, GroupColorType type);
+
+    /**
+     * Retrieves the message associated with the specified group.
+     *
+     * @param groupId The id of the group whose message should be retrieved.
+     * @return The message as a String, or {@code null} if the group id is invalid.
+     */
+    String getMessage(int groupId);
 
     /**
      * Sets a new prefix for the specified group and color type.
@@ -114,12 +122,22 @@ public sealed interface GroupColor permits GroupColorProvider {
      * Sets a new color for the specified group and color type.
      *
      * @param groupId   The id of the group.
-     * @param type      The GroupColorType specifying which context (e.g., Chat, ChatMessage, Tab, Team) to update.
+     * @param type      The GroupColorType specifying which context (e.g., Chat, Tab, Team) to update.
      * @param color     The new color value.
      * @param updatedBy The id of the user performing the update.
      * @return The number of rows affected by the update, or 0 if the group id or updater is invalid.
      */
     int setColor(int groupId, GroupColorType type, String color, int updatedBy);
+
+    /**
+     * Updates the message associated with the specified group.
+     *
+     * @param groupId   The id of the group whose message should be updated.
+     * @param message   The new message to set for the group.
+     * @param updatedBy The id of the user performing the update.
+     * @return The number of rows affected by the update, or 0 if the group id or updater is invalid.
+     */
+    int setMessage(int groupId, String message, int updatedBy);
 
     /**
      * Retrieves the id of the user who created the group color record.
