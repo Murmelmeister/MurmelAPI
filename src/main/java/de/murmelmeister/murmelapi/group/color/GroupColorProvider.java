@@ -21,7 +21,7 @@ public final class GroupColorProvider implements GroupColor {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "groupId INT PRIMARY KEY, " +
-                                         "chatPrefix VARCHAR(200), chatSuffix VARCHAR(200), chatColor VARCHAR(200), chatMessageColor VARCHAR(50), " +
+                                         "chatPrefix VARCHAR(200), chatSuffix VARCHAR(200), chatColor VARCHAR(200), chatMessage VARCHAR(200), " +
                                          "tabPrefix VARCHAR(200), tabSuffix VARCHAR(200), tabColor VARCHAR(200), " +
                                          "teamPrefix VARCHAR(200), teamSuffix VARCHAR(200), teamColor VARCHAR(50), " +
                                          "createdBy INT, FOREIGN KEY (createdBy) REFERENCES users(id), " +
@@ -38,12 +38,12 @@ public final class GroupColorProvider implements GroupColor {
     }
 
     @Override
-    public int createGroup(int groupId, String chatPrefix, String chatSuffix, String chatColor, String chatMessageColor,
+    public int createGroup(int groupId, String chatPrefix, String chatSuffix, String chatColor, String chatMessage,
                            String tabPrefix, String tabSuffix, String tabColor,
                            String teamPrefix, String teamSuffix, String teamColor,
                            int createdBy) {
         if (groupId < 1 || createdBy == -2) return 0;
-        return database.updateCallable(Procedure.CREATE.getName(), groupId, chatPrefix, chatSuffix, chatColor, chatMessageColor,
+        return database.updateCallable(Procedure.CREATE.getName(), groupId, chatPrefix, chatSuffix, chatColor, chatMessage,
                 tabPrefix, tabSuffix, tabColor,
                 teamPrefix, teamSuffix, teamColor,
                 createdBy, createdBy);
@@ -51,7 +51,7 @@ public final class GroupColorProvider implements GroupColor {
 
     @Override
     public int createGroup(int groupId, int createdBy) {
-        return createGroup(groupId, null, null, null, null,
+        return createGroup(groupId, null, null, null, " » ",
                 null, null, null, null, null, "gray", createdBy);
     }
 
@@ -64,17 +64,13 @@ public final class GroupColorProvider implements GroupColor {
     @Override
     public String getPrefix(int groupId, GroupColorType type) {
         if (groupId < 1) return null;
-        if (type == GroupColorType.CHAT_MESSAGE) type = GroupColorType.CHAT;
-        GroupColorType finalType = type;
-        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getString(finalType.getName() + "Prefix"), groupId);
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getString(type.getName() + "Prefix"), groupId);
     }
 
     @Override
     public String getSuffix(int groupId, GroupColorType type) {
         if (groupId < 1) return null;
-        if (type == GroupColorType.CHAT_MESSAGE) type = GroupColorType.CHAT;
-        GroupColorType finalType = type;
-        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getString(finalType.getName() + "Suffix"), groupId);
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getString(type.getName() + "Suffix"), groupId);
     }
 
     @Override
@@ -84,16 +80,20 @@ public final class GroupColorProvider implements GroupColor {
     }
 
     @Override
+    public String getMessage(int groupId) {
+        if (groupId < 1) return null;
+        return database.queryCallable(Procedure.GET_DATA.getName(), null, resultSet -> resultSet.getString("chatMessage"), groupId);
+    }
+
+    @Override
     public int setPrefix(int groupId, GroupColorType type, String prefix, int updatedBy) {
         if (groupId < 1 || updatedBy == -2) return 0;
-        if (type == GroupColorType.CHAT_MESSAGE) type = GroupColorType.CHAT;
         return database.updateCallable(Procedure.UPDATE.getName(), groupId, type.getName() + "Prefix", prefix, updatedBy);
     }
 
     @Override
     public int setSuffix(int groupId, GroupColorType type, String suffix, int updatedBy) {
         if (groupId < 1 || updatedBy == -2) return 0;
-        if (type == GroupColorType.CHAT_MESSAGE) type = GroupColorType.CHAT;
         return database.updateCallable(Procedure.UPDATE.getName(), groupId, type.getName() + "Suffix", suffix, updatedBy);
     }
 
@@ -101,6 +101,12 @@ public final class GroupColorProvider implements GroupColor {
     public int setColor(int groupId, GroupColorType type, String color, int updatedBy) {
         if (groupId < 1 || updatedBy == -2) return 0;
         return database.updateCallable(Procedure.UPDATE.getName(), groupId, type.getName() + "Color", color, updatedBy);
+    }
+
+    @Override
+    public int setMessage(int groupId, String message, int updatedBy) {
+        if (groupId < 1 || updatedBy == -2) return 0;
+        return database.updateCallable(Procedure.UPDATE.getName(), groupId, "chatMessage", message, updatedBy);
     }
 
     @Override
@@ -141,18 +147,18 @@ public final class GroupColorProvider implements GroupColor {
 
     private enum Procedure {
         CREATE("groupColor_create", "p_groupId INT, " +
-                                    "p_chatPrefix VARCHAR(200), p_chatSuffix VARCHAR(200), p_chatColor VARCHAR(200), p_chatMessageColor VARCHAR(50), " +
+                                    "p_chatPrefix VARCHAR(200), p_chatSuffix VARCHAR(200), p_chatColor VARCHAR(200), p_chatMessage VARCHAR(200), " +
                                     "p_tabPrefix VARCHAR(200), p_tabSuffix VARCHAR(200), p_tabColor VARCHAR(200), " +
                                     "p_teamPrefix VARCHAR(200), p_teamSuffix VARCHAR(200), p_teamColor VARCHAR(50), " +
                                     "p_createdBy INT, p_updatedBy INT",
-                "INSERT INTO [TABLE] (groupId, chatPrefix, chatSuffix, chatColor, chatMessageColor, " +
+                "INSERT INTO [TABLE] (groupId, chatPrefix, chatSuffix, chatColor, chatMessage, " +
                 "tabPrefix, tabSuffix, tabColor, teamPrefix, teamSuffix, teamColor, createdBy, updatedBy) " +
-                "VALUES (p_groupId, p_chatPrefix, p_chatSuffix, p_chatColor, p_chatMessageColor, " +
+                "VALUES (p_groupId, p_chatPrefix, p_chatSuffix, p_chatColor, p_chatMessage, " +
                 "p_tabPrefix, p_tabSuffix, p_tabColor, p_teamPrefix, p_teamSuffix, p_teamColor, p_createdBy, p_updatedBy);"),
         DELETE("groupColor_delete", "p_groupId INT", "DELETE FROM [TABLE] WHERE groupId=p_groupId;"),
         GET_DATA("groupColor_getData", "p_groupId INT", "SELECT * FROM [TABLE] WHERE groupId=p_groupId;"),
         UPDATE("groupColor_update", "p_groupId INT, columnName VARCHAR(200), columnValue VARCHAR(200), p_updatedBy INT", """
-                IF columnName IN ('chatPrefix', 'chatSuffix', 'chatColor', 'chatMessageColor',
+                IF columnName IN ('chatPrefix', 'chatSuffix', 'chatColor', 'chatMessage',
                                   'tabPrefix', 'tabSuffix', 'tabColor',
                                   'teamPrefix', 'teamSuffix', 'teamColor') THEN
                     SET @sql = CONCAT('UPDATE [TABLE] SET ', columnName, '="', columnValue, '", updatedBy=', p_updatedBy, ' WHERE groupId=', p_groupId, ';');
