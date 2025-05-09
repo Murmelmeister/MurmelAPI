@@ -40,6 +40,10 @@ public final class RefreshUtil {
         }
     }
 
+    public static void markAsRefreshed(RefreshType type) {
+        markAsRefreshed(type.getName());
+    }
+
     public static void globalRefresh() {
         markAsRefreshed("global");
     }
