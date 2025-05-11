@@ -51,7 +51,7 @@ public final class GroupColorProvider implements GroupColor {
 
     @Override
     public int createGroup(int groupId, int createdBy) {
-        return createGroup(groupId, null, null, null, " » ",
+        return createGroup(groupId, null, null, null, " <dark_gray>» <white>",
                 null, null, null, null, null, "gray", createdBy);
     }
 
