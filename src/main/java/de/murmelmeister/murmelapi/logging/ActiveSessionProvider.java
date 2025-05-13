@@ -33,7 +33,7 @@ public final class ActiveSessionProvider implements ActiveSession {
 
     @Override
     public boolean existsSession(int userId) {
-        return userId > 0 && database.existsCallable(Procedure.IS_ONLINE.getName(), userId);
+        return isOnline(userId);
     }
 
     @Override
