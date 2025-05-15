@@ -40,8 +40,18 @@ public final class RefreshUtil {
         }
     }
 
+    public static void markAsRefreshed(String... cacheNames) {
+        for (String cacheName : cacheNames)
+            markAsRefreshed(cacheName);
+    }
+
     public static void markAsRefreshed(RefreshType type) {
         markAsRefreshed(type.getName());
+    }
+
+    public static void markAsRefreshed(RefreshType... types) {
+        for (RefreshType type : types)
+            markAsRefreshed(type);
     }
 
     public static void globalRefresh() {
