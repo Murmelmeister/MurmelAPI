@@ -144,7 +144,7 @@ public final class GroupPermissionProvider implements GroupPermission {
                 "SELECT permission FROM [TABLE] WHERE groupId=p_groupId AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP());"),
         UPDATE_EXPIRED_AT("groupPermission_updateExpiredAt", "p_groupId INT, p_permission VARCHAR(200), p_expiredAt DATETIME, p_updatedBy INT",
                 "UPDATE [TABLE] SET expiredAt=p_expiredAt, updatedBy=p_updatedBy WHERE groupId=p_groupId AND permission=p_permission;"),
-        UPDATE_EXPIRED("userPermission_updateExpired", "",
+        UPDATE_EXPIRED("groupPermission_updateExpired", "",
                 "DELETE FROM [TABLE] WHERE expiredAt IS NOT NULL AND expiredAt <= CURRENT_TIMESTAMP();");
         private static final Procedure[] VALUES = values();
 
