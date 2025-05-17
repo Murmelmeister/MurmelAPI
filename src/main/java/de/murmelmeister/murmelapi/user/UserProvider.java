@@ -99,8 +99,8 @@ public final class UserProvider implements User {
 
     @Override
     public List<UUID> getUniqueIds() {
-        return database.queryListCallable(Procedure.GET_DATA.getName(), resultSet -> UUID.fromString(resultSet.getString("mojangId")))
-                .stream().filter(Objects::nonNull).toList();
+        return database.queryListCallable(Procedure.GET_DATA.getName(), resultSet -> resultSet.getString("mojangId"))
+                .stream().filter(Objects::nonNull).map(UUID::fromString).toList();
     }
 
     @Override
