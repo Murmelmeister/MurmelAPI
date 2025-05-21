@@ -226,16 +226,16 @@ public final class Database {
      * @param sql        The SQL update statement to execute.
      * @param parameters The parameters to set in the PreparedStatement.
      */
-    public void update(String sql, Object... parameters) {
-        executeInTransaction(connection -> {
+    public int update(String sql, Object... parameters) {
+        return executeInTransaction(connection -> {
             long startTime = System.nanoTime();
             try (PreparedStatement statement = getPreparedStatement(connection, sql, parameters)) {
-                statement.executeUpdate();
+                int affectedRows = statement.executeUpdate();
+                long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+                if (durationMs > SLOW_QUERY_THRESHOLD_MS)
+                    logger.warn("Update statement [{}] took {} ms", sql, durationMs);
+                return affectedRows;
             }
-            long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
-            if (durationMs > SLOW_QUERY_THRESHOLD_MS)
-                logger.warn("Update statement [{}] took {} ms", sql, durationMs);
-            return null;
         });
     }
 
