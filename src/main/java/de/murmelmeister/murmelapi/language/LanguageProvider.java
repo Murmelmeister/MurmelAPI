@@ -15,6 +15,7 @@ public final class LanguageProvider {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(100) UNIQUE");
+        database.update("INSERT IGNORE INTO " + TABLE_NAME + " (name) VALUES ('English'), ('German')");
     }
 
     public boolean loadData() {
