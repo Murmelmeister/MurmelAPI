@@ -534,8 +534,10 @@ public final class Database {
                  ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next())
                     return resultSet.getLong("Auto_increment");
-                else
-                    throw new DatabaseException("Table not found: " + tableName);
+                else {
+                    logger.error("Table not found: {}", tableName);
+                    return null;
+                }
             } catch (SQLException e) {
                 logger.error("Error retrieving auto-increment value for table: {}", tableName, e);
                 throw new DatabaseException("Database retrieval error", e);
