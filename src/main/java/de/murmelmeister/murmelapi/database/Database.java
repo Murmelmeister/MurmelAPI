@@ -229,7 +229,7 @@ public final class Database {
     public int update(String sql, Object... parameters) {
         return executeInTransaction(connection -> {
             long startTime = System.nanoTime();
-            try (PreparedStatement statement = getPreparedStatement(connection, sql, parameters)) {
+            try (PreparedStatement statement = getPreparedStatement(connection, false, sql, parameters)) {
                 int affectedRows = statement.executeUpdate();
                 long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
                 if (durationMs > SLOW_QUERY_THRESHOLD_MS)
@@ -269,7 +269,7 @@ public final class Database {
     public int[] updateBatch(String sql, List<Object[]> batchParameters) {
         return executeInTransaction(connection -> {
             long startTime = System.nanoTime();
-            try (PreparedStatement statement = getPreparedStatement(connection, sql)) {
+            try (PreparedStatement statement = getPreparedStatement(connection, false, sql)) {
                 for (Object[] parameters : batchParameters) {
                     setParameters(statement, parameters);
                     statement.addBatch();
@@ -296,7 +296,7 @@ public final class Database {
     public <T> T query(String sql, T defaultValue, ResultSetProcessor<T> processor, Object... parameters) {
         long startTime = System.nanoTime();
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = getPreparedStatement(connection, sql, parameters);
+             PreparedStatement statement = getPreparedStatement(connection, false, sql, parameters);
              ResultSet resultSet = statement.executeQuery()) {
 
             T result = defaultValue;
@@ -358,7 +358,7 @@ public final class Database {
         long startTime = System.nanoTime();
         List<T> resultList = new ArrayList<>();
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = getPreparedStatement(connection, sql, parameters);
+             PreparedStatement statement = getPreparedStatement(connection, false, sql, parameters);
              ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next())
@@ -417,7 +417,7 @@ public final class Database {
     public boolean exists(String sql, Object... parameters) {
         long startTime = System.nanoTime();
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = getPreparedStatement(connection, sql, parameters);
+             PreparedStatement statement = getPreparedStatement(connection, false, sql, parameters);
              ResultSet resultSet = statement.executeQuery()) {
 
             boolean exists = resultSet.next();
@@ -530,7 +530,7 @@ public final class Database {
         String sql = "SHOW TABLE STATUS LIKE ?";
         return CompletableFuture.supplyAsync(() -> {
             try (Connection connection = dataSource.getConnection();
-                 PreparedStatement statement = getPreparedStatement(connection, sql, tableName);
+                 PreparedStatement statement = getPreparedStatement(connection, false, sql, tableName);
                  ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next())
                     return resultSet.getLong("Auto_increment");
@@ -581,14 +581,15 @@ public final class Database {
     /**
      * Creates a PreparedStatement for the given SQL query and sets the parameters.
      *
-     * @param connection The database connection to use.
-     * @param sql        The SQL query to prepare.
-     * @param parameters The parameters to set in the PreparedStatement.
+     * @param connection       The database connection to use.
+     * @param hasGeneratedKeys Whether to return generated keys.
+     * @param sql              The SQL query to prepare.
+     * @param parameters       The parameters to set in the PreparedStatement.
      * @return The prepared statement with the parameters set.
      * @throws SQLException If an error occurs while preparing the statement or setting the parameters.
      */
-    private PreparedStatement getPreparedStatement(Connection connection, String sql, Object... parameters) throws SQLException {
-        PreparedStatement statement = connection.prepareStatement(sql);
+    private PreparedStatement getPreparedStatement(Connection connection, boolean hasGeneratedKeys, String sql, Object... parameters) throws SQLException {
+        PreparedStatement statement = hasGeneratedKeys ? connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) : connection.prepareStatement(sql);
         setParameters(statement, parameters);
         return statement;
     }
