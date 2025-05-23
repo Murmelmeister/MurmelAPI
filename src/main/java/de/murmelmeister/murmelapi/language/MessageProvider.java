@@ -14,8 +14,7 @@ public final class MessageProvider {
     }
 
     public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, tag VARCHAR(100) UNIQUE, languageId INT, message TEXT");
-        database.update("INSERT IGNORE INTO " + TABLE_NAME + " (tag, languageId, message) VALUES ('test', 1, 'Test message')");
+        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, tag VARCHAR(255) UNIQUE, languageId INT UNIQUE, message TEXT");
     }
 
     public boolean loadData() {
