@@ -66,6 +66,8 @@ public final class MurmelAPI {
 
     public static void setup() {
         // Create all tables
+        LanguageProvider.setup(DATABASE);
+        MessageProvider.setup(DATABASE);
         UserProvider.setup(DATABASE);
         GroupProvider.setup(DATABASE);
         LoginHistoryProvider.setup(DATABASE);
@@ -82,8 +84,6 @@ public final class MurmelAPI {
         PunishmentLogProvider.setup(DATABASE);
         PunishmentIPProvider.setup(DATABASE);
         PunishmentUserProvider.setup(DATABASE);
-        LanguageProvider.setup(DATABASE);
-        MessageProvider.setup(DATABASE);
         // Initialize all providers
         loginHistory = getLoginHistory();
         activeSession = getActiveSession();
