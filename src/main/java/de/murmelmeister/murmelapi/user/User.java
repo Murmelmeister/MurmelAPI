@@ -172,6 +172,25 @@ public sealed interface User permits UserProvider {
     boolean isDebugMode(int id);
 
     /**
+     * Retrieves the language ID associated with a given user ID.
+     *
+     * @param id The unique identifier of the user; must be ≥ 1
+     * @return The language ID for the user; returns -1 if {@code id} < 1
+     * or if no matching record exists
+     */
+    int getLanguage(int id);
+
+    /**
+     * Updates the language ID for a given user ID.
+     *
+     * @param id       The unique identifier (ID) of the user; must not be -2.
+     * @param language The new language ID to assign; must be greater than zero.
+     * @return 1 if parameters are invalid ({@code id} == -2 or {@code language} < 1);
+     * otherwise the number of rows affected by the update.
+     */
+    int setLanguage(int id, int language);
+
+    /**
      * Manages the process for a user joining the system. This method:
      * <ul>
      *   <li>Retrieves the user ID for the given UUID.</li>
