@@ -6,6 +6,8 @@ import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
+import de.murmelmeister.murmelapi.language.LanguageProvider;
+import de.murmelmeister.murmelapi.language.MessageProvider;
 import de.murmelmeister.murmelapi.logging.ActiveSession;
 import de.murmelmeister.murmelapi.logging.ActiveSessionProvider;
 import de.murmelmeister.murmelapi.logging.LoginHistory;
@@ -46,6 +48,9 @@ public final class MurmelAPI {
     private static PunishmentIP punishmentIP;
     private static PunishmentUser punishmentUser;
 
+    private static LanguageProvider language;
+    private static MessageProvider message;
+
     static {
         DATABASE = new Database();
     }
@@ -77,6 +82,8 @@ public final class MurmelAPI {
         PunishmentLogProvider.setup(DATABASE);
         PunishmentIPProvider.setup(DATABASE);
         PunishmentUserProvider.setup(DATABASE);
+        LanguageProvider.setup(DATABASE);
+        MessageProvider.setup(DATABASE);
         // Initialize all providers
         loginHistory = getLoginHistory();
         activeSession = getActiveSession();
@@ -88,6 +95,8 @@ public final class MurmelAPI {
         punishmentLog = getPunishmentLog(punishmentReason);
         punishmentIP = getPunishmentIP(punishmentLog);
         punishmentUser = getPunishmentUser(punishmentLog);
+        language = getLanguage();
+        message = getMessage();
     }
 
     public static int deleteUserSoft(int userId) {
@@ -203,5 +212,17 @@ public final class MurmelAPI {
 
     public static PunishmentUser getPunishmentUser() {
         return getPunishmentUser(getPunishmentLog());
+    }
+
+    public static LanguageProvider getLanguage() {
+        if (language == null)
+            language = new LanguageProvider(DATABASE);
+        return language;
+    }
+
+    public static MessageProvider getMessage() {
+        if (message == null)
+            message = new MessageProvider(DATABASE);
+        return message;
     }
 }
