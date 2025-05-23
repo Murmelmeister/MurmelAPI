@@ -1,0 +1,49 @@
+package de.murmelmeister.murmelapi.language;
+
+import java.util.concurrent.ConcurrentHashMap;
+
+public class MessageCache {
+    private final ConcurrentHashMap<Integer, Message> byId = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ConcurrentHashMap<Integer, Message>> byTag = new ConcurrentHashMap<>();
+
+    public boolean containsKeyById(int id) {
+        return byId.containsKey(id);
+    }
+
+    public boolean containsKeyByTag(String tag, int languageId) {
+        return byTag.containsKey(tag) && byTag.get(tag).containsKey(languageId);
+    }
+
+    public Message getById(int id) {
+        return byId.get(id);
+    }
+
+    public Message getByTag(String tag, int languageId) {
+        ConcurrentHashMap<Integer, Message> messages = byTag.get(tag);
+        return messages != null ? messages.get(languageId) : null;
+    }
+
+    public void put(Message message) {
+        byId.put(message.getId(), message);
+        byTag.computeIfAbsent(message.getTag(), k -> new ConcurrentHashMap<>())
+                .put(message.getLanguageId(), message);
+    }
+
+    public void remove(int id) {
+        Message removed = byId.remove(id);
+        if (removed != null) {
+            String tag = removed.getTag();
+            ConcurrentHashMap<Integer, Message> messages = byTag.get(tag);
+            if (messages != null) {
+                messages.remove(removed.getLanguageId());
+                if (messages.isEmpty())
+                    byTag.remove(tag);
+            }
+        }
+    }
+
+    public void clear() {
+        byId.clear();
+        byTag.clear();
+    }
+}
