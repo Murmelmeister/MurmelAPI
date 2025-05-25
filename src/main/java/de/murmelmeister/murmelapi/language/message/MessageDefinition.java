@@ -56,7 +56,10 @@ public interface MessageDefinition {
      * @throws UnsupportedOperationException if not overridden by the implementing class
      */
     static MessageDefinition[] getValues() {
-        throw new UnsupportedOperationException("This method should be overridden by the implementing class.");
+        Object[] constants = MessageDefinition.class.getEnumConstants();
+        if (constants == null)
+            throw new UnsupportedOperationException("getValues() can only be called on enums.");
+        return new MessageDefinition[constants.length];
     }
 
     /**
