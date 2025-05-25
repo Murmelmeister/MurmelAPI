@@ -3,7 +3,11 @@ package de.murmelmeister.murmelapi.language;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class LanguageCache {
+/**
+ * LanguageCache is a thread-safe cache for storing Language objects.
+ * It uses a ConcurrentHashMap to allow concurrent access and modifications.
+ */
+public final class LanguageCache {
     private final ConcurrentHashMap<Integer, Language> cache = new ConcurrentHashMap<>();
 
     public boolean containsKey(int id) {
