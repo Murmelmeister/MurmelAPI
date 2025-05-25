@@ -21,7 +21,7 @@ public final class MessageProvider {
                                          "message TEXT");
     }
 
-    public boolean loadData() {
+    public List<Message> loadData() {
         cache.clear();
         String sql = "SELECT id, tag, languageId, message FROM " + TABLE_NAME;
         List<Message> messages = database.queryList(sql, result -> {
@@ -33,7 +33,7 @@ public final class MessageProvider {
         });
 
         messages.forEach(cache::put);
-        return !messages.isEmpty();
+        return messages;
     }
 
     public Message getMessage(int id) {
