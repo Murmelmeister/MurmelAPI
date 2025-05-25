@@ -7,7 +7,8 @@ import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
-import de.murmelmeister.murmelapi.language.MessageProvider;
+import de.murmelmeister.murmelapi.language.message.MessageProvider;
+import de.murmelmeister.murmelapi.language.message.MessageService;
 import de.murmelmeister.murmelapi.logging.ActiveSession;
 import de.murmelmeister.murmelapi.logging.ActiveSessionProvider;
 import de.murmelmeister.murmelapi.logging.LoginHistory;
@@ -49,7 +50,8 @@ public final class MurmelAPI {
     private static PunishmentUser punishmentUser;
 
     private static LanguageProvider language;
-    private static MessageProvider message;
+    private static MessageProvider messageProvider;
+    private static MessageService messageService;
 
     static {
         DATABASE = new Database();
@@ -96,7 +98,8 @@ public final class MurmelAPI {
         punishmentIP = getPunishmentIP(punishmentLog);
         punishmentUser = getPunishmentUser(punishmentLog);
         language = getLanguage();
-        message = getMessage();
+        messageProvider = getMessageProvider();
+        messageService = getMessageService(messageProvider);
     }
 
     public static int deleteUserSoft(int userId) {
@@ -220,9 +223,19 @@ public final class MurmelAPI {
         return language;
     }
 
-    public static MessageProvider getMessage() {
-        if (message == null)
-            message = new MessageProvider(DATABASE);
-        return message;
+    public static MessageProvider getMessageProvider() {
+        if (messageProvider == null)
+            messageProvider = new MessageProvider(DATABASE);
+        return messageProvider;
+    }
+
+    public static MessageService getMessageService(MessageProvider messageProvider) {
+        if (messageService == null)
+            messageService = new MessageService(messageProvider);
+        return messageService;
+    }
+
+    public static MessageService getMessageService() {
+        return getMessageService(getMessageProvider());
     }
 }
