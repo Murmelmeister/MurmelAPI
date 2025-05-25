@@ -1,8 +1,12 @@
-package de.murmelmeister.murmelapi.language;
+package de.murmelmeister.murmelapi.language.message;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-public class MessageCache {
+/**
+ * MessageCache is a thread-safe cache for storing messages by their ID and tag.
+ * It allows for quick retrieval and management of messages based on their unique identifiers.
+ */
+public final class MessageCache {
     private final ConcurrentHashMap<Integer, Message> byId = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ConcurrentHashMap<Integer, Message>> byTag = new ConcurrentHashMap<>();
 
