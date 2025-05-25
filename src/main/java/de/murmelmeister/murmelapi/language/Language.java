@@ -1,5 +1,9 @@
 package de.murmelmeister.murmelapi.language;
 
+/**
+ * Represents a language with an ID and a name.
+ * This class is used to manage different languages in the application.
+ */
 public class Language {
     private final int id;
     private String name;
