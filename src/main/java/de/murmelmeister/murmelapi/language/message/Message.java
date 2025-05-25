@@ -1,5 +1,9 @@
-package de.murmelmeister.murmelapi.language;
+package de.murmelmeister.murmelapi.language.message;
 
+/**
+ * Represents a message in the Murmel API.
+ * Each message has an ID, a tag, a language ID, and the actual message content.
+ */
 public class Message {
     private final int id;
     private String tag;
