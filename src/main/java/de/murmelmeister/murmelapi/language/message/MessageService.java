@@ -37,26 +37,38 @@ public final class MessageService {
     }
 
     /**
-     * Ensures that all default messages defined in the code are present in the database.
+     * Ensures that every message definition in the provided array is present
+     * in the persistent store and in the provider’s cache.
      * <p>
-     * 1. Loads existing messages via {@code loadData()} and builds a set of keys
-     * in the form {@code "tag_languageId"}.
-     * 2. Iterates over all message definitions returned by
-     * {@link MessageDefinition#getValues()}, and for each (tag, languageId) pair:
-     *    <ul>
-     *      <li>Skips if the key already exists in the loaded set.</li>
-     *      <li>Skips if {@link MessageProvider#getMessage(String, int)} returns non-null.</li>
-     *      <li>Otherwise, creates the missing message via
-     *          {@link MessageProvider#createMessage(String, int, String)}.</li>
-     *    </ul>
+     * This method performs the following steps:
+     * <ol>
+     *   <li>Calls {@link MessageProvider#loadData()} to clear and reload the cache
+     *       with all existing messages.</li>
+     *   <li>Constructs a set of existing keys in the format {@code "tag_languageId"}.</li>
+     *   <li>Iterates over each {@link MessageDefinition} in {@code values}, and for each
+     *       supported language entry:
+     *     <ul>
+     *       <li>Skips the entry if its key is already in the loaded set.</li>
+     *       <li>Skips the entry if {@link MessageProvider#getMessage(String, int)} returns non-null.</li>
+     *       <li>Otherwise, creates a new record via
+     *           {@link MessageProvider#createMessage(String, int, String)}.</li>
+     *     </ul>
+     *   </li>
+     * </ol>
      * </p>
+     *
+     * @param values An array of {@link MessageDefinition} instances whose tag/language
+     *               combinations should be validated and inserted if missing
+     * @see MessageProvider#loadData()
+     * @see MessageProvider#getMessage(String, int)
+     * @see MessageProvider#createMessage(String, int, String)
      */
-    public void checkAndLoad() {
+    public void checkAndLoad(MessageDefinition[] values) {
         Set<String> existingKeys = provider.loadData().stream()
                 .map(message -> message.getTag() + "_" + message.getLanguageId())
                 .collect(Collectors.toSet());
 
-        for (MessageDefinition messages : MessageDefinition.getValues()) {
+        for (MessageDefinition messages : values) {
             String tag = messages.getTag();
             for (Map.Entry<Integer, String> entry : messages.getMessagesMap().entrySet()) {
                 int languageId = entry.getKey();

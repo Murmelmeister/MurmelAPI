@@ -46,23 +46,6 @@ public interface MessageDefinition {
     Map<Integer, String> getMessagesMap();
 
     /**
-     * Provides an array of all available message definitions of this type.
-     * <p>
-     * This mimics the {@code values()} method found in enums, allowing
-     * iteration over all defined message keys.
-     * </p>
-     *
-     * @return A non-null array of all {@code MessageDefinition} instances
-     * @throws UnsupportedOperationException if not overridden by the implementing class
-     */
-    static MessageDefinition[] getValues() {
-        Object[] constants = MessageDefinition.class.getEnumConstants();
-        if (constants == null)
-            throw new UnsupportedOperationException("getValues() can only be called on enums.");
-        return new MessageDefinition[constants.length];
-    }
-
-    /**
      * A simple pair type holding a (languageId, messageText) tuple.
      * <p>
      * This record is often used in enum constructors or builder methods
