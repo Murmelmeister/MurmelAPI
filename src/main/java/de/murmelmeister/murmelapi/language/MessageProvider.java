@@ -15,8 +15,9 @@ public final class MessageProvider {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
-                                         "tag VARCHAR(255) UNIQUE, " +
-                                         "languageId INT UNIQUE, FOREIGN KEY (languageId) REFERENCES languages(id), " +
+                                         "tag VARCHAR(255), " +
+                                         "languageId INT, FOREIGN KEY (languageId) REFERENCES languages(id), " +
+                                         "UNIQUE (tag, languageId), " +
                                          "message TEXT");
     }
 
