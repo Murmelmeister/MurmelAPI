@@ -31,6 +31,10 @@ public final class LanguageProvider {
         return !languages.isEmpty();
     }
 
+    public List<Language> getLanguages() {
+        return cache.getLanguages();
+    }
+
     public Language getLanguage(int id) {
         return cache.get(id);
     }

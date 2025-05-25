@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.language;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class LanguageCache {
@@ -23,5 +24,9 @@ public class LanguageCache {
 
     public void clear() {
         cache.clear();
+    }
+
+    public List<Language> getLanguages() {
+        return List.copyOf(cache.values());
     }
 }
