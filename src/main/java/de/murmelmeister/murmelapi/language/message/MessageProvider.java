@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.language.message;
 
 import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.util.List;
 
@@ -16,7 +17,7 @@ import java.util.List;
  */
 public final class MessageProvider {
     private static final String TABLE_NAME = "messages";
-    private final MessageCache cache = new MessageCache();
+    private static final MessageCache CACHE = new MessageCache();
     private final Database database;
 
     public MessageProvider(Database database) {
@@ -31,6 +32,13 @@ public final class MessageProvider {
                                          "message TEXT");
     }
 
+    static {
+        RefreshUtil.register(cacheName -> {
+            if ("messages".equals(cacheName) || "global".equals(cacheName))
+                CACHE.clear();
+        });
+    }
+
     /**
      * Loads all messages from the database into the cache.
      * <p>
@@ -42,7 +50,7 @@ public final class MessageProvider {
      * @return A list of all {@link Message} instances currently persisted
      */
     public List<Message> loadData() {
-        cache.clear();
+        CACHE.clear();
         String sql = "SELECT id, tag, languageId, message FROM " + TABLE_NAME;
         List<Message> messages = database.queryList(sql, result -> {
             int id = result.getInt("id");
@@ -52,8 +60,13 @@ public final class MessageProvider {
             return new Message(id, tag, languageId, message);
         });
 
-        messages.forEach(cache::put);
+        messages.forEach(CACHE::put);
         return messages;
+    }
+
+    private void ensureLoaded() {
+        if (CACHE.getMessages().isEmpty())
+            loadData();
     }
 
     /**
@@ -62,8 +75,9 @@ public final class MessageProvider {
      * @param id The primary key of the message
      * @return The cached {@link Message}, or {@code null} if not found
      */
-    public Message getMessage(int id) {
-        return cache.getById(id);
+    public Message get(int id) {
+        ensureLoaded();
+        return CACHE.getById(id);
     }
 
     /**
@@ -73,9 +87,10 @@ public final class MessageProvider {
      * @param languageId The numerical language identifier
      * @return The cached {@link Message}, or {@code null} if {@code tag} is null/empty or not present in cache
      */
-    public Message getMessage(String tag, int languageId) {
+    public Message get(String tag, int languageId) {
         if (tag == null || tag.isEmpty()) return null;
-        return cache.getByTag(tag, languageId);
+        ensureLoaded();
+        return CACHE.getByTag(tag, languageId);
     }
 
     /**
@@ -84,8 +99,9 @@ public final class MessageProvider {
      * @param id The primary key to check
      * @return {@code true} if present, {@code false} otherwise
      */
-    public boolean existsMessage(int id) {
-        return cache.containsKeyById(id);
+    public boolean exists(int id) {
+        ensureLoaded();
+        return CACHE.containsKeyById(id);
     }
 
     /**
@@ -95,9 +111,10 @@ public final class MessageProvider {
      * @param languageId The language identifier to check
      * @return {@code true} if present and {@code tag} is non-null/non-empty; {@code false} otherwise
      */
-    public boolean existsMessage(String tag, int languageId) {
+    public boolean exists(String tag, int languageId) {
         if (tag == null || tag.isEmpty()) return false;
-        return cache.containsKeyByTag(tag, languageId);
+        ensureLoaded();
+        return CACHE.containsKeyByTag(tag, languageId);
     }
 
     /**
@@ -113,13 +130,13 @@ public final class MessageProvider {
      * @param message    The localized message text (must not be null or empty)
      * @return The newly created {@link Message}, or {@code null} if validation fails or insertion did not succeed
      */
-    public Message createMessage(String tag, int languageId, String message) {
+    public Message create(String tag, int languageId, String message) {
         if (tag == null || tag.isEmpty() || message == null || message.isEmpty()) return null;
         String sql = "INSERT INTO " + TABLE_NAME + " (tag, languageId, message) VALUES (?, ?, ?)";
         int id = database.updateAndGetAutoIncrement(sql, tag, languageId, message);
         if (id < 1) return null;
         Message msg = new Message(id, tag, languageId, message);
-        cache.put(msg);
+        CACHE.put(msg);
         return msg;
     }
 
@@ -129,11 +146,30 @@ public final class MessageProvider {
      * @param id The primary key of the message to delete
      * @return The number of rows affected (0 if {@code id < 1} or no record was deleted)
      */
-    public int deleteMessage(int id) {
+    public int delete(int id) {
         if (id < 1) return 0;
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE id=?";
         int affectedRow = database.update(sql, id);
-        cache.remove(id);
+        CACHE.remove(id);
+        return affectedRow;
+    }
+
+    /**
+     * Deletes a message by its tag and language ID from both the database and the cache.
+     * <p>
+     * Validates that {@code tag} is non-null and non-empty, and that {@code languageId} is ≥ 1.
+     * If validation fails, returns 0 without performing any SQL operation.
+     * </p>
+     *
+     * @param tag        The message tag to delete it (must not be null or empty)
+     * @param languageId The language identifier (must be ≥ 1)
+     * @return The number of rows affected (0 if validation fails or no record was deleted)
+     */
+    public int delete(String tag, int languageId) {
+        if (tag == null || tag.isEmpty() || languageId < 1) return 0;
+        String sql = "DELETE FROM " + TABLE_NAME + " WHERE tag=? AND languageId=?";
+        int affectedRow = database.update(sql, tag, languageId);
+        CACHE.removeByTag(tag, languageId);
         return affectedRow;
     }
 
@@ -151,13 +187,13 @@ public final class MessageProvider {
      * @param message    The new localized text (must not be null or empty)
      * @return The updated {@link Message} from cache, or {@code null} if validation fails
      */
-    public Message updateMessage(int id, String tag, int languageId, String message) {
+    public Message update(int id, String tag, int languageId, String message) {
         if (id < 1 || tag == null || tag.isEmpty() || languageId < 1 || message == null || message.isEmpty())
             return null;
         String sql = "UPDATE " + TABLE_NAME + " SET tag=?, languageId=?, message=? WHERE id=?";
         int affectedRow = database.update(sql, tag, languageId, message, id);
         if (affectedRow > 0) {
-            Message msg = cache.getById(id);
+            Message msg = CACHE.getById(id);
             if (msg != null) {
                 msg.setTag(tag);
                 msg.setLanguageId(languageId);
@@ -165,8 +201,8 @@ public final class MessageProvider {
             } else {
                 msg = new Message(id, tag, languageId, message);
             }
-            cache.put(msg);
+            CACHE.put(msg);
         }
-        return cache.getById(id);
+        return CACHE.getById(id);
     }
 }
