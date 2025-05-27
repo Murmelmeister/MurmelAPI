@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.language.message;
 
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -37,17 +38,25 @@ public final class MessageCache {
         Message removed = byId.remove(id);
         if (removed != null) {
             String tag = removed.getTag();
-            ConcurrentHashMap<Integer, Message> messages = byTag.get(tag);
-            if (messages != null) {
-                messages.remove(removed.getLanguageId());
-                if (messages.isEmpty())
-                    byTag.remove(tag);
-            }
+            removeByTag(tag, removed.getLanguageId());
+        }
+    }
+
+    public void removeByTag(String tag, int languageId) {
+        ConcurrentHashMap<Integer, Message> messages = byTag.get(tag);
+        if (messages != null) {
+            messages.remove(languageId);
+            if (messages.isEmpty())
+                byTag.remove(tag);
         }
     }
 
     public void clear() {
         byId.clear();
         byTag.clear();
+    }
+
+    public List<Message> getMessages() {
+        return List.copyOf(byId.values());
     }
 }
