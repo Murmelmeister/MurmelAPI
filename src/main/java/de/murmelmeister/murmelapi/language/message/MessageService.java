@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.language.message;
 
+import de.murmelmeister.murmelapi.language.LanguageProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,21 +20,12 @@ import java.util.stream.Collectors;
  */
 public final class MessageService {
     private final Logger logger = LoggerFactory.getLogger(MessageService.class);
-    private final MessageProvider provider;
+    private final LanguageProvider languageProvider;
+    private final MessageProvider messageProvider;
 
-    public MessageService(MessageProvider provider) {
-        this.provider = provider;
-    }
-
-    /**
-     * Reloads all messages from the persistent store into the provider's cache.
-     * <p>
-     * Clears and repopulates the in-memory cache within the provider by calling
-     * {@link MessageProvider#loadData()}.
-     * </p>
-     */
-    public void reload() {
-        provider.loadData();
+    public MessageService(LanguageProvider languageProvider, MessageProvider provider) {
+        this.languageProvider = languageProvider;
+        this.messageProvider = provider;
     }
 
     /**
@@ -49,9 +41,9 @@ public final class MessageService {
      *       supported language entry:
      *     <ul>
      *       <li>Skips the entry if its key is already in the loaded set.</li>
-     *       <li>Skips the entry if {@link MessageProvider#getMessage(String, int)} returns non-null.</li>
+     *       <li>Skips the entry if {@link MessageProvider#get(String, int)} returns non-null.</li>
      *       <li>Otherwise, creates a new record via
-     *           {@link MessageProvider#createMessage(String, int, String)}.</li>
+     *           {@link MessageProvider#create(String, int, String)}.</li>
      *     </ul>
      *   </li>
      * </ol>
@@ -60,11 +52,11 @@ public final class MessageService {
      * @param values An array of {@link MessageDefinition} instances whose tag/language
      *               combinations should be validated and inserted if missing
      * @see MessageProvider#loadData()
-     * @see MessageProvider#getMessage(String, int)
-     * @see MessageProvider#createMessage(String, int, String)
+     * @see MessageProvider#get(String, int)
+     * @see MessageProvider#create(String, int, String)
      */
     public void checkAndLoad(MessageDefinition[] values) {
-        Set<String> existingKeys = provider.loadData().stream()
+        Set<String> existingKeys = messageProvider.loadData().stream()
                 .map(message -> message.getTag() + "_" + message.getLanguageId())
                 .collect(Collectors.toSet());
 
@@ -75,8 +67,8 @@ public final class MessageService {
                 String messageText = entry.getValue();
                 String key = tag + "_" + languageId;
                 if (existingKeys.contains(key)) continue;
-                if (provider.getMessage(tag, languageId) != null) continue;
-                provider.createMessage(tag, languageId, messageText);
+                if (messageProvider.get(tag, languageId) != null) continue;
+                messageProvider.create(tag, languageId, messageText);
             }
         }
     }
@@ -84,9 +76,9 @@ public final class MessageService {
     /**
      * Retrieves the persisted message text for the given definition and language.
      * <p>
-     * Attempts to fetch the message via {@link MessageProvider#getMessage(String, int)}.
+     * Attempts to fetch the message via {@link MessageProvider#get(String, int)}.
      * If no persisted entry is found, logs a warning and falls back to the default
-     * English (languageId = 1) text from the provider.
+     * English text from the provider.
      * </p>
      *
      * @param messages   The {@link MessageDefinition} enum instance identifying the message tag
@@ -94,10 +86,10 @@ public final class MessageService {
      * @return The localized message text, never {@code null}
      */
     public String getMessage(MessageDefinition messages, int languageId) {
-        Message message = provider.getMessage(messages.getTag(), languageId);
+        Message message = messageProvider.get(messages.getTag(), languageId);
         if (message == null) {
             logger.warn("Message with tag '{}' and language ID '{}' not found.", messages.getTag(), languageId);
-            message = provider.getMessage(messages.getTag(), 1);
+            message = messageProvider.get(messages.getTag(), languageProvider.get("english").getId());
             return message.getMessage();
         }
         return message.getMessage();
