@@ -9,7 +9,9 @@ package de.murmelmeister.murmelapi.utils.update;
 public enum RefreshType {
     ALL("global"),
     GLOBAL("global"),
-    PERMISSIONS("permissions");
+    PERMISSIONS("permissions"),
+    MESSAGES("messages"),
+    LANGUAGES("languages"),;
     private static final RefreshType[] VALUES = values();
 
     private final String name;
