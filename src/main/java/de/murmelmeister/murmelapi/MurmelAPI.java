@@ -97,9 +97,9 @@ public final class MurmelAPI {
         punishmentLog = getPunishmentLog(punishmentReason);
         punishmentIP = getPunishmentIP(punishmentLog);
         punishmentUser = getPunishmentUser(punishmentLog);
-        language = getLanguage();
         messageProvider = getMessageProvider();
-        messageService = getMessageService(messageProvider);
+        language = getLanguage(messageProvider);
+        messageService = getMessageService(language, messageProvider);
     }
 
     public static int deleteUserSoft(int userId) {
@@ -217,10 +217,14 @@ public final class MurmelAPI {
         return getPunishmentUser(getPunishmentLog());
     }
 
-    public static LanguageProvider getLanguage() {
+    public static LanguageProvider getLanguage(MessageProvider messageProvider) {
         if (language == null)
-            language = new LanguageProvider(DATABASE);
+            language = new LanguageProvider(DATABASE, messageProvider);
         return language;
+    }
+
+    public static LanguageProvider getLanguage() {
+        return getLanguage(getMessageProvider());
     }
 
     public static MessageProvider getMessageProvider() {
@@ -229,13 +233,13 @@ public final class MurmelAPI {
         return messageProvider;
     }
 
-    public static MessageService getMessageService(MessageProvider messageProvider) {
+    public static MessageService getMessageService(LanguageProvider languageProvider, MessageProvider messageProvider) {
         if (messageService == null)
-            messageService = new MessageService(messageProvider);
+            messageService = new MessageService(languageProvider, messageProvider);
         return messageService;
     }
 
     public static MessageService getMessageService() {
-        return getMessageService(getMessageProvider());
+        return getMessageService(getLanguage(), getMessageProvider());
     }
 }
