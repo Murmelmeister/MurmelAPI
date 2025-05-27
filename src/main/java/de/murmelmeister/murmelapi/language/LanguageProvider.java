@@ -3,6 +3,7 @@ package de.murmelmeister.murmelapi.language;
 import de.murmelmeister.murmelapi.database.Database;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Provides CRUD operations for {@link Language} entities backed by a relational database
@@ -61,13 +62,32 @@ public final class LanguageProvider {
     }
 
     /**
+     * Retrieves the names of all cached languages.
+     *
+     * @return A set of language names (case-sensitive) currently in the cache
+     */
+    public Set<String> getLanguageNames() {
+        return cache.getNames();
+    }
+
+    /**
      * Retrieves a single language by its primary key from the cache.
      *
      * @param id The unique identifier of the language
      * @return The cached {@link Language}, or {@code null} if not found
      */
     public Language getLanguage(int id) {
-        return cache.get(id);
+        return cache.getById(id);
+    }
+
+    /**
+     * Retrieves a language by its name from the cache.
+     *
+     * @param name The language name (case‐insensitive)
+     * @return The cached {@link Language}, or null if not found
+     */
+    public Language getLanguage(String name) {
+        return cache.getByName(name);
     }
 
     /**
@@ -77,7 +97,17 @@ public final class LanguageProvider {
      * @return {@code true} if present; {@code false} otherwise
      */
     public boolean existsLanguage(int id) {
-        return cache.containsKey(id);
+        return cache.containsId(id);
+    }
+
+    /**
+     * Checks whether a language with the given name exists in the cache.
+     *
+     * @param name The language name to check (case‐insensitive)
+     * @return True if present; false otherwise
+     */
+    public boolean existsLanguage(String name) {
+        return cache.containsName(name);
     }
 
     /**
@@ -131,11 +161,11 @@ public final class LanguageProvider {
         String sql = "UPDATE " + TABLE_NAME + " SET name=? WHERE id=?";
         int affectedRow = database.update(sql, name, id);
         if (affectedRow > 0) {
-            Language language = cache.get(id);
+            Language language = cache.getById(id);
             if (language != null) language.setName(name);
             else language = new Language(id, name);
             cache.put(language);
         }
-        return cache.get(id);
+        return cache.getById(id);
     }
 }
