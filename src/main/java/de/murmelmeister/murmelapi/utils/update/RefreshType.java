@@ -11,7 +11,8 @@ public enum RefreshType {
     GLOBAL("global"),
     PERMISSIONS("permissions"),
     MESSAGES("messages"),
-    LANGUAGES("languages"),;
+    LANGUAGES("languages"),
+    REASONS("reasons"),;
     private static final RefreshType[] VALUES = values();
 
     private final String name;
