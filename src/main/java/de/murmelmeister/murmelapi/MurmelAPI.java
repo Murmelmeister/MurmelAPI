@@ -20,6 +20,7 @@ import de.murmelmeister.murmelapi.punishment.log.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.log.PunishmentLogProvider;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
+import de.murmelmeister.murmelapi.punishment.reason.ReasonProvider;
 import de.murmelmeister.murmelapi.time.PlayTime;
 import de.murmelmeister.murmelapi.time.PlayTimeProvider;
 import de.murmelmeister.murmelapi.user.User;
@@ -52,6 +53,8 @@ public final class MurmelAPI {
     private static LanguageProvider language;
     private static MessageProvider messageProvider;
     private static MessageService messageService;
+
+    private static ReasonProvider reasonProvider;
 
     static {
         DATABASE = new Database();
@@ -86,6 +89,7 @@ public final class MurmelAPI {
         PunishmentLogProvider.setup(DATABASE);
         PunishmentIPProvider.setup(DATABASE);
         PunishmentUserProvider.setup(DATABASE);
+        ReasonProvider.setup(DATABASE);
         // Initialize all providers
         loginHistory = getLoginHistory();
         activeSession = getActiveSession();
@@ -100,6 +104,7 @@ public final class MurmelAPI {
         messageProvider = getMessageProvider();
         language = getLanguage(messageProvider);
         messageService = getMessageService(language, messageProvider);
+        reasonProvider = getReasonProvider();
     }
 
     public static int deleteUserSoft(int userId) {
@@ -241,5 +246,11 @@ public final class MurmelAPI {
 
     public static MessageService getMessageService() {
         return getMessageService(getLanguage(), getMessageProvider());
+    }
+
+    public static ReasonProvider getReasonProvider() {
+        if (reasonProvider == null)
+            reasonProvider = new ReasonProvider(DATABASE);
+        return reasonProvider;
     }
 }
