@@ -80,6 +80,13 @@ public enum PunishmentType {
         return null;
     }
 
+    public static PunishmentType fromId(int id) {
+        for (PunishmentType type : VALUES)
+            if (type.id == id)
+                return type;
+        return null;
+    }
+
     /**
      * Checks whether the specified punishment type already exists in the database.
      * This is a private method used internally during setup.
