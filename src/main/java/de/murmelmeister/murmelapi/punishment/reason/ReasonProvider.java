@@ -70,7 +70,7 @@ public final class ReasonProvider {
     }
 
     public Reason create(int id, int typeId, String reason, long duration, boolean autoFlagIp, boolean autoPunish, int createdBy) {
-        if (typeId < 1 || reason == null || createdBy != -2) return null;
+        if (typeId < 1 || reason == null || createdBy == -2) return null;
         Timestamp now = new Timestamp(System.currentTimeMillis());
         Reason reasonPunishment = new Reason(id, typeId, reason, duration, autoFlagIp, autoPunish, createdBy, now, createdBy, now);
         database.update("INSERT INTO " + TABLE_NAME + " (id, typeId, reason, duration, autoFlagIp, autoPunish, createdBy, updatedBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
