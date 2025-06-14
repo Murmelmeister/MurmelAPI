@@ -1,4 +1,4 @@
-package de.murmelmeister.murmelapi.database;
+package de.murmelmeister.murmelapi.exceptions;
 
 public class DatabaseException extends RuntimeException {
     /**

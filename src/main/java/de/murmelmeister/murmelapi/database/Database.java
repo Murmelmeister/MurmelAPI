@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.database;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import de.murmelmeister.murmelapi.exceptions.DatabaseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
