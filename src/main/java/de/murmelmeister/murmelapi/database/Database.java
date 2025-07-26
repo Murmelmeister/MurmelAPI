@@ -298,12 +298,12 @@ public final class Database {
      * @param batchParameters The list of parameters for each batch.
      * @return An array of integers representing the number of affected rows for each batch.
      */
-    public int[] updateBatch(String sql, List<Object[]> batchParameters) {
+    public int[] updateBatch(String sql, Collection<Object[]> batchParameters) {
         return executeInTransaction(connection -> {
             long startTime = System.nanoTime();
-            try (PreparedStatement statement = getPreparedStatement(connection, false, sql)) {
-                for (Object[] parameters : batchParameters) {
-                    setParameters(statement, parameters);
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+                for (Object[] params : batchParameters) {
+                    setParameters(statement, params);
                     statement.addBatch();
                 }
                 int[] affectedRows = statement.executeBatch();
