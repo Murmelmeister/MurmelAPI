@@ -1,60 +1,59 @@
 package de.murmelmeister.murmelapi.utils.update;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.slf4j.LoggerFactory;
+
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.*;
 
 public final class RefreshUtil {
-    private static final List<RefreshListener> LISTENERS = new ArrayList<>();
-    private static final ReadWriteLock LOCK = new ReentrantReadWriteLock();
-    private static final Lock READ_LOCK = LOCK.readLock();
-    private static final Lock WRITE_LOCK = LOCK.writeLock();
+    private static final CopyOnWriteArrayList<RefreshListener> LISTENERS = new CopyOnWriteArrayList<>();
+
+    private static final Set<RefreshEvent<?>> RECENT = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private static final ScheduledExecutorService DEBOUNCER = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread thread = new Thread(r, "RefreshDebouncer");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public static void register(RefreshListener listener) {
-        WRITE_LOCK.lock();
-        try {
-            LISTENERS.add(listener);
-        } finally {
-            WRITE_LOCK.unlock();
-        }
+        LISTENERS.add(listener);
     }
 
     public static void unregister(RefreshListener listener) {
-        WRITE_LOCK.lock();
-        try {
-            LISTENERS.remove(listener);
-        } finally {
-            WRITE_LOCK.unlock();
+        LISTENERS.remove(listener);
+    }
+
+    public static <K> void fire(RefreshEvent<K> event) {
+        if (!RECENT.add(event)) return; // Prevent duplicate events
+        DEBOUNCER.schedule(() -> RECENT.remove(event), 100, TimeUnit.MILLISECONDS);
+
+        for (RefreshListener listener : LISTENERS) {
+            try {
+                listener.onRefresh(event);
+            } catch (Exception e) {
+                LoggerFactory.getLogger(RefreshListener.class).error("Listener {} failed to handle refresh event: {}", listener, event, e);
+            }
         }
     }
 
-    public static void markAsRefreshed(String cacheName) {
-        READ_LOCK.lock();
-        try {
-            for (RefreshListener listener : LISTENERS)
-                listener.onRefreshOccurred(cacheName);
-        } finally {
-            READ_LOCK.unlock();
-        }
+    public static <K> void fireSingle(String cacheName, K key) {
+        fire(new RefreshEvent<>(cacheName, key));
     }
 
-    public static void markAsRefreshed(String... cacheNames) {
-        for (String cacheName : cacheNames)
-            markAsRefreshed(cacheName);
+    public static <K> void fireSingle(RefreshType type, K key) {
+        fire(new RefreshEvent<>(type, key));
     }
 
-    public static void markAsRefreshed(RefreshType type) {
-        markAsRefreshed(type.getName());
+    public static void fireCache(String cacheName) {
+        fire(new RefreshEvent<>(cacheName, null));
     }
 
-    public static void markAsRefreshed(RefreshType... types) {
-        for (RefreshType type : types)
-            markAsRefreshed(type);
+    public static void fireCache(RefreshType type) {
+        fire(new RefreshEvent<>(type, null));
     }
 
-    public static void globalRefresh() {
-        markAsRefreshed("global");
+    public static void fireAll() {
+        fire(new RefreshEvent<>(RefreshType.ALL, null));
     }
 }
