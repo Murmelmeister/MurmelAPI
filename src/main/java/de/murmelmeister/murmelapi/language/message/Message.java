@@ -4,44 +4,11 @@ package de.murmelmeister.murmelapi.language.message;
  * Represents a message in the Murmel API.
  * Each message has an ID, a tag, a language ID, and the actual message content.
  */
-public class Message {
-    private final int id;
-    private String tag;
-    private int languageId;
-    private String message;
-
-    public Message(int id, String tag, int languageId, String message) {
-        this.id = id;
-        this.tag = tag;
-        this.languageId = languageId;
-        this.message = message;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public String getTag() {
-        return tag;
-    }
-
-    public void setTag(String tag) {
-        this.tag = tag;
-    }
-
-    public int getLanguageId() {
-        return languageId;
-    }
-
-    public void setLanguageId(int languageId) {
-        this.languageId = languageId;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
+public record Message(int id, String tagId, int languageId, String message) {
+    public Message withUpdateMeta(String tagId, Integer languageId, String message) {
+        return new Message(id,
+                tagId != null ? tagId : this.tagId,
+                languageId != null ? languageId : this.languageId,
+                message != null ? message : this.message);
     }
 }
