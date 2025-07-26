@@ -22,39 +22,12 @@ public interface MessageDefinition {
     String getTag();
 
     /**
-     * Retrieves the message text for the specified language.
+     * Retrieves all messages associated with this definition, indexed by language ID.
      * <p>
-     * If the implementation does not support the requested language ID, it
-     * may choose to fall back to a default language (for example, English).
+     * This method provides a map of language IDs to their corresponding message texts.
      * </p>
      *
-     * @param languageId The numerical identifier of the desired language (e.g., 1 = English, 2 = German)
-     * @return The localized message text
+     * @return A map where keys are language IDs and values are the corresponding message texts
      */
-    String getMessage(int languageId);
-
-    /**
-     * Returns an unmodifiable map of all supported language IDs to their
-     * corresponding message texts.
-     * <p>
-     * The keys in the map are language identifiers (integers), and the values
-     * are the localized message strings.
-     * </p>
-     *
-     * @return A map such as {@code {1="English", 2="Englisch"}}
-     */
-    Map<Integer, String> getMessagesMap();
-
-    /**
-     * A simple pair type holding a (languageId, messageText) tuple.
-     * <p>
-     * This record is often used in enum constructors or builder methods
-     * to supply multiple language variants in a concise form.
-     * </p>
-     */
-    record LanguageMessage(int languageId, String message) {
-        public static LanguageMessage of(int languageId, String message) {
-            return new LanguageMessage(languageId, message);
-        }
-    }
+    Map<Integer, String> getMessages();
 }
