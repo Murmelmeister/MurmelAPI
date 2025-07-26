@@ -6,10 +6,5 @@ package de.murmelmeister.murmelapi.utils.update;
  */
 @FunctionalInterface
 public interface RefreshListener {
-    /**
-     * Called when a cache refresh occurs.
-     *
-     * @param cacheName The name of the cache that was refreshed.
-     */
-    void onRefreshOccurred(String cacheName);
+    void onRefresh(RefreshEvent<?> event);
 }
