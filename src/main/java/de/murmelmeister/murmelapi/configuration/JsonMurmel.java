@@ -27,7 +27,7 @@ public class JsonMurmel {
                 return null;
 
             try {
-                String content = new String(Files.readAllBytes(path)); // The max file size is 2GB
+                String content = Files.readString(path); // The max file size is 2GB
                 JsonObject root = JsonParser.parseString(content).getAsJsonObject();
 
                 // Split the key into parts and navigate to the correct location in the JSON object
@@ -66,7 +66,7 @@ public class JsonMurmel {
             // Read the existing JSON file or create an object if it doesn't exist
             if (Files.exists(path)) {
                 try {
-                    String content = new String(Files.readAllBytes(path)); // The max file size is 2GB
+                    String content = Files.readString(path); // The max file size is 2GB
                     root = JsonParser.parseString(content).getAsJsonObject();
                 } catch (IOException e) {
                     throw new JsonMurmelException("Error reading file: " + path, e);
@@ -106,7 +106,7 @@ public class JsonMurmel {
             JsonObject root;
             if (Files.exists(path)) {
                 try {
-                    String content = new String(Files.readAllBytes(path)); // The max file size is 2GB
+                    String content = Files.readString(path); // The max file size is 2GB
                     root = JsonParser.parseString(content).getAsJsonObject();
                 } catch (IOException e) {
                     throw new JsonMurmelException("Error reading file: " + path, e);
