@@ -127,7 +127,7 @@ public final class MessageProviderImpl implements MessageProvider {
         if (existing == null) return null;
 
         if (Objects.equals(tagId, existing.tagId()) &&
-            Objects.equals(languageId, existing.languageId()) &&
+            languageId == existing.languageId() &&
             Objects.equals(message, existing.message()))
             return existing; // No changes, return existing
 
