@@ -1,34 +1,49 @@
 package de.murmelmeister.murmelapi;
 
 import de.murmelmeister.murmelapi.database.Database;
-import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.GroupProvider;
+import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
+import de.murmelmeister.murmelapi.group.color.GroupColorProviderImpl;
+import de.murmelmeister.murmelapi.group.color.GroupColorType;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
+import de.murmelmeister.murmelapi.group.parent.GroupParentProviderImpl;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
+import de.murmelmeister.murmelapi.group.permission.GroupPermissionProviderImpl;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
+import de.murmelmeister.murmelapi.language.LanguageProviderImpl;
 import de.murmelmeister.murmelapi.language.message.MessageProvider;
+import de.murmelmeister.murmelapi.language.message.MessageProviderImpl;
 import de.murmelmeister.murmelapi.language.message.MessageService;
-import de.murmelmeister.murmelapi.logging.ActiveSession;
-import de.murmelmeister.murmelapi.logging.ActiveSessionProvider;
-import de.murmelmeister.murmelapi.logging.LoginHistory;
-import de.murmelmeister.murmelapi.logging.LoginHistoryProvider;
+import de.murmelmeister.murmelapi.language.message.MurmelMessage;
 import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.permission.PermissionProvider;
-import de.murmelmeister.murmelapi.punishment.*;
-import de.murmelmeister.murmelapi.punishment.log.PunishmentLog;
-import de.murmelmeister.murmelapi.punishment.log.PunishmentLogProvider;
-import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
+import de.murmelmeister.murmelapi.punishment.PunishmentService;
+import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProvider;
+import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProviderImpl;
+import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIpProvider;
+import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIpProviderImpl;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
-import de.murmelmeister.murmelapi.punishment.reason.ReasonProvider;
-import de.murmelmeister.murmelapi.time.PlayTime;
-import de.murmelmeister.murmelapi.time.PlayTimeProvider;
-import de.murmelmeister.murmelapi.user.User;
+import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProviderImpl;
+import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProviderImpl;
 import de.murmelmeister.murmelapi.user.UserProvider;
+import de.murmelmeister.murmelapi.user.UserProviderImpl;
+import de.murmelmeister.murmelapi.user.UserService;
+import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
+import de.murmelmeister.murmelapi.user.login.UserLoginProviderImpl;
 import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
+import de.murmelmeister.murmelapi.user.parent.UserParentProviderImpl;
 import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
+import de.murmelmeister.murmelapi.user.permission.UserPermissionProviderImpl;
+import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
+import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProviderImpl;
+import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
+import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
 
-import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.format.DateTimeFormatter;
 
 /**
  * The MurmelAPI main class.
@@ -37,24 +52,34 @@ public final class MurmelAPI {
     private static final Database DATABASE;
 
     private static String databaseName = "MurmelAPI";
-    private static SimpleDateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+    private static Long fetchLimit = null;
+    private static long cacheCapacity = 10_000; // Default cache size
+    private static Duration refreshInterval = Duration.ofMinutes(30);
 
-    private static LoginHistory loginHistory;
-    private static ActiveSession activeSession;
-    private static User user;
-    private static Group group;
-    private static PlayTime playTime;
-    private static Permission permission;
-    private static PunishmentReason punishmentReason;
-    private static PunishmentLog punishmentLog;
-    private static PunishmentIP punishmentIP;
-    private static PunishmentUser punishmentUser;
-
-    private static LanguageProvider language;
+    private static LanguageProvider languageProvider;
     private static MessageProvider messageProvider;
     private static MessageService messageService;
 
-    private static ReasonProvider reasonProvider;
+    private static UserProvider userProvider;
+    private static UserPlayTimeProvider userPlayTimeProvider;
+    private static UserLoginProvider userLoginProvider;
+    private static UserSessionProvider userSessionProvider;
+    private static UserService userService;
+
+    private static GroupProvider groupProvider;
+    private static GroupColorProvider groupColorProvider;
+
+    private static UserPermissionProvider userPermissionProvider;
+    private static UserParentProvider userParentProvider;
+    private static GroupPermissionProvider groupPermissionProvider;
+    private static GroupParentProvider groupParentProvider;
+    private static Permission permission;
+
+    private static PunishmentReasonProvider punishReasonProvider;
+    private static PunishmentLogProvider punishLogProvider;
+    private static PunishmentCurrentIpProvider punishIpProvider;
+    private static PunishmentCurrentUserProvider punishUserProvider;
+    private static PunishmentService punishmentService;
 
     static {
         DATABASE = new Database();
@@ -66,53 +91,98 @@ public final class MurmelAPI {
     }
 
     public static void disconnect() {
+        closeCache();
         DATABASE.disconnect();
     }
 
     public static void setup() {
         // Create all tables
-        LanguageProvider.setup(DATABASE);
-        MessageProvider.setup(DATABASE);
-        UserProvider.setup(DATABASE);
-        GroupProvider.setup(DATABASE);
-        LoginHistoryProvider.setup(DATABASE);
-        ActiveSessionProvider.setup(DATABASE);
-        PlayTimeProvider.setup(DATABASE);
-        GroupColorProvider.setup(DATABASE);
-        GroupParentProvider.setup(DATABASE);
-        GroupPermissionProvider.setup(DATABASE);
-        UserParentProvider.setup(DATABASE);
-        UserPermissionProvider.setup(DATABASE);
+        LanguageProviderImpl.setup(DATABASE);
+        LanguageProviderImpl.createDefaultLanguages(DATABASE);
+        MessageProviderImpl.setup(DATABASE);
+
+        UserProviderImpl.setup(DATABASE);
+        UserProviderImpl.createConsoleUser(DATABASE);
+        UserPlayTimeProviderImpl.setup(DATABASE);
+        UserLoginProviderImpl.setup(DATABASE);
+        UserSessionProviderImpl.setup(DATABASE);
+
+        GroupProviderImpl.setup(DATABASE);
+        GroupProviderImpl.createDefaultGroup(DATABASE);
+        GroupColorType.setup(DATABASE);
+        GroupColorType.createDefaultTypes(DATABASE);
+        GroupColorProviderImpl.setup(DATABASE);
+
+        UserPermissionProviderImpl.setup(DATABASE);
+        UserParentProviderImpl.setup(DATABASE);
+        GroupPermissionProviderImpl.setup(DATABASE);
+        GroupParentProviderImpl.setup(DATABASE);
         PermissionProvider.setup(DATABASE);
+
         PunishmentType.setup(DATABASE);
-        PunishmentReasonProvider.setup(DATABASE);
-        PunishmentLogProvider.setup(DATABASE);
-        PunishmentIPProvider.setup(DATABASE);
-        PunishmentUserProvider.setup(DATABASE);
-        ReasonProvider.setup(DATABASE);
+        PunishmentType.createDefaultTypes(DATABASE);
+        PunishmentReasonProviderImpl.setup(DATABASE);
+        PunishmentLogProviderImpl.setup(DATABASE);
+        PunishmentCurrentIpProviderImpl.setup(DATABASE);
+        PunishmentCurrentUserProviderImpl.setup(DATABASE);
         // Initialize all providers
-        loginHistory = getLoginHistory();
-        activeSession = getActiveSession();
-        user = getUser();
-        group = getGroup();
-        playTime = getPlayTime();
-        permission = getPermission(group, user);
-        punishmentReason = getPunishmentReason();
-        punishmentLog = getPunishmentLog(punishmentReason);
-        punishmentIP = getPunishmentIP(punishmentLog);
-        punishmentUser = getPunishmentUser(punishmentLog);
+        languageProvider = getLanguageProvider();
         messageProvider = getMessageProvider();
-        language = getLanguage(messageProvider);
-        messageService = getMessageService(language, messageProvider);
-        reasonProvider = getReasonProvider();
+        messageService = getMessageService(languageProvider, messageProvider);
+        MurmelMessage.loadMessages(messageService);
+
+        userProvider = getUserProvider();
+        userPlayTimeProvider = getUserPlayTimeProvider();
+        userLoginProvider = getUserLoginProvider();
+        userSessionProvider = getUserSessionProvider();
+        userService = getUserService(userProvider, userPlayTimeProvider, userLoginProvider, userSessionProvider);
+
+        groupProvider = getGroupProvider();
+        groupColorProvider = getGroupColorProvider();
+
+        userPermissionProvider = getUserPermissionProvider();
+        userParentProvider = getUserParentProvider();
+        groupPermissionProvider = getGroupPermissionProvider();
+        groupParentProvider = getGroupParentProvider();
+        permission = getPermission(userProvider, groupParentProvider, groupPermissionProvider, userParentProvider, userPermissionProvider);
+
+        punishReasonProvider = getPunishmentReasonProvider();
+        punishLogProvider = getPunishmentLogProvider();
+        punishIpProvider = getPunishmentCurrentIpProvider();
+        punishUserProvider = getPunishmentCurrentUserProvider();
+        punishmentService = getPunishmentService(punishReasonProvider, punishLogProvider, punishIpProvider, punishUserProvider);
     }
 
-    public static int deleteUserSoft(int userId) {
+    public static void closeCache() {
+        languageProvider.closeCache();
+        messageProvider.closeCache();
+
+        userProvider.closeCache();
+        userPlayTimeProvider.closeCache();
+        userLoginProvider.closeCache();
+        userSessionProvider.closeCache();
+
+        groupProvider.closeCache();
+        groupColorProvider.closeCache();
+
+        userPermissionProvider.closeCache();
+        userParentProvider.closeCache();
+        groupParentProvider.closeCache();
+        groupPermissionProvider.closeCache();
+        permission.closeCache();
+
+        punishReasonProvider.closeCache();
+        punishLogProvider.closeCache();
+        punishIpProvider.closeCache();
+        punishUserProvider.closeCache();
+    }
+
+    /*public static int deleteUserSoft(int userId) {
         if (userId < 1) return 0;
         int sessionRow = activeSession.closeSession(userId);
         int loginRows = loginHistory.deleteUserLogins(userId);
-        int permissionRow = user.getPermission().clearPermission(userId);
-        int parentRow = user.getParent().clearParent(userId);
+        int permissionRow = userProvider.getPermission().clearPermission(userId);
+        int parentRow = userProvider.getParent().clearParent(userId);
         int playTimeRow = playTime.deleteUser(userId);
         return sessionRow + loginRows + permissionRow + parentRow + playTimeRow;
     }
@@ -120,11 +190,12 @@ public final class MurmelAPI {
     public static int deleteUserHard(int userId) {
         if (userId < 1) return 0;
         int softDeleteRow = deleteUserSoft(userId);
-        int punishmentRow = punishmentUser.unpunish(userId);
-        int logsRow = punishmentLog.deleteUserLogs(userId);
-        int userRow = user.deleteUser(userId);
-        return softDeleteRow + punishmentRow + logsRow + userRow;
-    }
+        //int punishmentRow = punishmentUser.unpunish(userId);
+        //int logsRow = punishmentLog.deleteUserLogs(userId);
+        int userRow = userProvider.deleteUser(userId);
+        //return softDeleteRow + punishmentRow + logsRow + userRow;
+        return softDeleteRow + userRow;
+    }*/
 
     public static Database getDatabase() {
         return DATABASE;
@@ -138,103 +209,43 @@ public final class MurmelAPI {
         MurmelAPI.databaseName = databaseName;
     }
 
-    public static SimpleDateFormat getDateFormat() {
-        return dateFormat;
+    public static DateTimeFormatter getDateTimeFormatter(int languageId) {
+        return DateTimeFormatter.ofPattern(messageService.getMessage(MurmelMessage.DATE_TIME_FORMAT, languageId));
     }
 
-    public static void setDateFormat(SimpleDateFormat dateFormat) {
-        MurmelAPI.dateFormat = dateFormat;
+    public static Long getFetchLimit() {
+        return fetchLimit;
     }
 
-    public static LoginHistory getLoginHistory() {
-        if (loginHistory == null)
-            loginHistory = new LoginHistoryProvider(DATABASE);
-        return loginHistory;
+    public static void setFetchLimit(Long fetchLimit) {
+        MurmelAPI.fetchLimit = fetchLimit;
     }
 
-    public static ActiveSession getActiveSession() {
-        if (activeSession == null)
-            activeSession = new ActiveSessionProvider(DATABASE);
-        return activeSession;
+    public static long getCacheCapacity() {
+        return cacheCapacity;
     }
 
-    public static User getUser() {
-        if (user == null)
-            user = new UserProvider(DATABASE);
-        return user;
+    public static void setCacheCapacity(long cacheCapacity) {
+        MurmelAPI.cacheCapacity = cacheCapacity;
     }
 
-    public static Group getGroup() {
-        if (group == null)
-            group = new GroupProvider(DATABASE);
-        return group;
+    public static Duration getRefreshInterval() {
+        return refreshInterval;
     }
 
-    public static PlayTime getPlayTime() {
-        if (playTime == null)
-            playTime = new PlayTimeProvider(DATABASE);
-        return playTime;
+    public static void setRefreshInterval(Duration refreshInterval) {
+        MurmelAPI.refreshInterval = refreshInterval;
     }
 
-    public static Permission getPermission(Group group, User user) {
-        if (permission == null)
-            permission = new PermissionProvider(DATABASE, group, user);
-        return permission;
-    }
-
-    public static Permission getPermission() {
-        return getPermission(getGroup(), getUser());
-    }
-
-    public static PunishmentReason getPunishmentReason() {
-        if (punishmentReason == null)
-            punishmentReason = new PunishmentReasonProvider(DATABASE);
-        return punishmentReason;
-    }
-
-    public static PunishmentLog getPunishmentLog(PunishmentReason reason) {
-        if (punishmentLog == null)
-            punishmentLog = new PunishmentLogProvider(DATABASE, reason);
-        return punishmentLog;
-    }
-
-    public static PunishmentLog getPunishmentLog() {
-        return getPunishmentLog(getPunishmentReason());
-    }
-
-    public static PunishmentIP getPunishmentIP(PunishmentLog log) {
-        if (punishmentIP == null)
-            punishmentIP = new PunishmentIPProvider(DATABASE, log);
-        return punishmentIP;
-    }
-
-    public static PunishmentIP getPunishmentIP() {
-        return getPunishmentIP(getPunishmentLog());
-    }
-
-    public static PunishmentUser getPunishmentUser(PunishmentLog log) {
-        if (punishmentUser == null)
-            punishmentUser = new PunishmentUserProvider(DATABASE, log);
-        return punishmentUser;
-    }
-
-    public static PunishmentUser getPunishmentUser() {
-        return getPunishmentUser(getPunishmentLog());
-    }
-
-    public static LanguageProvider getLanguage(MessageProvider messageProvider) {
-        if (language == null)
-            language = new LanguageProvider(DATABASE, messageProvider);
-        return language;
-    }
-
-    public static LanguageProvider getLanguage() {
-        return getLanguage(getMessageProvider());
+    public static LanguageProvider getLanguageProvider() {
+        if (languageProvider == null)
+            languageProvider = new LanguageProviderImpl(DATABASE, cacheCapacity);
+        return languageProvider;
     }
 
     public static MessageProvider getMessageProvider() {
         if (messageProvider == null)
-            messageProvider = new MessageProvider(DATABASE);
+            messageProvider = new MessageProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
         return messageProvider;
     }
 
@@ -245,12 +256,129 @@ public final class MurmelAPI {
     }
 
     public static MessageService getMessageService() {
-        return getMessageService(getLanguage(), getMessageProvider());
+        return getMessageService(getLanguageProvider(), getMessageProvider());
     }
 
-    public static ReasonProvider getReasonProvider() {
-        if (reasonProvider == null)
-            reasonProvider = new ReasonProvider(DATABASE);
-        return reasonProvider;
+    public static UserProvider getUserProvider() {
+        if (userProvider == null)
+            userProvider = new UserProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return userProvider;
+    }
+
+    public static UserPlayTimeProvider getUserPlayTimeProvider() {
+        if (userPlayTimeProvider == null)
+            userPlayTimeProvider = new UserPlayTimeProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return userPlayTimeProvider;
+    }
+
+    public static UserLoginProvider getUserLoginProvider() {
+        if (userLoginProvider == null)
+            userLoginProvider = new UserLoginProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return userLoginProvider;
+    }
+
+    public static UserSessionProvider getUserSessionProvider() {
+        if (userSessionProvider == null)
+            userSessionProvider = new UserSessionProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return userSessionProvider;
+    }
+
+    public static UserService getUserService(UserProvider userProvider,
+                                             UserPlayTimeProvider playTimeProvider,
+                                             UserLoginProvider loginProvider,
+                                             UserSessionProvider sessionProvider) {
+        if (userService == null)
+            userService = new UserService(userProvider, playTimeProvider, loginProvider, sessionProvider);
+        return userService;
+    }
+
+    public static UserService getUserService() {
+        return getUserService(getUserProvider(), getUserPlayTimeProvider(), getUserLoginProvider(), getUserSessionProvider());
+    }
+
+    public static GroupProvider getGroupProvider() {
+        if (groupProvider == null)
+            groupProvider = new GroupProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return groupProvider;
+    }
+
+    public static GroupColorProvider getGroupColorProvider() {
+        if (groupColorProvider == null)
+            groupColorProvider = new GroupColorProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return groupColorProvider;
+    }
+
+    public static UserPermissionProvider getUserPermissionProvider() {
+        if (userPermissionProvider == null)
+            userPermissionProvider = new UserPermissionProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return userPermissionProvider;
+    }
+
+    public static UserParentProvider getUserParentProvider() {
+        if (userParentProvider == null)
+            userParentProvider = new UserParentProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return userParentProvider;
+    }
+
+    public static GroupPermissionProvider getGroupPermissionProvider() {
+        if (groupPermissionProvider == null)
+            groupPermissionProvider = new GroupPermissionProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return groupPermissionProvider;
+    }
+
+    public static GroupParentProvider getGroupParentProvider() {
+        if (groupParentProvider == null)
+            groupParentProvider = new GroupParentProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return groupParentProvider;
+    }
+
+    public static Permission getPermission(UserProvider userProvider, GroupParentProvider groupParentProvider,
+                                           GroupPermissionProvider groupPermissionProvider, UserParentProvider userParentProvider,
+                                           UserPermissionProvider userPermissionProvider) {
+        if (permission == null)
+            permission = new PermissionProvider(DATABASE, userProvider, groupParentProvider, groupPermissionProvider, userParentProvider, userPermissionProvider,
+                    cacheCapacity, refreshInterval);
+        return permission;
+    }
+
+    public static Permission getPermission() {
+        return getPermission(getUserProvider(), getGroupParentProvider(), getGroupPermissionProvider(), getUserParentProvider(), getUserPermissionProvider());
+    }
+
+    public static PunishmentReasonProvider getPunishmentReasonProvider() {
+        if (punishReasonProvider == null)
+            punishReasonProvider = new PunishmentReasonProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return punishReasonProvider;
+    }
+
+    public static PunishmentLogProvider getPunishmentLogProvider() {
+        if (punishLogProvider == null)
+            punishLogProvider = new PunishmentLogProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return punishLogProvider;
+    }
+
+    public static PunishmentCurrentIpProvider getPunishmentCurrentIpProvider() {
+        if (punishIpProvider == null)
+            punishIpProvider = new PunishmentCurrentIpProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return punishIpProvider;
+    }
+
+    public static PunishmentCurrentUserProvider getPunishmentCurrentUserProvider() {
+        if (punishUserProvider == null)
+            punishUserProvider = new PunishmentCurrentUserProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return punishUserProvider;
+    }
+
+    public static PunishmentService getPunishmentService(PunishmentReasonProvider reasonProvider,
+                                                         PunishmentLogProvider logProvider,
+                                                         PunishmentCurrentIpProvider ipProvider,
+                                                         PunishmentCurrentUserProvider userProvider) {
+        if (punishmentService == null)
+            punishmentService = new PunishmentService(reasonProvider, logProvider, ipProvider, userProvider);
+        return punishmentService;
+    }
+
+    public static PunishmentService getPunishmentService() {
+        return getPunishmentService(getPunishmentReasonProvider(), getPunishmentLogProvider(), getPunishmentCurrentIpProvider(), getPunishmentCurrentUserProvider());
     }
 }
