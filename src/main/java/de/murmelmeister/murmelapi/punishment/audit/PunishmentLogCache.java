@@ -1,0 +1,124 @@
+package de.murmelmeister.murmelapi.punishment.audit;
+
+import com.github.benmanes.caffeine.cache.LoadingCache;
+import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.murmelapi.utils.CacheUtil;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshListener;
+import de.murmelmeister.murmelapi.utils.update.RefreshType;
+import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+
+import java.time.Duration;
+import java.util.*;
+
+public class PunishmentLogCache implements RefreshListener, AutoCloseable {
+    private static final String ALL_KEY = "ALL";
+    private final Database database;
+    private final String tableName;
+    private final LoadingCache<UUID, PunishmentLog> cacheById;
+    private final LoadingCache<Integer, List<PunishmentLog>> cacheByUser;
+    private final LoadingCache<String, List<PunishmentLog>> cacheByIp;
+    private final LoadingCache<String, List<PunishmentLog>> listCache;
+    private final Long fetchLimit;
+
+    public PunishmentLogCache(Database database, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+        this.database = database;
+        this.tableName = tableName;
+        this.fetchLimit = fetchLimit;
+        this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapcity, refreshInterval);
+        this.cacheByUser = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapcity, refreshInterval);
+        this.cacheByIp = CacheUtil.buildCacheRefresh(this::loadByIpAddress, cacheCapcity, refreshInterval);
+        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
+        RefreshUtil.register(this);
+    }
+
+    @Override
+    public void onRefresh(RefreshEvent<?> event) {
+        String cacheName = event.getType();
+        if (RefreshType.PUNISHMENT_LOGS.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+            refreshAll();
+        else if (RefreshType.SINGLE_PUNISHMENT_LOG.getName().equalsIgnoreCase(cacheName)) {
+            Object key = event.getKey();
+            if (key instanceof UUID logId)
+                remove(logId);
+        }
+    }
+
+    @Override
+    public void close() {
+        RefreshUtil.unregister(this);
+        clear();
+    }
+
+    private void refreshAll() {
+        clear();
+        List<PunishmentLog> logs = loadAllFromDatabase();
+        logs.forEach(this::put);
+    }
+
+    private List<PunishmentLog> loadAllFromDatabase() {
+        // Note: IDK if this is the best order, but it makes sense to have the latest logs first
+        String sql = "SELECT * FROM " + tableName + " ORDER BY created_at DESC";
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog());
+    }
+
+    private List<PunishmentLog> loadByUserId(int userId) {
+        // Note: IDK if this is the best order, but it makes sense to have the latest logs first
+        String sql = "SELECT * FROM " + tableName + " WHERE user_id = ? ORDER BY created_at DESC";
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog(), userId);
+    }
+
+    private List<PunishmentLog> loadByIpAddress(String ipAddress) {
+        // Note: IDK if this is the best order, but it makes sense to have the latest logs first
+        String sql = "SELECT * FROM " + tableName + " WHERE ip_address = ? ORDER BY created_at DESC";
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog(), ipAddress);
+    }
+
+    private PunishmentLog loadById(UUID id) {
+        String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentLog(), id.toString());
+    }
+
+    public PunishmentLog getById(UUID logId) {
+        return cacheById.get(logId);
+    }
+
+    public List<PunishmentLog> getByUser(int userId) {
+        return cacheByUser.get(userId);
+    }
+
+    public List<PunishmentLog> getByIp(String ipAddress) {
+        return cacheByIp.get(ipAddress);
+    }
+
+    public void put(PunishmentLog log) {
+        UUID logId = log.id();
+        cacheById.put(logId, log);
+        CacheUtil.put(cacheByUser, log.userId(), log, v -> v.id().equals(logId));
+        CacheUtil.put(cacheByIp, log.ipAddress(), log, v -> v.id().equals(logId));
+        CacheUtil.put(listCache, ALL_KEY, log, v -> v.id().equals(logId));
+    }
+
+    public void remove(UUID logId) {
+        PunishmentLog log = cacheById.getIfPresent(logId);
+        if (log != null) {
+            cacheById.invalidate(logId);
+            CacheUtil.remove(cacheByUser, log.userId(), v -> v.id().equals(logId));
+            CacheUtil.remove(cacheByIp, log.ipAddress(), v -> v.id().equals(logId));
+        }
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(logId));
+    }
+
+    public void clear() {
+        cacheById.invalidateAll();
+        cacheByUser.invalidateAll();
+        cacheByIp.invalidateAll();
+        listCache.invalidateAll();
+    }
+
+    public List<PunishmentLog> getCachedPunishLogs() {
+        return listCache.get(ALL_KEY);
+    }
+}
