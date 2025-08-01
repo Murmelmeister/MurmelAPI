@@ -90,7 +90,8 @@ public class GroupColorCache implements RefreshListener, AutoCloseable {
     }
 
     public void remove(int groupId, int typeId) {
-        cacheByKey.invalidate(new GroupColorKey(groupId, typeId));
+        GroupColorKey key = new GroupColorKey(groupId, typeId);
+        cacheByKey.invalidate(key);
         CacheUtil.remove(cacheByGroupId, groupId, v -> v.groupId() == groupId && v.typeId() == typeId);
         CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == groupId && v.typeId() == typeId);
     }
