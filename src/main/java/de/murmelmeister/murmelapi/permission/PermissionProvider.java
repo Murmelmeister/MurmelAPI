@@ -1,139 +1,165 @@
 package de.murmelmeister.murmelapi.permission;
 
+import com.github.benmanes.caffeine.cache.LoadingCache;
 import de.murmelmeister.murmelapi.database.Database;
-import de.murmelmeister.murmelapi.group.Group;
+import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
+import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
 import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.utils.CacheManager;
+import de.murmelmeister.murmelapi.user.UserProvider;
+import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
+import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
+import de.murmelmeister.murmelapi.utils.CacheUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshListener;
+import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+
+import static de.murmelmeister.murmelapi.user.UserProviderImpl.CONSOLE_USER_ID;
 
 /**
  * The PermissionProvider class provides methods to manage and check permissions for users and groups.
  * It implements the Permission interface.
  */
-public record PermissionProvider(Database database, Group group, User user) implements Permission {
-    private static final CacheManager<Integer, Set<String>> CACHE = new CacheManager<>();
-    private static final long CACHE_TTL = 15; // 15 minutes
+public final class PermissionProvider implements Permission, RefreshListener, AutoCloseable {
+    private final Database database;
+    private final UserProvider userProvider;
+    private final GroupParentProvider groupParentProvider;
+    private final GroupPermissionProvider groupPermissionProvider;
+    private final UserParentProvider userParentProvider;
+    private final UserPermissionProvider userPermissionProvider;
+    private final LoadingCache<Integer, Set<String>> cache;
 
-    static {
-        RefreshUtil.register(cacheName -> {
-            if ("permissions".equals(cacheName) || "global".equals(cacheName))
-                CACHE.clear();
-        });
+    public PermissionProvider(Database database, UserProvider userProvider,
+                              GroupParentProvider groupParentProvider, GroupPermissionProvider groupPermissionProvider,
+                              UserParentProvider userParentProvider, UserPermissionProvider userPermissionProvider,
+                              long cacheCapcity, Duration refreshInterval) {
+        this.database = database;
+        this.userProvider = userProvider;
+        this.groupParentProvider = groupParentProvider;
+        this.groupPermissionProvider = groupPermissionProvider;
+        this.userParentProvider = userParentProvider;
+        this.userPermissionProvider = userPermissionProvider;
+        this.cache = CacheUtil.buildCacheRefresh(this::loadAllFromDatabase, cacheCapcity, refreshInterval);
+        RefreshUtil.register(this);
+    }
+
+    private Set<String> loadAllFromDatabase(int userId) {
+        return new LinkedHashSet<>(database.queryListCallable("getUserPermission", resultSet -> resultSet.getString("permission"), userId));
     }
 
     public static void setup(Database database) {
-        Procedure.loadAll(database);
+        database.update(Database.getProcedureQuery("getUserPermission", "p_user_id INT", """
+                     WITH RECURSIVE grp(grp_id) AS (
+                         SELECT parent_id AS grp_id
+                         FROM   user_parent
+                         WHERE  user_id = p_user_id
+                           AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP())
+                         UNION ALL
+                         SELECT gp.parent_id
+                         FROM   group_parent gp
+                         JOIN   grp g ON g.grp_id = gp.group_id
+                         WHERE  gp.expires_at IS NULL OR gp.expires_at > CURRENT_TIMESTAMP()
+                     ),
+                    \s
+                     perms AS (
+                         SELECT permission
+                         FROM   user_permission
+                         WHERE  user_id = p_user_id
+                           AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP())
+                         UNION
+                         SELECT permission
+                         FROM   group_permission
+                         WHERE  group_id IN (SELECT grp_id FROM grp)
+                           AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP())
+                     )
+                    \s
+                     SELECT DISTINCT permission
+                     FROM   perms
+                     ORDER BY permission;
+                \s"""));
     }
 
     @Override
-    public CompletableFuture<Void> preloadAsync(int userId) {
-        return CompletableFuture.runAsync(() -> refresh(userId), database.getExecutor());
+    public Set<String> getPermissions(int userId) {
+        return cache.get(userId);
     }
 
     @Override
-    public void invalidate(int userId) {
-        CACHE.remove(userId);
-    }
-
-    @Override
-    public List<String> getPermissions(int userId) {
-        Set<String> perms = CACHE.get(userId);
-        if (perms == null)
-            perms = refresh(userId);
-        return new LinkedList<>(perms);
-    }
-
-    @Override
-    public boolean hasPermission(int userId, String permission) {
-        Collection<String> permissions = getPermissions(userId);
+    public boolean hasPermission(User user, String permission) {
+        if (user.id() < CONSOLE_USER_ID || permission == null || permission.isEmpty())
+            return false; // Invalid permission
+        if (user.systemUser()) return true; // Special case for server-wide permissions
+        Set<String> permissions = getPermissions(user.id());
         if (permissions.isEmpty()) return false;
         if (permissions.contains("-" + permission)) return false;
+
+        for (String negative : permissions) {
+            if (negative.startsWith("-") && negative.endsWith(".*")) {
+                String prefix = negative.substring(1, negative.length() - 1); // "-minecraft.command.*" -> "minecraft.command."
+                if (permission.startsWith(prefix))
+                    return false; // Negative permission matches
+            }
+        }
+
         if (permissions.contains("*")) return true;
         if (permissions.contains(permission)) return true;
 
-        int idx = permission.lastIndexOf('.');
-        while (idx > 0) {
-            String prefix = permission.substring(0, idx) + ".*";
-            if (permissions.contains(prefix)) return true;
-            idx = permission.lastIndexOf('.', idx - 1);
+        for (String perm : permissions) {
+            if (perm.endsWith(".*")) {
+                String prefix = perm.substring(0, perm.length() - 1); // "minecraft.command.*" -> "minecraft.command."
+                if (permission.startsWith(prefix))
+                    return true; // Permission matches with wildcard
+            }
         }
         return false;
     }
 
     @Override
     public boolean hasPermission(UUID uuid, String permission) {
-        return hasPermission(user.getId(uuid), permission);
+        User user = userProvider.findByMojangId(uuid);
+        if (user == null) return false; // User not found
+        return hasPermission(user, permission);
     }
 
     @Override
     public int loadExpired() {
-        return user.loadExpired() + group.loadExpired();
+        int groupParentExpired = groupParentProvider.loadExpired();
+        int groupPermissionExpired = groupPermissionProvider.loadExpired();
+        int userParentExpired = userParentProvider.loadExpired();
+        int userPermissionExpired = userPermissionProvider.loadExpired();
+        return groupParentExpired + groupPermissionExpired + userParentExpired + userPermissionExpired;
     }
 
-    private Set<String> refresh(int userId) {
-        List<String> list = database.queryListCallable(Procedure.GET_USER_PERMISSION.getName(),
-                resultSet -> resultSet.getString("permission"), userId);
-        Set<String> permissions = new LinkedHashSet<>(list);
-        CACHE.put(userId, permissions, CACHE_TTL, TimeUnit.MINUTES);
-        return permissions;
+    @Override
+    public void onRefresh(RefreshEvent<?> event) {
+        String cacheName = event.getType();
+        // Let the cache refresh by single and all events (Not really optimal, but works for now)
+        if (RefreshType.USER_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.GROUP_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.USER_PARENTS.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.GROUP_PARENTS.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.SINGLE_USER_PERMISSION.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.SINGLE_GROUP_PARENT.getName().equalsIgnoreCase(cacheName)
+            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            cache.invalidateAll();
+            List<Integer> userIds = userProvider.findAll().stream().map(User::id).toList();
+            userIds.forEach(id -> cache.put(id, loadAllFromDatabase(id)));
+        }
     }
 
-    private enum Procedure {
-        GET_USER_PERMISSION("getUserPermission", "p_userId INT", """
-                     WITH RECURSIVE grp(grp_id) AS (
-                         SELECT parentId AS grp_id
-                         FROM   user_parent
-                         WHERE  userId = p_userId
-                           AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP())
-                         UNION ALL
-                         SELECT gp.parentId
-                         FROM   group_parent gp
-                         JOIN   grp g ON g.grp_id = gp.groupId
-                         WHERE  gp.expiredAt IS NULL OR gp.expiredAt > CURRENT_TIMESTAMP()
-                     ),
-                    \s
-                     perms AS (
-                         SELECT permission
-                         FROM   user_permission
-                         WHERE  userId = p_userId
-                           AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP())
-                         UNION
-                         SELECT permission
-                         FROM   group_permission
-                         WHERE  groupId IN (SELECT grp_id FROM grp)
-                           AND (expiredAt IS NULL OR expiredAt > CURRENT_TIMESTAMP())
-                     )
-                    \s
-                     SELECT DISTINCT permission
-                     FROM   perms
-                     ORDER BY permission;
-                \s"""),
-        ;
-        private static final Procedure[] VALUES = values();
+    @Override
+    public void close() {
+        RefreshUtil.unregister(this);
+        cache.invalidateAll();
+    }
 
-        private final String name;
-        private final String query;
-
-        Procedure(String name, String input, String query) {
-            this.name = name;
-            this.query = Database.getProcedureQuery(name, input, query);
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getQuery() {
-            return query;
-        }
-
-        public static void loadAll(Database database) {
-            for (Procedure procedure : VALUES)
-                database.update(procedure.getQuery());
-        }
+    @Override
+    public void closeCache() {
+        close();
     }
 }
