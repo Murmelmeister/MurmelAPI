@@ -59,7 +59,9 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
 
     @Override
     public List<GroupColor> getGroupColors(int groupId) {
-        return cache.getByGroupId(groupId);
+        return cache.getCachedColors().stream()
+                .filter(color -> color.groupId() == groupId)
+                .toList();
     }
 
     @Override
@@ -82,7 +84,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         if (createdAt == null) return null;
 
         GroupColor groupColor = new GroupColor(groupId, typeId, value, createdBy, createdAt, null, null);
-        RefreshUtil.fireSingle(single, new GroupColorCache.GroupColorKey(groupId, typeId));
+        RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         cache.put(groupColor);
         return groupColor;
     }
@@ -96,7 +98,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         if (row < 1) return 0;
 
         cache.remove(groupId, typeId);
-        RefreshUtil.fireSingle(single, new GroupColorCache.GroupColorKey(groupId, typeId));
+        RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         return row;
     }
 
@@ -134,7 +136,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         if (changedAt == null) return null;
 
         GroupColor groupColor = existing.withUpdateMeta(value, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, new GroupColorCache.GroupColorKey(groupId, typeId));
+        RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         cache.put(groupColor);
         return groupColor;
     }
