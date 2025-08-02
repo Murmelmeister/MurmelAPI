@@ -70,7 +70,7 @@ public class GroupParentCache implements RefreshListener, AutoCloseable {
 
     private GroupParent loadByKey(ParentKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_id = ? AND parent_id = ?";
-        return database.query(sql, null, ResultSetUtil.groupParent(), key.groupId(), key.parentId());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupParent(), key.groupId(), key.parentId());
     }
 
     public GroupParent get(int groupId, int parentId) {
