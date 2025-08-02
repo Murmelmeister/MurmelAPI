@@ -70,7 +70,7 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
 
     private GroupPermission loadByKey(PermissionKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_id = ? AND permission = ?";
-        return database.query(sql, null, ResultSetUtil.groupPermission(), key.groupId(), key.permission());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupPermission(), key.groupId(), key.permission());
     }
 
     public GroupPermission get(int groupId, String permission) {
