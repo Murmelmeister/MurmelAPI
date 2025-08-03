@@ -99,7 +99,7 @@ public final class GroupProviderImpl implements GroupProvider {
         if (createdAt == null) return null;
 
         Group group = new Group(groupId, groupName, teamId, priority, false, createdBy, createdAt, null, null);
-        RefreshUtil.fireSingle(single, group.id());
+        RefreshUtil.fireSingle(single, groupId);
         cache.put(group);
         return group;
     }
