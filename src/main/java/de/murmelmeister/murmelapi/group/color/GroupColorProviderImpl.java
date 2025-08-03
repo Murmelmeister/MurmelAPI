@@ -59,9 +59,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
 
     @Override
     public List<GroupColor> getGroupColors(int groupId) {
-        return cache.getCachedColors().stream()
-                .filter(color -> color.groupId() == groupId)
-                .toList();
+        return cache.getByGroupId(groupId);
     }
 
     @Override
