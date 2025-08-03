@@ -11,6 +11,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
@@ -37,8 +39,19 @@ public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseabl
             refreshAll();
         else if (RefreshType.SINGLE_PUNISHMENT_USER.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof UserTypeKey(int userId, int typeId))
-                remove(userId, typeId);
+            if (!(key instanceof String)) {
+                if (key instanceof UserTypeKey userTypeKey)
+                    refreshSingle(userTypeKey);
+            } else {
+                Matcher matcher = Pattern.compile(".*userId=(\\d+), typeId=(\\d+).*").matcher((String) key);
+                if (matcher.matches()) {
+                    int userId = Integer.parseInt(matcher.group(1));
+                    int typeId = Integer.parseInt(matcher.group(2));
+                    refreshSingle(new UserTypeKey(userId, typeId));
+                } else {
+                    throw new IllegalArgumentException("Invalid key format: " + key);
+                }
+            }
         }
     }
 
@@ -52,6 +65,13 @@ public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseabl
         clear();
         List<PunishmentCurrentUser> punishments = loadAllFromDatabase();
         punishments.forEach(this::put);
+    }
+
+    private void refreshSingle(UserTypeKey key) {
+        remove(key.userId(), key.typeId());
+        PunishmentCurrentUser punishment = loadFromDatabase(key);
+        if (punishment != null)
+            put(punishment);
     }
 
     private List<PunishmentCurrentUser> loadAllFromDatabase() {

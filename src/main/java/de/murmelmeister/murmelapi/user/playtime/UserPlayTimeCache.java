@@ -37,8 +37,13 @@ public class UserPlayTimeCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_USER_PLAY_TIME.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof Integer userId)
-                remove(userId);
+            if (!(key instanceof String)) {
+                if (key instanceof Integer userId)
+                    refreshSingle(userId);
+            } else {
+                int userId = Integer.parseInt((String) key);
+                refreshSingle(userId);
+            }
         }
     }
 
@@ -52,6 +57,13 @@ public class UserPlayTimeCache implements RefreshListener, AutoCloseable {
         clear();
         List<UserPlayTime> playTimes = loadAllFromDatabase();
         playTimes.forEach(this::put);
+    }
+
+    private void refreshSingle(int userId) {
+        remove(userId);
+        UserPlayTime playTime = loadById(userId);
+        if (playTime != null)
+            put(playTime);
     }
 
     private List<UserPlayTime> loadAllFromDatabase() {

@@ -40,8 +40,13 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_LANGUAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof Integer id)
-                remove(id);
+            if (!(key instanceof String)) {
+                if (key instanceof Integer id)
+                    refreshSingle(id);
+            } else {
+                int id = Integer.parseInt((String) key);
+                refreshSingle(id);
+            }
         }
     }
 
@@ -55,6 +60,13 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
         clear();
         List<Language> languages = loadAllFromDatabase();
         languages.forEach(this::put);
+    }
+
+    private void refreshSingle(int id) {
+        remove(id);
+        Language language = loadById(id);
+        if (language != null)
+            put(language);
     }
 
     private List<Language> loadAllFromDatabase() {

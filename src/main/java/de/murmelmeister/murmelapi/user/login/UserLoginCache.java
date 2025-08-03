@@ -42,8 +42,13 @@ public class UserLoginCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_USER_LOGIN.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof UUID sessionId)
-                remove(sessionId);
+            if (!(key instanceof String)) {
+                if (key instanceof UUID sessionId)
+                    refreshSingle(sessionId);
+            } else {
+                UUID sessionId = UUID.fromString((String) key);
+                refreshSingle(sessionId);
+            }
         }
     }
 
@@ -57,6 +62,13 @@ public class UserLoginCache implements RefreshListener, AutoCloseable {
         clear();
         List<UserLogin> userLogins = loadAllFromDatabase();
         userLogins.forEach(this::put);
+    }
+
+    private void refreshSingle(UUID sessionId) {
+        remove(sessionId);
+        UserLogin userLogin = loadById(sessionId);
+        if (userLogin != null)
+            put(userLogin);
     }
 
     private List<UserLogin> loadAllFromDatabase() {

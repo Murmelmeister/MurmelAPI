@@ -41,8 +41,13 @@ public class PunishmentLogCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_PUNISHMENT_LOG.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof UUID logId)
-                remove(logId);
+            if (!(key instanceof String)) {
+                if (key instanceof UUID logId)
+                    refreshSingle(logId);
+            } else {
+                UUID logId = UUID.fromString((String) key);
+                refreshSingle(logId);
+            }
         }
     }
 
@@ -56,6 +61,13 @@ public class PunishmentLogCache implements RefreshListener, AutoCloseable {
         clear();
         List<PunishmentLog> logs = loadAllFromDatabase();
         logs.forEach(this::put);
+    }
+
+    private void refreshSingle(UUID logId) {
+        remove(logId);
+        PunishmentLog log = loadById(logId);
+        if (log != null)
+            put(log);
     }
 
     private List<PunishmentLog> loadAllFromDatabase() {

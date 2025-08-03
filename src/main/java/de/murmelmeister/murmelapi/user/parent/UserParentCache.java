@@ -11,6 +11,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class UserParentCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
@@ -39,10 +41,22 @@ public class UserParentCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof ParentKey(int userId, int parentId))
-                remove(userId, parentId);
-            else if (key instanceof Integer userId)
-                remove(userId);
+            if (!(key instanceof String)) {
+                if (key instanceof ParentKey parentKey)
+                    refreshSingle(parentKey);
+                else if (key instanceof Integer userId)
+                    refreshSingle(userId);
+            } else {
+                Matcher matcher = Pattern.compile(".*userId=(\\d+), parentId=(\\d+).*").matcher((String) key);
+                if (matcher.matches()) {
+                    int userId = Integer.parseInt(matcher.group(1));
+                    int parentId = Integer.parseInt(matcher.group(2));
+                    refreshSingle(new ParentKey(userId, parentId));
+                } else {
+                    int userId = Integer.parseInt((String) key);
+                    refreshSingle(userId);
+                }
+            }
         }
     }
 
@@ -56,6 +70,19 @@ public class UserParentCache implements RefreshListener, AutoCloseable {
         clear();
         List<UserParent> parents = loadAllFromDatabase();
         parents.forEach(this::put);
+    }
+
+    private void refreshSingle(int userId) {
+        remove(userId);
+        List<UserParent> parents = loadByUserId(userId);
+        parents.forEach(this::put);
+    }
+
+    private void refreshSingle(ParentKey key) {
+        remove(key.userId(), key.parentId());
+        UserParent userParent = loadByKey(key);
+        if (userParent != null)
+            put(userParent);
     }
 
     private List<UserParent> loadAllFromDatabase() {

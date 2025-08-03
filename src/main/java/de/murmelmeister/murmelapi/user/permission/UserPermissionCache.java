@@ -11,6 +11,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class UserPermissionCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
@@ -39,10 +41,22 @@ public class UserPermissionCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_USER_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof PermissionKey(int userId, String permission))
-                remove(userId, permission);
-            else if (key instanceof Integer userId)
-                remove(userId);
+            if (!(key instanceof String)) {
+                if (key instanceof PermissionKey permissionKey)
+                    refreshSingle(permissionKey);
+                else if (key instanceof Integer userId)
+                    refreshSingle(userId);
+            } else {
+                Matcher matcher = Pattern.compile(".*userId=(\\d+), permission=(\\w+).*").matcher((String) key);
+                if (matcher.matches()) {
+                    int userId = Integer.parseInt(matcher.group(1));
+                    String permission = matcher.group(2);
+                    refreshSingle(new PermissionKey(userId, permission));
+                } else {
+                    int userId = Integer.parseInt((String) key);
+                    refreshSingle(userId);
+                }
+            }
         }
     }
 
@@ -56,6 +70,19 @@ public class UserPermissionCache implements RefreshListener, AutoCloseable {
         clear();
         List<UserPermission> permissions = loadAllFromDatabase();
         permissions.forEach(this::put);
+    }
+
+    private void refreshSingle(int userId) {
+        remove(userId);
+        List<UserPermission> permissions = loadByUserId(userId);
+        permissions.forEach(this::put);
+    }
+
+    private void refreshSingle(PermissionKey key) {
+        remove(key.userId(), key.permission());
+        UserPermission permission = loadByKey(key);
+        if (permission != null)
+            put(permission);
     }
 
     private List<UserPermission> loadAllFromDatabase() {

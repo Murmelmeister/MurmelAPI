@@ -11,6 +11,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GroupParentCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
@@ -39,10 +41,22 @@ public class GroupParentCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_GROUP_PARENT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof ParentKey(int groupId, int parentId))
-                remove(groupId, parentId);
-            else if (key instanceof Integer groupId)
-                remove(groupId);
+            if (!(key instanceof String)) {
+                if (key instanceof ParentKey parentKey)
+                    refreshSingle(parentKey);
+                else if (key instanceof Integer groupId)
+                    refreshSingle(groupId);
+            } else {
+                Matcher matcher = Pattern.compile(".*groupId=(\\d+), parentId=(\\d+).*").matcher((String) key);
+                if (matcher.matches()) {
+                    int groupId = Integer.parseInt(matcher.group(1));
+                    int parentId = Integer.parseInt(matcher.group(2));
+                    refreshSingle(new ParentKey(groupId, parentId));
+                } else {
+                    int groupId = Integer.parseInt((String) key);
+                    refreshSingle(groupId);
+                }
+            }
         }
     }
 
@@ -56,6 +70,19 @@ public class GroupParentCache implements RefreshListener, AutoCloseable {
         clear();
         List<GroupParent> parents = loadAllFromDatabase();
         parents.forEach(this::put);
+    }
+
+    private void refreshSingle(int groupId) {
+        remove(groupId);
+        List<GroupParent> parents = loadByGroupId(groupId);
+        parents.forEach(this::put);
+    }
+
+    private void refreshSingle(ParentKey key) {
+        remove(key.groupId(), key.parentId());
+        GroupParent groupParent = loadByKey(key);
+        if (groupParent != null)
+            put(groupParent);
     }
 
     public List<GroupParent> loadAllFromDatabase() {

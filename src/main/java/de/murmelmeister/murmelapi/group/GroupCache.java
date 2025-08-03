@@ -39,8 +39,13 @@ public class GroupCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_GROUP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof Integer id)
-                remove(id);
+            if (!(key instanceof String)) {
+                if (key instanceof Integer id)
+                    refreshSingle(id);
+            } else {
+                int id = Integer.parseInt((String) key);
+                refreshSingle(id);
+            }
         }
     }
 
@@ -54,6 +59,13 @@ public class GroupCache implements RefreshListener, AutoCloseable {
         clear();
         List<Group> groups = loadAllFromDatabase();
         groups.forEach(this::put);
+    }
+
+    private void refreshSingle(int id) {
+        remove(id);
+        Group group = loadById(id);
+        if (group != null)
+            put(group);
     }
 
     private List<Group> loadAllFromDatabase() {

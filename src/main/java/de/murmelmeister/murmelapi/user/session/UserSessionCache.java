@@ -40,8 +40,13 @@ public class UserSessionCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_USER_SESSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof UUID sessionId)
-                remove(sessionId);
+            if (!(key instanceof String)) {
+                if (key instanceof UUID sessionId)
+                    refreshSingle(sessionId);
+            } else {
+                UUID sessionId = UUID.fromString((String) key);
+                refreshSingle(sessionId);
+            }
         }
     }
 
@@ -55,6 +60,13 @@ public class UserSessionCache implements RefreshListener, AutoCloseable {
         clear();
         List<UserSession> sessions = loadAllFromDatabase();
         sessions.forEach(this::put);
+    }
+
+    private void refreshSingle(UUID sessionId) {
+        remove(sessionId);
+        UserSession session = loadById(sessionId);
+        if (session != null)
+            put(session);
     }
 
     private List<UserSession> loadAllFromDatabase() {

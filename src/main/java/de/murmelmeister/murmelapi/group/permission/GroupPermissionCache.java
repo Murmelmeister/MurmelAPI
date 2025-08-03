@@ -11,6 +11,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GroupPermissionCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
@@ -39,10 +41,22 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof PermissionKey(int groupId, String permission))
-                remove(groupId, permission);
-            else if (key instanceof Integer groupId)
-                remove(groupId);
+            if (!(key instanceof String)) {
+                if (key instanceof PermissionKey permissionKey)
+                    refreshSingle(permissionKey);
+                else if (key instanceof Integer groupId)
+                    refreshSingle(groupId);
+            } else {
+                Matcher matcher = Pattern.compile(".*groupId=(\\d+), permission=(\\w+).*").matcher((String) key);
+                if (matcher.matches()) {
+                    int groupId = Integer.parseInt(matcher.group(1));
+                    String permission = matcher.group(2);
+                    refreshSingle(new PermissionKey(groupId, permission));
+                } else {
+                    int groupId = Integer.parseInt((String) key);
+                    refreshSingle(groupId);
+                }
+            }
         }
     }
 
@@ -56,6 +70,19 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
         clear();
         List<GroupPermission> permissions = loadAllFromDatabase();
         permissions.forEach(this::put);
+    }
+
+    private void refreshSingle(int groupId) {
+        remove(groupId);
+        List<GroupPermission> permissions = loadByUserId(groupId);
+        permissions.forEach(this::put);
+    }
+
+    private void refreshSingle(PermissionKey key) {
+        remove(key.groupId(), key.permission());
+        GroupPermission permission = loadByKey(key);
+        if (permission != null)
+            put(permission);
     }
 
     private List<GroupPermission> loadAllFromDatabase() {

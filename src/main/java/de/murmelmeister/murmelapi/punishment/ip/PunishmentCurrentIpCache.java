@@ -11,6 +11,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
@@ -37,8 +39,19 @@ public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable 
             refreshAll();
         else if (RefreshType.SINGLE_PUNISHMENT_IP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof IpTypeKey(String ipAddress, int typeId))
-                remove(ipAddress, typeId);
+            if (!(key instanceof String)) {
+                if (key instanceof IpTypeKey ipTypeKey)
+                    refreshSingle(ipTypeKey);
+            } else {
+                Matcher matcher = Pattern.compile(".*ipAddress=(\\w+), typeId=(\\d+).*").matcher((String) key);
+                if (matcher.matches()) {
+                    String ipAddress = matcher.group(1);
+                    int typeId = Integer.parseInt(matcher.group(2));
+                    refreshSingle(new IpTypeKey(ipAddress, typeId));
+                } else {
+                    throw new IllegalArgumentException("Invalid key format: " + key);
+                }
+            }
         }
     }
 
@@ -52,6 +65,13 @@ public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable 
         clear();
         List<PunishmentCurrentIp> punishments = loadAllFromDatabase();
         punishments.forEach(this::put);
+    }
+
+    private void refreshSingle(IpTypeKey key) {
+        remove(key.ipAddress(), key.typeId());
+        PunishmentCurrentIp punishment = loadFromDatabase(key);
+        if (punishment != null)
+            put(punishment);
     }
 
     private List<PunishmentCurrentIp> loadAllFromDatabase() {

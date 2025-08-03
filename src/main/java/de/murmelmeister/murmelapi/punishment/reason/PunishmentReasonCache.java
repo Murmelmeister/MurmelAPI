@@ -39,8 +39,13 @@ public class PunishmentReasonCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_PUNISHMENT_REASON.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof Integer reasonId)
-                remove(reasonId);
+            if (!(key instanceof String)) {
+                if (key instanceof Integer reasonId)
+                    refreshSingle(reasonId);
+            } else {
+                int reasonId = Integer.parseInt((String) key);
+                refreshSingle(reasonId);
+            }
         }
     }
 
@@ -54,6 +59,13 @@ public class PunishmentReasonCache implements RefreshListener, AutoCloseable {
         clear();
         List<PunishmentReason> reasons = loadAllFromDatabase();
         reasons.forEach(this::put);
+    }
+
+    private void refreshSingle(int reasonId) {
+        remove(reasonId);
+        PunishmentReason reason = loadById(reasonId);
+        if (reason != null)
+            put(reason);
     }
 
     private List<PunishmentReason> loadAllFromDatabase() {

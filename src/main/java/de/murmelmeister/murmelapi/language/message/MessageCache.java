@@ -11,6 +11,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * MessageCache is a thread-safe cache for storing messages by their ID and tag.
@@ -42,12 +44,28 @@ public class MessageCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_MESSAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof Integer id)
-                remove(id);
-            else if (key instanceof TagKey(String tag, int languageId))
-                removeByTag(tag, languageId);
-            else if (key instanceof LanguageKey(int languageId))
-                removeByLanguage(languageId);
+            if (!(key instanceof String)) {
+                if (key instanceof Integer id)
+                    refreshSingle(id);
+                else if (key instanceof TagKey tagKey)
+                    refreshSingle(tagKey);
+                else if (key instanceof LanguageKey languageKey)
+                    refreshSingle(languageKey);
+            } else {
+                Matcher languageMatcher = Pattern.compile("^LanguageKey\\[languageId=(\\d+)]$").matcher((String) key);
+                Matcher tagMatcher = Pattern.compile("^TagKey\\[tagId=(\\w+), languageId=(\\d+)]$").matcher((String) key);
+                if (languageMatcher.matches()) {
+                    int languageId = Integer.parseInt(languageMatcher.group(1));
+                    refreshSingle(new LanguageKey(languageId));
+                } else if (tagMatcher.matches()) {
+                    String tagId = tagMatcher.group(1);
+                    int languageId = Integer.parseInt(tagMatcher.group(2));
+                    refreshSingle(new TagKey(tagId, languageId));
+                } else {
+                    int id = Integer.parseInt((String) key);
+                    refreshSingle(id);
+                }
+            }
         }
     }
 
@@ -61,6 +79,26 @@ public class MessageCache implements RefreshListener, AutoCloseable {
         clear();
         List<Message> messages = loadAllFromDatabase();
         messages.forEach(this::put);
+    }
+
+    private void refreshSingle(LanguageKey key) {
+        removeByLanguage(key.languageId());
+        List<Message> messages = loadByLanguage(key.languageId());
+        messages.forEach(this::put);
+    }
+
+    private void refreshSingle(TagKey key) {
+        removeByTag(key.tagId(), key.languageId());
+        Message message = loadByTag(key);
+        if (message != null)
+            put(message);
+    }
+
+    private void refreshSingle(int id) {
+        remove(id);
+        Message message = loadById(id);
+        if (message != null)
+            put(message);
     }
 
     private List<Message> loadAllFromDatabase() {

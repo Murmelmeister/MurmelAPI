@@ -42,8 +42,13 @@ public class UserCache implements RefreshListener, AutoCloseable {
             refreshAll();
         else if (RefreshType.SINGLE_USER.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.getKey();
-            if (key instanceof Integer id)
-                remove(id);
+            if (!(key instanceof String)) {
+                if (key instanceof Integer id)
+                    refreshSingle(id);
+            } else {
+                int id = Integer.parseInt((String) key);
+                refreshSingle(id);
+            }
         }
     }
 
@@ -57,6 +62,13 @@ public class UserCache implements RefreshListener, AutoCloseable {
         clear();
         List<User> users = loadAllFromDatabase();
         users.forEach(this::put);
+    }
+
+    private void refreshSingle(int id) {
+        remove(id);
+        User user = loadById(id);
+        if (user != null)
+            put(user);
     }
 
     private List<User> loadAllFromDatabase() {
