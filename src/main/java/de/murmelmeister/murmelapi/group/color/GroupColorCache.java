@@ -72,17 +72,17 @@ public class GroupColorCache implements RefreshListener, AutoCloseable {
         colors.forEach(this::put);
     }
 
+    private void refreshSingle(int groupId) {
+        remove(groupId);
+        List<GroupColor> groupColors = loadByGroupId(groupId);
+        groupColors.forEach(this::put);
+    }
+
     private void refreshSingle(ColorKey key) {
         remove(key.groupId(), key.typeId());
         GroupColor groupColor = loadByKey(key);
         if (groupColor != null)
             put(groupColor);
-    }
-
-    private void refreshSingle(int groupId) {
-        remove(groupId);
-        List<GroupColor> groupColors = loadByGroupId(groupId);
-        groupColors.forEach(this::put);
     }
 
     private List<GroupColor> loadAllFromDatabase() {
