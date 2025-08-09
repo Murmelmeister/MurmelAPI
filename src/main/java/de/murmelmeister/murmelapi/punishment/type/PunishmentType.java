@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.punishment.type;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 
 public enum PunishmentType {
     BAN(1, "Ban", false),

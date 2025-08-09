@@ -1,7 +1,7 @@
 package de.murmelmeister.murmelapi.permission;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
 import de.murmelmeister.murmelapi.user.User;

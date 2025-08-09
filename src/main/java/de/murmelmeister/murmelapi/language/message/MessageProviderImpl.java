@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.language.message;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -64,7 +64,7 @@ public final class MessageProviderImpl implements MessageProvider {
         if (tagId.isEmpty()) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (tag_id, language_id, message) VALUES (?, ?, ?)";
-        int id = database.updateAndGetAutoIncrement(sql, tagId, languageId, message);
+        int id = (int) database.updateWithGeneratedKeys(sql, tagId, languageId, message);
         if (id < 1) return null;
 
         Message msg = new Message(id, tagId, languageId, message);

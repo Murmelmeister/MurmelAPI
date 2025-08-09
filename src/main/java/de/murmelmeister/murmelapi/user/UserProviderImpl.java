@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.user;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -102,7 +102,7 @@ public final class UserProviderImpl implements UserProvider {
         if (username.isEmpty()) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (mojang_id, username) VALUES (?, ?)";
-        int id = database.updateAndGetAutoIncrement(sql, uuid.toString(), username);
+        int id = (int) database.updateWithGeneratedKeys(sql, uuid.toString(), username);
         if (id < 1) return null;
 
         User newUser = new User(id, uuid, username, null, false, false, false, 1);

@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.punishment.audit;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;

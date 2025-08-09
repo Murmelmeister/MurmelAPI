@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.user.session;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 

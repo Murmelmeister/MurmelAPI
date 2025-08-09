@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.group;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -91,7 +91,7 @@ public final class GroupProviderImpl implements GroupProvider {
 
         String insertSql = "INSERT INTO " + TABLE_NAME + " (group_name, priority, team_tag_id, created_by) " +
                            "VALUES (?, ?, ?, ?)";
-        int groupId = database.updateAndGetAutoIncrement(insertSql, groupName, priority, teamId, createdBy);
+        int groupId = (int) database.updateWithGeneratedKeys(insertSql, groupName, priority, teamId, createdBy);
         if (groupId < 1) return null;
 
         String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE id = ?";

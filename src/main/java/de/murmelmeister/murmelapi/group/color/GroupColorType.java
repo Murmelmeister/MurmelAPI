@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.group.color;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 
 /**
  * The GroupColorType enum represents the types of group color customization

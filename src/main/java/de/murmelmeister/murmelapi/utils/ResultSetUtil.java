@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.utils;
 
-import de.murmelmeister.murmelapi.database.ResultSetProcessor;
+import de.murmelmeister.library.database.ResultSetProcessor;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.color.GroupColor;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;

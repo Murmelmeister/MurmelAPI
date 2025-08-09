@@ -3,8 +3,8 @@ package de.murmelmeister.murmelapi.utils;
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import de.murmelmeister.murmelapi.database.Database;
-import de.murmelmeister.murmelapi.database.ResultSetProcessor;
+import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.database.ResultSetProcessor;
 
 import java.time.Duration;
 import java.util.ArrayList;

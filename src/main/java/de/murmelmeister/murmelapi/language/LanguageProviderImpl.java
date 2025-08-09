@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi.language;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -71,7 +71,7 @@ public final class LanguageProviderImpl implements LanguageProvider {
         if (name.isEmpty()) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (name) VALUES (?)";
-        int id = database.updateAndGetAutoIncrement(sql, name);
+        int id = (int) database.updateWithGeneratedKeys(sql, name);
         if (id < 1) return null;
 
         Language language = new Language(id, name);

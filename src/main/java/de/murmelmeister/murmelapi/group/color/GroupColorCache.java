@@ -1,7 +1,7 @@
 package de.murmelmeister.murmelapi.group.color;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;

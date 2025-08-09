@@ -1,12 +1,12 @@
 package de.murmelmeister.murmelapi.logging;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.UUID;
 
-import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+//import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
 
 /**
  * LoginHistoryProvider class to manage login history in the database.
@@ -66,7 +66,7 @@ public final class LoginHistoryProvider implements LoginHistory {
     @Override
     public String getLoginDate(UUID loginId) {
         Timestamp loginTime = getLoginTime(loginId);
-        return loginTime == null ? null : getDateFormat().format(loginTime);
+        return loginTime == null ? null : loginTime.toString(); //getDateFormat().format(loginTime);
     }
 
     @Override
@@ -78,7 +78,7 @@ public final class LoginHistoryProvider implements LoginHistory {
     @Override
     public String getLogoutDate(UUID loginId) {
         Timestamp logoutTime = getLogoutTime(loginId);
-        return logoutTime == null ? null : getDateFormat().format(logoutTime);
+        return logoutTime == null ? null : logoutTime.toString(); //getDateFormat().format(logoutTime);
     }
 
     @Override
@@ -120,7 +120,7 @@ public final class LoginHistoryProvider implements LoginHistory {
     @Override
     public String getLastQuitDate(int userId) {
         Timestamp lastQuit = getLastQuit(userId);
-        return lastQuit == null ? null : getDateFormat().format(lastQuit);
+        return lastQuit == null ? null : lastQuit.toString(); //getDateFormat().format(lastQuit);
     }
 
     @Override
@@ -135,8 +135,8 @@ public final class LoginHistoryProvider implements LoginHistory {
         return database.queryCallable(Procedure.GET_DATE_BY_USER_AND_IP.getName(), null, result -> {
             Timestamp minTime = result.getTimestamp("minTime");
             Timestamp maxTime = result.getTimestamp("maxTime");
-            String minDate = minTime == null ? null : getDateFormat().format(minTime);
-            String maxDate = maxTime == null ? null : getDateFormat().format(maxTime);
+            String minDate = minTime == null ? null : minTime.toString(); //getDateFormat().format(minTime);
+            String maxDate = maxTime == null ? null : maxTime.toString(); //getDateFormat().format(maxTime);
             return minDate + " - " + maxDate;
         }, userId);
     }

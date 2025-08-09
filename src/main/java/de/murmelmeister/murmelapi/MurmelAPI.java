@@ -1,6 +1,6 @@
 package de.murmelmeister.murmelapi;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
@@ -85,8 +85,8 @@ public final class MurmelAPI {
         DATABASE = new Database();
     }
 
-    public static void connect(String url, String user, String password) {
-        DATABASE.connectMySQL(url, user, password);
+    public static void connect(String driver, String url, String user, String password) {
+        DATABASE.connect(driver, url, user, password);
         setup();
     }
 

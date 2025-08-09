@@ -1,12 +1,12 @@
 package de.murmelmeister.murmelapi.logging;
 
-import de.murmelmeister.murmelapi.database.Database;
+import de.murmelmeister.library.database.Database;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.util.UUID;
 
-import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
+//import static de.murmelmeister.murmelapi.MurmelAPI.getDateFormat;
 
 /**
  * ActiveSessionProvider class to manage active sessions in the database.
@@ -75,7 +75,7 @@ public final class ActiveSessionProvider implements ActiveSession {
     public String getLoginDate(int userId) {
         if (userId < 1) return null;
         Timestamp loginTime = getLoginTime(userId);
-        return loginTime == null ? null : getDateFormat().format(loginTime);
+        return loginTime == null ? null : loginTime.toString(); //getDateFormat().format(loginTime);
     }
 
     @Override
