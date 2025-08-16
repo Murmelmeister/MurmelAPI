@@ -25,7 +25,7 @@ public final class MessageProviderImpl implements MessageProvider {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
                                          "tag_id VARCHAR(255), " +
                                          "language_id INT, " +
-                                         "UNIQUE (tag, language_id), " +
+                                         "UNIQUE (tag_id, language_id), " +
                                          "message TEXT, " +
                                          "FOREIGN KEY (language_id) REFERENCES languages(id)");
     }
