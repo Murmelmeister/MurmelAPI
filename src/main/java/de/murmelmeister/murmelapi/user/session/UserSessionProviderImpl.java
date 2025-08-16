@@ -83,7 +83,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
         if (loginTime == null) return null;
 
         UserSession session = new UserSession(sessionId, userId, loginTime, ipAddress, clientVersion, protocolVersion);
-        RefreshUtil.fireSingle(single, session.userId());
+        RefreshUtil.fireSingle(single, session.id());
         cache.put(session);
         return session;
     }
