@@ -43,7 +43,7 @@ public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable 
                 if (key instanceof IpTypeKey ipTypeKey)
                     refreshSingle(ipTypeKey);
             } else {
-                Matcher matcher = Pattern.compile(".*ipAddress=(\\w+), typeId=(\\d+).*").matcher((String) key);
+                Matcher matcher = Pattern.compile(".*ipAddress=([^,]+), typeId=(\\d+).*").matcher((String) key);
                 if (matcher.matches()) {
                     String ipAddress = matcher.group(1);
                     int typeId = Integer.parseInt(matcher.group(2));
