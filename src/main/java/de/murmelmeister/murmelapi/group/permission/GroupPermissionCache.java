@@ -47,7 +47,7 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
                 else if (key instanceof Integer groupId)
                     refreshSingle(groupId);
             } else {
-                Matcher matcher = Pattern.compile(".*groupId=(\\d+), permission=(\\w+).*").matcher((String) key);
+                Matcher matcher = Pattern.compile(".*groupId=(\\d+), permission=([^,]+).*").matcher((String) key);
                 if (matcher.matches()) {
                     int groupId = Integer.parseInt(matcher.group(1));
                     String permission = matcher.group(2);

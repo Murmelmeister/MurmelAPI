@@ -31,11 +31,11 @@ public final class LanguageProviderImpl implements LanguageProvider {
     }
 
     public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(100) UNIQUE");
+        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, name VARCHAR(100) UNIQUE"); // TODO: Change 'name' to 'code'
     }
 
     public static void createDefaultLanguages(Database database) {
-        database.update("INSERT IGNORE INTO " + TABLE_NAME + " (id, name) VALUES (1, 'English'), (2, 'German')");
+        database.update("INSERT IGNORE INTO " + TABLE_NAME + " (id, name) VALUES (1, 'English'), (2, 'German')"); // TODO: English -> en_US; German -> de_DE
     }
 
     @Override
