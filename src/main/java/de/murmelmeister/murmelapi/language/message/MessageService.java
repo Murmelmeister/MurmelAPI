@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.language.message;
 
+import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,11 +52,18 @@ public final class MessageService {
      */
     public String getMessage(MessageDefinition messages, int languageId) {
         Message message = messageProvider.get(messages.getTag(), languageId);
-        if (message == null) {
-            logger.warn("Message with tag '{}' and language ID '{}' not found.", messages.getTag(), languageId);
-            message = messageProvider.get(messages.getTag(), languageProvider.get("english").id());
+        if (message != null)
             return message.message();
+
+        logger.warn("Message with tag '{}' and language ID '{}' not found.", messages.getTag(), languageId);
+
+        Language defaultLanguage = languageProvider.get("english");
+        if (defaultLanguage != null) {
+            Message fallback = messageProvider.get(messages.getTag(), defaultLanguage.id());
+            if (fallback != null)
+                return fallback.message();
         }
-        return message.message();
+
+        return null;
     }
 }
