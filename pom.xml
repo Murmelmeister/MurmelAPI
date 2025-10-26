@@ -63,7 +63,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <finalName>${project.parent.artifactId}</finalName>
+                    <finalName>${project.artifactId}</finalName>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>
                     </descriptorRefs>
