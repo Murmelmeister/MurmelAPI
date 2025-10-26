@@ -31,12 +31,12 @@ public class UserPlayTimeCache implements RefreshListener, AutoCloseable {
 
     @Override
     public void onRefresh(RefreshEvent<?> event) {
-        String cacheName = event.getType();
+        String cacheName = event.type();
         if (RefreshType.USER_PLAY_TIMES.getName().equalsIgnoreCase(cacheName)
             || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_USER_PLAY_TIME.getName().equalsIgnoreCase(cacheName)) {
-            Object key = event.getKey();
+            Object key = event.key();
             if (!(key instanceof String)) {
                 if (key instanceof Integer userId)
                     refreshSingle(userId);

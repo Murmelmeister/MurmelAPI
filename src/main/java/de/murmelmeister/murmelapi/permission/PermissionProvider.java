@@ -135,7 +135,7 @@ public final class PermissionProvider implements Permission, RefreshListener, Au
 
     @Override
     public void onRefresh(RefreshEvent<?> event) {
-        String cacheName = event.getType();
+        String cacheName = event.type();
         // Let the cache refresh by single and all events (Not really optimal, but works for now)
         if (RefreshType.USER_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
             || RefreshType.GROUP_PERMISSIONS.getName().equalsIgnoreCase(cacheName)

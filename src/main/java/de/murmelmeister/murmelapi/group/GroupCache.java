@@ -33,12 +33,12 @@ public class GroupCache implements RefreshListener, AutoCloseable {
 
     @Override
     public void onRefresh(RefreshEvent<?> event) {
-        String cacheName = event.getType();
+        String cacheName = event.type();
         if (RefreshType.GROUPS.getName().equalsIgnoreCase(cacheName)
             || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_GROUP.getName().equalsIgnoreCase(cacheName)) {
-            Object key = event.getKey();
+            Object key = event.key();
             if (!(key instanceof String)) {
                 if (key instanceof Integer id)
                     refreshSingle(id);

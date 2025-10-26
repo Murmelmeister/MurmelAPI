@@ -35,12 +35,12 @@ public class UserPermissionCache implements RefreshListener, AutoCloseable {
 
     @Override
     public void onRefresh(RefreshEvent<?> event) {
-        String cacheName = event.getType();
+        String cacheName = event.type();
         if (RefreshType.USER_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
             || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_USER_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
-            Object key = event.getKey();
+            Object key = event.key();
             if (!(key instanceof String)) {
                 if (key instanceof PermissionKey permissionKey)
                     refreshSingle(permissionKey);
