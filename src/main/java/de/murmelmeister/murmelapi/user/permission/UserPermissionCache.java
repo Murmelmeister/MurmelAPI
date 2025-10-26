@@ -47,7 +47,7 @@ public class UserPermissionCache implements RefreshListener, AutoCloseable {
                 else if (key instanceof Integer userId)
                     refreshSingle(userId);
             } else {
-                Matcher matcher = Pattern.compile(".*userId=(\\d+), permission=([^,]+).*").matcher((String) key);
+                Matcher matcher = Pattern.compile(".*userId=(\\d+), permission=([^,\\]]+).*").matcher((String) key);
                 if (matcher.matches()) {
                     int userId = Integer.parseInt(matcher.group(1));
                     String permission = matcher.group(2);
