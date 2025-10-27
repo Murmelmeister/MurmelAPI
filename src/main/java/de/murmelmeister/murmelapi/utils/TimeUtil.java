@@ -12,11 +12,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Utility class for time-related operations.
+ * Utility class for parsing and formatting time-based values used across the plugin.
  */
 public final class TimeUtil {
     private static final Pattern TIME_PATTERN = Pattern.compile("^(\\d+)([smhdwMy])$");
 
+    /**
+     * Parses a short duration token (e.g. {@code 5m}, {@code 2h}) into seconds.
+     *
+     * @param time duration token to parse
+     * @return parsed seconds, or a negative sentinel value if the input is invalid
+     */
     public static long parseDurationInSeconds(String time) {
         if ("-1".equals(time)) return -1L; // Permanent
         if (time.startsWith("-")) return -2L; // No negative value
@@ -37,6 +43,17 @@ public final class TimeUtil {
         };
     }
 
+    /**
+     * Formats the supplied duration into a localized, human-readable string.
+     * <p>
+     * Filters act as an exclusion list: any listed units are omitted from the result.
+     *
+     * @param messageService service used to resolve localized unit labels
+     * @param languageId     identifier of the target language
+     * @param totalSeconds   duration to format
+     * @param filters        optional time units to exclude from the output
+     * @return localized duration string
+     */
     public static String formatDuration(MessageService messageService, int languageId, long totalSeconds, TimeFilterUtil... filters) {
         if (totalSeconds <= 0) return "0 seconds";
 
