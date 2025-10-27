@@ -20,8 +20,8 @@ public final class TimeUtil {
     /**
      * Parses a short duration token (e.g. {@code 5m}, {@code 2h}) into seconds.
      *
-     * @param time duration token to parse
-     * @return parsed seconds, or a negative sentinel value if the input is invalid
+     * @param time Duration token to parse
+     * @return Parsed seconds, or a negative sentinel value if the input is invalid
      */
     public static long parseDurationInSeconds(String time) {
         if ("-1".equals(time)) return -1L; // Permanent
@@ -48,11 +48,11 @@ public final class TimeUtil {
      * <p>
      * Filters act as an exclusion list: any listed units are omitted from the result.
      *
-     * @param messageService service used to resolve localized unit labels
-     * @param languageId     identifier of the target language
-     * @param totalSeconds   duration to format
-     * @param filters        optional time units to exclude from the output
-     * @return localized duration string
+     * @param messageService Service used to resolve localized unit labels
+     * @param languageId     Identifier of the target language
+     * @param totalSeconds   Duration to format
+     * @param filters        Optional time units to exclude from the output
+     * @return Localized duration string
      */
     public static String formatDuration(MessageService messageService, int languageId, long totalSeconds, TimeFilterUtil... filters) {
         if (totalSeconds <= 0) return "0 seconds";
@@ -71,10 +71,8 @@ public final class TimeUtil {
 
         StringBuilder builder = new StringBuilder();
         boolean appended = false;
-        TimeFilterUtil fallbackFilter = null;
 
         if (!excludedFilters.contains(TimeFilterUtil.YEARS)) {
-            fallbackFilter = TimeFilterUtil.YEARS;
             if (years > 0) {
                 builder.append(years).append(" ").append(years == 1 ?
                         messageService.getMessage(MurmelMessage.TIME_YEAR_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_YEAR_PLURAL, languageId)).append(" ");
@@ -82,7 +80,6 @@ public final class TimeUtil {
             }
         }
         if (!excludedFilters.contains(TimeFilterUtil.DAYS)) {
-            if (fallbackFilter == null) fallbackFilter = TimeFilterUtil.DAYS;
             if (days > 0) {
                 builder.append(days).append(" ").append(days == 1 ?
                         messageService.getMessage(MurmelMessage.TIME_DAY_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_DAY_PLURAL, languageId)).append(" ");
@@ -90,7 +87,6 @@ public final class TimeUtil {
             }
         }
         if (!excludedFilters.contains(TimeFilterUtil.HOURS)) {
-            if (fallbackFilter == null) fallbackFilter = TimeFilterUtil.HOURS;
             if (hours > 0) {
                 builder.append(hours).append(" ").append(hours == 1 ?
                         messageService.getMessage(MurmelMessage.TIME_HOUR_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_HOUR_PLURAL, languageId)).append(" ");
@@ -98,7 +94,6 @@ public final class TimeUtil {
             }
         }
         if (!excludedFilters.contains(TimeFilterUtil.MINUTES)) {
-            if (fallbackFilter == null) fallbackFilter = TimeFilterUtil.MINUTES;
             if (minutes > 0) {
                 builder.append(minutes).append(" ").append(minutes == 1 ?
                         messageService.getMessage(MurmelMessage.TIME_MINUTE_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_MINUTE_PLURAL, languageId)).append(" ");
@@ -106,7 +101,6 @@ public final class TimeUtil {
             }
         }
         if (!excludedFilters.contains(TimeFilterUtil.SECONDS)) {
-            if (fallbackFilter == null) fallbackFilter = TimeFilterUtil.SECONDS;
             if (seconds > 0) {
                 builder.append(seconds).append(" ").append(seconds == 1 ?
                         messageService.getMessage(MurmelMessage.TIME_SECOND_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_SECOND_PLURAL, languageId));
@@ -115,6 +109,11 @@ public final class TimeUtil {
         }
 
         if (!appended) {
+            TimeFilterUtil fallbackFilter = Arrays.stream(TimeFilterUtil.values())
+                    .filter(filter -> !excludedFilters.contains(filter))
+                    .reduce((first, second) -> second)
+                    .orElse(null);
+
             if (fallbackFilter == null) return "0 seconds";
 
             MurmelMessage pluralMessage = switch (fallbackFilter) {
