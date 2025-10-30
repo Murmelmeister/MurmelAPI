@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,17 +39,22 @@ public class UserCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.USERS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_USER.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof Integer id)
-                    refreshSingle(id);
-            } else {
-                int id = Integer.parseInt((String) key);
-                refreshSingle(id);
+            Integer id = null;
+            if (key instanceof Number number)
+                id = number.intValue();
+            else if (key instanceof String stringKey) {
+                try {
+                    id = Integer.parseInt(stringKey);
+                } catch (NumberFormatException ignored) {
+                    return;
+                }
             }
+            if (id != null)
+                refreshSingle(id);
         }
     }
 
@@ -78,17 +84,17 @@ public class UserCache implements RefreshListener, AutoCloseable {
 
     private User loadByName(String name) {
         String sql = "SELECT * FROM " + tableName + " WHERE username = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), name);
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), stmt -> stmt.setString(1, name));
     }
 
     private User loadByUUID(UUID uuid) {
         String sql = "SELECT * FROM " + tableName + " WHERE mojang_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), uuid.toString());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), stmt -> stmt.setString(1, uuid.toString()));
     }
 
     private User loadById(int id) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), id);
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), stmt -> stmt.setInt(1, id));
     }
 
     public User getById(int id) {
@@ -128,6 +134,9 @@ public class UserCache implements RefreshListener, AutoCloseable {
     }
 
     public List<User> getCachedUsers() {
-        return listCache.get(ALL_KEY);
+        List<User> users = listCache.get(ALL_KEY);
+        if (users == null || users.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(users);
     }
 }
