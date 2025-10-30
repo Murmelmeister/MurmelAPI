@@ -4,6 +4,7 @@ import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.database.ParameterProcessor;
 import de.murmelmeister.library.database.ResultSetProcessor;
 
 import java.time.Duration;
@@ -56,17 +57,37 @@ public final class CacheUtil {
         });
     }
 
-    public static <V> V loadSingle(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet, Object... args) {
+    public static <V> V loadSingle(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet, ParameterProcessor args) {
         String limitSql = sql + (limit != null && limit > 0 ? " LIMIT ?" : "");
-        return limit != null && limit > 0
-                ? database.query(limitSql, null, resultSet, args, limit)
-                : database.query(limitSql, null, resultSet, args);
+        ParameterProcessor limitProcessor = limit != null && limit > 0
+                ? stmt -> stmt.setLong(stmt.getParameterMetaData().getParameterCount(), limit)
+                : ParameterProcessor.noop();
+        ParameterProcessor processor = ParameterProcessor.of(args).andThen(limitProcessor);
+        return database.query(limitSql, null, resultSet, processor);
     }
 
-    public static <V> List<V> loadList(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet, Object... args) {
+    public static <V> V loadSingle(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet) {
         String limitSql = sql + (limit != null && limit > 0 ? " LIMIT ?" : "");
-        return limit != null && limit > 0
-                ? database.queryList(limitSql, resultSet, args, limit)
-                : database.queryList(limitSql, resultSet, args);
+        ParameterProcessor limitProcessor = limit != null && limit > 0
+                ? stmt -> stmt.setLong(stmt.getParameterMetaData().getParameterCount(), limit)
+                : ParameterProcessor.noop();
+        return database.query(limitSql, null, resultSet, limitProcessor);
+    }
+
+    public static <V> List<V> loadList(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet, ParameterProcessor args) {
+        String limitSql = sql + (limit != null && limit > 0 ? " LIMIT ?" : "");
+        ParameterProcessor limitProcessor = limit != null && limit > 0
+                ? stmt -> stmt.setLong(stmt.getParameterMetaData().getParameterCount(), limit)
+                : ParameterProcessor.noop();
+        ParameterProcessor processor = ParameterProcessor.of(args).andThen(limitProcessor);
+        return database.queryList(limitSql, resultSet, processor);
+    }
+
+    public static <V> List<V> loadList(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet) {
+        String limitSql = sql + (limit != null && limit > 0 ? " LIMIT ?" : "");
+        ParameterProcessor limitProcessor = limit != null && limit > 0
+                ? stmt -> stmt.setLong(stmt.getParameterMetaData().getParameterCount(), limit)
+                : ParameterProcessor.noop();
+        return database.queryList(limitSql, resultSet, limitProcessor);
     }
 }
