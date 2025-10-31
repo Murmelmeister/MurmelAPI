@@ -12,6 +12,9 @@ target/
 *.iml
 *.ipr
 .idea/*
+.env
+.env.*
+!.env.example
 
 ### Eclipse ###
 .apt_generated
