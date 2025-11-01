@@ -24,11 +24,11 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "ip_address VARCHAR(45) NOT NULL, " +
-                                         "type_id INT NOT NULL, " +
-                                         "log_id VARCHAR(36) NOT NULL UNIQUE, " +
-                                         "PRIMARY KEY (ip_address, type_id), " +
-                                         "FOREIGN KEY (type_id) REFERENCES punishment_types(id), " +
-                                         "FOREIGN KEY (log_id) REFERENCES punishment_logs(id)"
+                "type_id INT NOT NULL, " +
+                "log_id VARCHAR(36) NOT NULL UNIQUE, " +
+                "PRIMARY KEY (ip_address, type_id), " +
+                "FOREIGN KEY (type_id) REFERENCES punishment_types(id), " +
+                "FOREIGN KEY (log_id) REFERENCES punishment_logs(id)"
         );
     }
 
@@ -64,7 +64,12 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
         if (ipAddress.isEmpty()) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (ip_address, type_id, log_id) VALUES (?, ?, ?)";
-        int row = database.update(sql, ipAddress, typeId, logId.toString());
+        String finalIpAddress = ipAddress;
+        int row = database.update(sql, stmt -> {
+            stmt.setString(1, finalIpAddress);
+            stmt.setInt(2, typeId);
+            stmt.setString(3, logId.toString());
+        });
         if (row < 1) return null;
 
         PunishmentCurrentIp punish = new PunishmentCurrentIp(ipAddress, typeId, logId);
@@ -82,7 +87,11 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
         if (ipAddress.isEmpty()) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE ip_address = ? AND type_id = ?";
-        int row = database.update(sql, ipAddress, typeId);
+        String finalIpAddress = ipAddress;
+        int row = database.update(sql, stmt -> {
+            stmt.setString(1, finalIpAddress);
+            stmt.setInt(2, typeId);
+        });
         if (row < 1) return 0;
 
         cache.remove(ipAddress, typeId);
@@ -105,7 +114,12 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
             return existing; // No update needed if the log ID is the same
 
         String sql = "UPDATE " + TABLE_NAME + " SET log_id = ? WHERE ip_address = ? AND type_id = ?";
-        int row = database.update(sql, logId.toString(), ipAddress, typeId);
+        String finalIpAddress = ipAddress;
+        int row = database.update(sql, stmt -> {
+            stmt.setString(1, logId.toString());
+            stmt.setString(2, finalIpAddress);
+            stmt.setInt(3, typeId);
+        });
         if (row < 1) return null;
 
         PunishmentCurrentIp punish = existing.withUpdateLog(logId);

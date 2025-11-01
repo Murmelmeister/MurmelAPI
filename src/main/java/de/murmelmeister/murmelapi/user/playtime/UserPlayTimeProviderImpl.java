@@ -57,7 +57,8 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         if (userId < 1) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (id) VALUES (?)";
-        int row = database.update(sql, userId);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, userId));
         if (row < 1) return null;
 
         UserPlayTime newPlayTime = new UserPlayTime(userId, 0, 1);
@@ -72,7 +73,8 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         if (userId < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
-        int row = database.update(sql, userId);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
         cache.remove(userId);
@@ -92,7 +94,11 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
             return existing; // No changes, return existing playtime
 
         String sql = "UPDATE " + TABLE_NAME + " SET play_time = ?, login_count = ? WHERE id = ?";
-        int row = database.update(sql, playTime.getPlayTime(), playTime.getLoginCount(), playTime.getUserId());
+        int row = database.update(sql, stmt -> {
+            stmt.setInt(1, playTime.getPlayTime());
+            stmt.setInt(2, playTime.getLoginCount());
+            stmt.setInt(3, playTime.getUserId());
+        });
         if (row < 1) return null;
 
         RefreshUtil.fireSingle(single, playTime.getUserId());
@@ -125,7 +131,11 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         ++currentPlayTime;
 
         String sql = "UPDATE " + TABLE_NAME + " SET play_time = ? WHERE id = ?";
-        int row = database.update(sql, currentPlayTime, playTime.getUserId());
+        int finalCurrentPlayTime = currentPlayTime;
+        int row = database.update(sql, stmt -> {
+            stmt.setInt(1, finalCurrentPlayTime);
+            stmt.setInt(2, playTime.getUserId());
+        });
         if (row < 1) return; // No rows updated, exit early
 
         playTime.setPlayTime(currentPlayTime);

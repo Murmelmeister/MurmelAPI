@@ -5,6 +5,7 @@ import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.sql.Types;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,21 +28,21 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id VARCHAR(36) PRIMARY KEY, " +
-                                         "action ENUM('CREATED', 'MODIFIED', 'REVOKED') NOT NULL, " +
-                                         "user_id INT NULL, " +
-                                         "ip_address VARCHAR(45) NULL, " +
-                                         "CONSTRAINT chk_user_or_ip_not_both_null CHECK (user_id IS NOT NULL OR ip_address IS NOT NULL), " +
-                                         "reason_id INT NULL, " +
-                                         "reason_type_id INT NOT NULL, " +
-                                         "reason_text TEXT NOT NULL, " +
-                                         "reason_duration BIGINT NULL, " +
-                                         "reason_auto_flag_ip BOOLEAN NOT NULL, " +
-                                         "reason_auto_punish BOOLEAN NOT NULL, " +
-                                         "created_by INT NOT NULL, " +
-                                         "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                                         "FOREIGN KEY (user_id) REFERENCES users(id), " +
-                                         "FOREIGN KEY (reason_id) REFERENCES punishment_reasons(id) ON DELETE SET NULL ON UPDATE CASCADE, " +
-                                         "FOREIGN KEY (created_by) REFERENCES users(id)"
+                "action ENUM('CREATED', 'MODIFIED', 'REVOKED') NOT NULL, " +
+                "user_id INT NULL, " +
+                "ip_address VARCHAR(45) NULL, " +
+                "CONSTRAINT chk_user_or_ip_not_both_null CHECK (user_id IS NOT NULL OR ip_address IS NOT NULL), " +
+                "reason_id INT NULL, " +
+                "reason_type_id INT NOT NULL, " +
+                "reason_text TEXT NOT NULL, " +
+                "reason_duration BIGINT NULL, " +
+                "reason_auto_flag_ip BOOLEAN NOT NULL, " +
+                "reason_auto_punish BOOLEAN NOT NULL, " +
+                "created_by INT NOT NULL, " +
+                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
+                "FOREIGN KEY (user_id) REFERENCES users(id), " +
+                "FOREIGN KEY (reason_id) REFERENCES punishment_reasons(id) ON DELETE SET NULL ON UPDATE CASCADE, " +
+                "FOREIGN KEY (created_by) REFERENCES users(id)"
         );
         database.update("CREATE INDEX IF NOT EXISTS idx_audit_user ON " + TABLE_NAME + " (user_id)");
         database.update("CREATE INDEX IF NOT EXISTS idx_audit_ip ON " + TABLE_NAME + " (ip_address)");
@@ -84,15 +85,29 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
 
         UUID logId = UUID.randomUUID();
         String insertSql = "INSERT INTO " + TABLE_NAME + " (id, action, user_id, ip_address, reason_id, " +
-                           "reason_type_id, reason_text, reason_duration, reason_auto_flag_ip, " +
-                           "reason_auto_punish, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        int row = database.update(insertSql, logId.toString(), action.name(), userId, ipAddress,
+                "reason_type_id, reason_text, reason_duration, reason_auto_flag_ip, " +
+                "reason_auto_punish, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        int row = database.update(insertSql, stmt -> {
+            stmt.setString(1, logId.toString());
+            stmt.setString(2, action.name());
+            stmt.setInt(3, userId == null ? Types.NULL : userId);
+            stmt.setString(4, ipAddress);
+            stmt.setInt(5, reason.id());
+            stmt.setInt(6, reason.typeId());
+            stmt.setString(7, reason.reasonText());
+            stmt.setLong(8, reason.durationSecs());
+            stmt.setBoolean(9, reason.autoFlagIp());
+            stmt.setBoolean(10, reason.autoPunish());
+        });
+                /*logId.toString(), action.name(), userId, ipAddress,
                 reason.id(), reason.typeId(), reason.reasonText(), reason.durationSecs(),
-                reason.autoFlagIp(), reason.autoPunish(), createdBy);
+                reason.autoFlagIp(), reason.autoPunish(), createdBy);*/
         if (row < 1) return null;
 
         String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE id = ?";
-        LocalDateTime createdAt = database.query(selectSql, null, resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(), logId.toString());
+        LocalDateTime createdAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
+                stmt -> stmt.setString(1, logId.toString()));
         if (createdAt == null) return null;
 
         return new PunishmentLog(logId, action, userId, ipAddress, reason.id(),
@@ -136,15 +151,29 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
         UUID logId = UUID.randomUUID();
         PunishmentLog.Action action = PunishmentLog.Action.REVOKED;
         String insertSql = "INSERT INTO " + TABLE_NAME + " (id, action, user_id, ip_address, reason_id, " +
-                           "reason_type_id, reason_text, reason_duration, reason_auto_flag_ip, " +
-                           "reason_auto_punish, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        int row = database.update(insertSql, logId.toString(), action.name(), userId, ipAddress,
-                log.reasonId(), log.reasonTypeId(), log.reasonText(), log.reasonDuration(),
-                log.reasonAutoFlagIp(), log.reasonAutoPunish(), createdBy);
+                "reason_type_id, reason_text, reason_duration, reason_auto_flag_ip, " +
+                "reason_auto_punish, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        int row = database.update(insertSql, stmt -> {
+            stmt.setString(1, logId.toString());
+            stmt.setString(2, action.name());
+            stmt.setInt(3, userId == null ? Types.NULL : userId);
+            stmt.setString(4, ipAddress);
+            stmt.setInt(5, log.reasonId());
+            stmt.setInt(6, log.reasonTypeId());
+            stmt.setString(7, log.reasonText());
+            stmt.setLong(8, log.reasonDuration());
+            stmt.setBoolean(9, log.reasonAutoFlagIp());
+            stmt.setBoolean(10, log.reasonAutoPunish());
+        });
+        /*logId.toString(), action.name(), userId, ipAddress,
+          log.reasonId(), log.reasonTypeId(), log.reasonText(), log.reasonDuration(),
+          log.reasonAutoFlagIp(), log.reasonAutoPunish(), createdBy);*/
         if (row < 1) return null;
 
         String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE id = ?";
-        LocalDateTime createdAt = database.query(selectSql, null, resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(), logId.toString());
+        LocalDateTime createdAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
+                stmt -> stmt.setString(1, logId.toString()));
         if (createdAt == null) return null;
 
         PunishmentLog newLog = new PunishmentLog(logId, action, userId, ipAddress, log.reasonId(),

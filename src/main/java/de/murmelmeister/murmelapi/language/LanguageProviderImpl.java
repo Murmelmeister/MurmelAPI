@@ -71,7 +71,9 @@ public final class LanguageProviderImpl implements LanguageProvider {
         if (name.isEmpty()) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (name) VALUES (?)";
-        int id = (int) database.updateWithGeneratedKeys(sql, name);
+        String finalName = name;
+        int id = (int) database.updateAndGetGeneratedKeys(sql,
+                stmt -> stmt.setString(1, finalName));
         if (id < 1) return null;
 
         Language language = new Language(id, name);
@@ -85,7 +87,8 @@ public final class LanguageProviderImpl implements LanguageProvider {
         if (id < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
-        int row = database.update(sql, id);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
         cache.remove(id);
@@ -107,7 +110,11 @@ public final class LanguageProviderImpl implements LanguageProvider {
             return existing; // No changes, return existing
 
         String sql = "UPDATE " + TABLE_NAME + " SET name = ? WHERE id = ?";
-        int rows = database.update(sql, name, id);
+        String finalName = name;
+        int rows = database.update(sql, stmt -> {
+            stmt.setString(1, finalName);
+            stmt.setInt(2, id);
+        });
         if (rows < 1) return null;
 
         Language language = existing.withName(name);

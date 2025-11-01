@@ -23,11 +23,11 @@ public final class MessageProviderImpl implements MessageProvider {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
-                                         "tag_id VARCHAR(255), " +
-                                         "language_id INT, " +
-                                         "UNIQUE (tag_id, language_id), " +
-                                         "message TEXT, " +
-                                         "FOREIGN KEY (language_id) REFERENCES languages(id)");
+                "tag_id VARCHAR(255), " +
+                "language_id INT, " +
+                "UNIQUE (tag_id, language_id), " +
+                "message TEXT, " +
+                "FOREIGN KEY (language_id) REFERENCES languages(id)");
     }
 
     @Override
@@ -64,7 +64,12 @@ public final class MessageProviderImpl implements MessageProvider {
         if (tagId.isEmpty()) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (tag_id, language_id, message) VALUES (?, ?, ?)";
-        int id = (int) database.updateWithGeneratedKeys(sql, tagId, languageId, message);
+        String finalTagId = tagId;
+        int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> {
+            stmt.setString(1, finalTagId);
+            stmt.setInt(2, languageId);
+            stmt.setString(3, message);
+        });
         if (id < 1) return null;
 
         Message msg = new Message(id, tagId, languageId, message);
@@ -78,7 +83,8 @@ public final class MessageProviderImpl implements MessageProvider {
         if (id < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
-        int row = database.update(sql, id);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
         cache.remove(id);
@@ -94,7 +100,11 @@ public final class MessageProviderImpl implements MessageProvider {
         if (tagId.isEmpty()) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE tag_id = ? AND language_id = ?";
-        int row = database.update(sql, tagId, languageId);
+        String finalTagId = tagId;
+        int row = database.update(sql, stmt -> {
+            stmt.setString(1, finalTagId);
+            stmt.setInt(2, languageId);
+        });
         if (row < 1) return 0;
 
         cache.removeByTag(tagId, languageId);
@@ -107,7 +117,8 @@ public final class MessageProviderImpl implements MessageProvider {
         if (languageId < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE language_id = ?";
-        int row = database.update(sql, languageId);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, languageId));
         if (row < 1) return 0;
 
         cache.removeByLanguage(languageId);
@@ -127,12 +138,18 @@ public final class MessageProviderImpl implements MessageProvider {
         if (existing == null) return null;
 
         if (Objects.equals(tagId, existing.tagId()) &&
-            languageId == existing.languageId() &&
-            Objects.equals(message, existing.message()))
+                languageId == existing.languageId() &&
+                Objects.equals(message, existing.message()))
             return existing; // No changes, return existing
 
         String sql = "UPDATE " + TABLE_NAME + " SET tag_id = ?, language_id = ?, message = ? WHERE id = ?";
-        int rows = database.update(sql, tagId, languageId, message, id);
+        String finalTagId = tagId;
+        int rows = database.update(sql, stmt -> {
+            stmt.setString(1, finalTagId);
+            stmt.setInt(2, languageId);
+            stmt.setString(3, message);
+            stmt.setInt(4, id);
+        });
         if (rows < 1) return null;
 
         Message msg = existing.withUpdateMeta(tagId, languageId, message);

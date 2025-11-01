@@ -4,6 +4,7 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,15 +33,15 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "user_id INT, permission VARCHAR(200), " +
-                                         "PRIMARY KEY (user_id, permission), " +
-                                         "expires_at DATETIME NULL, " +
-                                         "created_by INT NOT NULL, " +
-                                         "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                                         "changed_by INT NULL, " +
-                                         "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                                         "FOREIGN KEY (user_id) REFERENCES users(id), " +
-                                         "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                                         "FOREIGN KEY (changed_by) REFERENCES users(id)"
+                "PRIMARY KEY (user_id, permission), " +
+                "expires_at DATETIME NULL, " +
+                "created_by INT NOT NULL, " +
+                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
+                "changed_by INT NULL, " +
+                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
+                "FOREIGN KEY (user_id) REFERENCES users(id), " +
+                "FOREIGN KEY (created_by) REFERENCES users(id), " +
+                "FOREIGN KEY (changed_by) REFERENCES users(id)"
         );
         database.update("CREATE INDEX IF NOT EXISTS idx_user_perm_userId_exp ON " + TABLE_NAME + " (user_id, expires_at)");
         // TODO: Get all user permissions + parent permissions of the user from db -> cache
@@ -76,12 +77,22 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
 
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
         String insertSql = "INSERT INTO " + TABLE_NAME + " (user_id, permission, expires_at, created_by) VALUES (?, ?, ?, ?)";
-        int row = database.update(insertSql, userId, permission, expiresAt, createdBy);
+        String finalPermission = permission;
+        int row = database.update(insertSql, stmt -> {
+            stmt.setInt(1, userId);
+            stmt.setString(2, finalPermission);
+            stmt.setTimestamp(3, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
+            stmt.setInt(4, createdBy);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE user_id = ? AND permission = ?";
         LocalDateTime createdAt = database.query(selectSql, null, resultSet ->
-                resultSet.getTimestamp("created_at").toLocalDateTime(), userId, permission);
+                        resultSet.getTimestamp("created_at").toLocalDateTime(),
+                stmt -> {
+                    stmt.setInt(1, userId);
+                    stmt.setString(2, finalPermission);
+                });
         if (createdAt == null) return null;
 
         UserPermission userPermission = new UserPermission(userId, permission, expiresAt, createdBy, createdAt, null, null);
@@ -98,7 +109,11 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
         if (permission.isEmpty()) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE user_id = ? AND permission = ?";
-        int row = database.update(sql, userId, permission);
+        String finalPermission = permission;
+        int row = database.update(sql, stmt -> {
+            stmt.setInt(1, userId);
+            stmt.setString(2, finalPermission);
+        });
         if (row < 1) return 0;
 
         cache.remove(userId, permission);
@@ -111,7 +126,8 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
         if (userId < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE user_id = ?";
-        int rows = database.update(sql, userId);
+        int rows = database.update(sql,
+                stmt -> stmt.setInt(1, userId));
         if (rows < 1) return 0;
 
         cache.remove(userId);
@@ -135,12 +151,22 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
             return existing; // No changes, return existing
 
         String updateSql = "UPDATE " + TABLE_NAME + " SET expires_at = ?, changed_by = ? WHERE user_id = ? AND permission = ?";
-        int row = database.update(updateSql, expiresAt, changedBy, userId, permission);
+        String finalPermission = permission;
+        int row = database.update(updateSql, stmt -> {
+            stmt.setTimestamp(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
+            stmt.setInt(2, changedBy);
+            stmt.setInt(3, userId);
+            stmt.setString(4, finalPermission);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE user_id = ? AND permission = ?";
-        LocalDateTime changedAt = database.query(selectSql, null, resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
-                userId, permission);
+        LocalDateTime changedAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
+                stmt -> {
+                    stmt.setInt(1, userId);
+                    stmt.setString(2, finalPermission);
+                });
         if (changedAt == null) return null;
 
         UserPermission userPermission = existing.withUpdateMeta(expiresAt, changedBy, changedAt);

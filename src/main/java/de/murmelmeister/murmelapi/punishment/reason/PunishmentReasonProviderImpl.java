@@ -26,18 +26,18 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY, " +
-                                         "type_id INT NOT NULL, " +
-                                         "reason_text TEXT NOT NULL, " +
-                                         "duration_secs BIGINT NULL, " + // NULL = permanent, >0 = seconds
-                                         "auto_flag_ip BOOLEAN NOT NULL DEFAULT FALSE, " +
-                                         "auto_punish BOOLEAN NOT NULL DEFAULT FALSE, " +
-                                         "created_by INT NOT NULL, " +
-                                         "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                                         "changed_by INT NULL, " +
-                                         "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                                         "FOREIGN KEY (type_id) REFERENCES punishment_types(id), " +
-                                         "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                                         "FOREIGN KEY (changed_by) REFERENCES users(id)"
+                "type_id INT NOT NULL, " +
+                "reason_text TEXT NOT NULL, " +
+                "duration_secs BIGINT NULL, " + // NULL = permanent, >0 = seconds
+                "auto_flag_ip BOOLEAN NOT NULL DEFAULT FALSE, " +
+                "auto_punish BOOLEAN NOT NULL DEFAULT FALSE, " +
+                "created_by INT NOT NULL, " +
+                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
+                "changed_by INT NULL, " +
+                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
+                "FOREIGN KEY (type_id) REFERENCES punishment_types(id), " +
+                "FOREIGN KEY (created_by) REFERENCES users(id), " +
+                "FOREIGN KEY (changed_by) REFERENCES users(id)"
         );
         database.update("CREATE INDEX IF NOT EXISTS idx_reason_type ON " + TABLE_NAME + " (type_id)");
     }
@@ -73,12 +73,22 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
             return null;
 
         String insertSql = "INSERT INTO " + TABLE_NAME + " (id, type_id, reason_text, duration_secs, auto_flag_ip, auto_punish, created_by) " +
-                           "VALUES (?, ?, ?, ?, ?, ?, ?)";
-        int row = database.update(insertSql, id, typeId, reasonText, durationSecs, autoFlagIp, autoPunish, createdBy);
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        int row = database.update(insertSql, stmt -> {
+            stmt.setInt(1, id);
+            stmt.setInt(2, typeId);
+            stmt.setString(3, reasonText);
+            stmt.setLong(4, durationSecs);
+            stmt.setBoolean(5, autoFlagIp);
+            stmt.setBoolean(6, autoPunish);
+            stmt.setInt(7, createdBy);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE id = ?";
-        LocalDateTime createdAt = database.query(selectSql, null, result -> result.getTimestamp("created_at").toLocalDateTime(), id);
+        LocalDateTime createdAt = database.query(selectSql, null,
+                result -> result.getTimestamp("created_at").toLocalDateTime(),
+                stmt -> stmt.setInt(1, id));
         if (createdAt == null) return null;
 
         PunishmentReason reason = new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp, autoPunish, createdBy, createdAt, null, null);
@@ -90,7 +100,8 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
     @Override
     public int delete(int id) {
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
-        int row = database.update(sql, id);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
         cache.remove(id);
@@ -107,19 +118,29 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
         if (existing == null) return null;
 
         if (typeId == existing.typeId() &&
-            Objects.equals(reasonText, existing.reasonText()) &&
-            Objects.equals(durationSecs, existing.durationSecs()) &&
-            autoFlagIp == existing.autoFlagIp() &&
-            autoPunish == existing.autoPunish())
+                Objects.equals(reasonText, existing.reasonText()) &&
+                Objects.equals(durationSecs, existing.durationSecs()) &&
+                autoFlagIp == existing.autoFlagIp() &&
+                autoPunish == existing.autoPunish())
             return existing; // No changes
 
         String insertSql = "UPDATE " + TABLE_NAME + " SET type_id = ?, reason_text = ?, duration_secs = ?, " +
-                           "auto_flag_ip = ?, auto_punish = ?, changed_by = ? WHERE id = ?";
-        int row = database.update(insertSql, typeId, reasonText, durationSecs, autoFlagIp, autoPunish, changedBy, id);
+                "auto_flag_ip = ?, auto_punish = ?, changed_by = ? WHERE id = ?";
+        int row = database.update(insertSql, stmt -> {
+            stmt.setInt(1, typeId);
+            stmt.setString(2, reasonText);
+            stmt.setLong(3, durationSecs);
+            stmt.setBoolean(4, autoFlagIp);
+            stmt.setBoolean(5, autoPunish);
+            stmt.setInt(6, changedBy);
+            stmt.setInt(7, id);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE id = ?";
-        LocalDateTime changedAt = database.query(selectSql, null, result -> result.getTimestamp("changed_at").toLocalDateTime(), id);
+        LocalDateTime changedAt = database.query(selectSql, null,
+                result -> result.getTimestamp("changed_at").toLocalDateTime(),
+                stmt -> stmt.setInt(1, id));
         if (changedAt == null) return null;
 
         PunishmentReason reason = existing.withUpdateMeta(typeId, reasonText, durationSecs, autoFlagIp, autoPunish, changedBy, changedAt);

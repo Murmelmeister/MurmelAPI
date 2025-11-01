@@ -24,12 +24,12 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "user_id INT NOT NULL, " +
-                                         "type_id INT NOT NULL, " +
-                                         "log_id VARCHAR(36) NOT NULL UNIQUE, " +
-                                         "PRIMARY KEY (user_id, type_id), " +
-                                         "FOREIGN KEY (user_id) REFERENCES users(id), " +
-                                         "FOREIGN KEY (type_id) REFERENCES punishment_types(id), " +
-                                         "FOREIGN KEY (log_id) REFERENCES punishment_logs(id)"
+                "type_id INT NOT NULL, " +
+                "log_id VARCHAR(36) NOT NULL UNIQUE, " +
+                "PRIMARY KEY (user_id, type_id), " +
+                "FOREIGN KEY (user_id) REFERENCES users(id), " +
+                "FOREIGN KEY (type_id) REFERENCES punishment_types(id), " +
+                "FOREIGN KEY (log_id) REFERENCES punishment_logs(id)"
         );
     }
 
@@ -62,7 +62,11 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
             return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (user_id, type_id, log_id) VALUES (?, ?, ?)";
-        int row = database.update(sql, userId, typeId, logId.toString());
+        int row = database.update(sql, stmt -> {
+            stmt.setInt(1, userId);
+            stmt.setInt(2, typeId);
+            stmt.setString(3, logId.toString());
+        });
         if (row < 1) return null;
 
         PunishmentCurrentUser punish = new PunishmentCurrentUser(userId, typeId, logId);
@@ -77,7 +81,10 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
             return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE user_id = ? AND type_id = ?";
-        int row = database.update(sql, userId, typeId);
+        int row = database.update(sql, stmt -> {
+            stmt.setInt(1, userId);
+            stmt.setInt(2, typeId);
+        });
         if (row < 1) return 0;
 
         cache.remove(userId, typeId);
@@ -96,7 +103,11 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
             return existing; // No change needed
 
         String sql = "UPDATE " + TABLE_NAME + " SET log_id = ? WHERE user_id = ? AND type_id = ?";
-        int row = database.update(sql, logId.toString(), userId, typeId);
+        int row = database.update(sql, stmt -> {
+            stmt.setString(1, logId.toString());
+            stmt.setInt(2, userId);
+            stmt.setInt(3, typeId);
+        });
         if (row < 1) return null;
 
         PunishmentCurrentUser punish = existing.withUpdateLog(logId);
