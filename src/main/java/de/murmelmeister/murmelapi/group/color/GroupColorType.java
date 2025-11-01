@@ -65,6 +65,9 @@ public enum GroupColorType {
     public static void createDefaultTypes(Database database) {
         String sql = "INSERT IGNORE INTO " + TABLE_NAME + " (id, name) VALUES (?, ?)";
         for (GroupColorType type : VALUES)
-            database.update(sql, type.getId(), type.getName());
+            database.update(sql, stmt -> {
+                stmt.setInt(1, type.getId());
+                stmt.setString(2, type.getName());
+            });
     }
 }

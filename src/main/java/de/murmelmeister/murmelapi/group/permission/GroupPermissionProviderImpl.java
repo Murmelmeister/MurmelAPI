@@ -4,6 +4,7 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,15 +31,15 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "group_id INT, permission VARCHAR(200), " +
-                                         "PRIMARY KEY (group_id, permission), " +
-                                         "expires_at DATETIME NULL, " +
-                                         "created_by INT NOT NULL, " +
-                                         "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                                         "changed_by INT NULL, " +
-                                         "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP()," +
-                                         "FOREIGN KEY (group_id) REFERENCES groups(id), " +
-                                         "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                                         "FOREIGN KEY (changed_by) REFERENCES users(id)");
+                "PRIMARY KEY (group_id, permission), " +
+                "expires_at DATETIME NULL, " +
+                "created_by INT NOT NULL, " +
+                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
+                "changed_by INT NULL, " +
+                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP()," +
+                "FOREIGN KEY (group_id) REFERENCES groups(id), " +
+                "FOREIGN KEY (created_by) REFERENCES users(id), " +
+                "FOREIGN KEY (changed_by) REFERENCES users(id)");
         database.update("CREATE INDEX IF NOT EXISTS idx_group_perm_groupId_exp ON " + TABLE_NAME + " (group_id, expires_at)");
         // TODO: Get all group permissions + parent permissions of the group form db -> cache
     }
@@ -73,12 +74,22 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
 
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
         String insertSql = "INSERT INTO " + TABLE_NAME + " (group_id, permission, expires_at, created_by) VALUES (?, ?, ?, ?)";
-        int row = database.update(insertSql, groupId, permission, expiresAt, createdBy);
+        String finalPermission = permission;
+        int row = database.update(insertSql, stmt -> {
+            stmt.setInt(1, groupId);
+            stmt.setString(2, finalPermission);
+            stmt.setTimestamp(3, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
+            stmt.setInt(4, createdBy);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE group_id = ? AND permission = ?";
-        LocalDateTime createdAt = database.query(selectSql, null, resultSet ->
-                resultSet.getTimestamp("created_at").toLocalDateTime(), groupId, permission);
+        LocalDateTime createdAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
+                stmt -> {
+                    stmt.setInt(1, groupId);
+                    stmt.setString(2, finalPermission);
+                });
         if (createdAt == null) return null;
 
         GroupPermission groupPermission = new GroupPermission(groupId, permission, expiresAt, createdBy, createdAt, null, null);
@@ -95,7 +106,11 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
         if (permission.isEmpty()) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ? AND permission = ?";
-        int row = database.update(sql, groupId, permission);
+        String finalPermission = permission;
+        int row = database.update(sql, stmt -> {
+            stmt.setInt(1, groupId);
+            stmt.setString(2, finalPermission);
+        });
         if (row < 1) return 0;
 
         cache.remove(groupId, permission);
@@ -108,7 +123,8 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
         if (groupId < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ?";
-        int row = database.update(sql, groupId);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
         cache.remove(groupId);
@@ -132,12 +148,22 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
             return existing; // No changes, return existing
 
         String updateSql = "UPDATE " + TABLE_NAME + " SET expires_at = ?, changed_by = ? WHERE group_id = ? AND permission = ?";
-        int row = database.update(updateSql, expiresAt, changedBy, groupId, permission);
+        String finalPermission = permission;
+        int row = database.update(updateSql, stmt -> {
+            stmt.setString(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt).toString());
+            stmt.setInt(2, changedBy);
+            stmt.setInt(3, groupId);
+            stmt.setString(4, finalPermission);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE group_id = ? AND permission = ?";
-        LocalDateTime changedAt = database.query(selectSql, null, resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
-                groupId, permission);
+        LocalDateTime changedAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
+                stmt -> {
+                    stmt.setInt(1, groupId);
+                    stmt.setString(2, finalPermission);
+                });
         if (changedAt == null) return null;
 
         GroupPermission groupPermission = existing.withUpdateMeta(expiresAt, changedBy, changedAt);

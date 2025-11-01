@@ -52,14 +52,18 @@ public enum PunishmentType {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY, " +
-                                         "name VARCHAR(100) NOT NULL UNIQUE, " +
-                                         "ip_type BOOLEAN NOT NULL DEFAULT FALSE"
+                "name VARCHAR(100) NOT NULL UNIQUE, " +
+                "ip_type BOOLEAN NOT NULL DEFAULT FALSE"
         );
     }
 
     public static void createDefaultTypes(Database database) {
         String sql = "INSERT IGNORE INTO " + TABLE_NAME + " (id, name, ip_type) VALUES (?, ?, ?)";
         for (PunishmentType type : VALUES)
-            database.update(sql, type.getId(), type.getName(), type.isIpType());
+            database.update(sql, stmt -> {
+                stmt.setInt(1, type.getId());
+                stmt.setString(2, type.getName());
+                stmt.setBoolean(3, type.isIpType());
+            });
     }
 }

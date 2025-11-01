@@ -4,6 +4,7 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,16 +31,16 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "group_id INT, parent_id INT, " +
-                                         "PRIMARY KEY (group_id, parent_id), " +
-                                         "expires_at DATETIME NULL, " +
-                                         "created_by INT NOT NULL, " +
-                                         "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                                         "changed_by INT NULL, " +
-                                         "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                                         "FOREIGN KEY (group_id) REFERENCES groups(id), " +
-                                         "FOREIGN KEY (parent_id) REFERENCES groups(id), " +
-                                         "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                                         "FOREIGN KEY (changed_by) REFERENCES users(id)");
+                "PRIMARY KEY (group_id, parent_id), " +
+                "expires_at DATETIME NULL, " +
+                "created_by INT NOT NULL, " +
+                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
+                "changed_by INT NULL, " +
+                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
+                "FOREIGN KEY (group_id) REFERENCES groups(id), " +
+                "FOREIGN KEY (parent_id) REFERENCES groups(id), " +
+                "FOREIGN KEY (created_by) REFERENCES users(id), " +
+                "FOREIGN KEY (changed_by) REFERENCES users(id)");
         database.update("CREATE INDEX IF NOT EXISTS idx_group_parent_groupId_exp ON " + TABLE_NAME + " (group_id, expires_at)");
     }
 
@@ -70,12 +71,21 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
 
         LocalDateTime expiredAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
         String insertSql = "INSERT INTO " + TABLE_NAME + " (group_id, parent_id, expires_at, created_by) VALUES (?, ?, ?, ?)";
-        int row = database.update(insertSql, groupId, parentId, expiredAt, createdBy);
+        int row = database.update(insertSql, stmt -> {
+            stmt.setInt(1, groupId);
+            stmt.setInt(2, parentId);
+            stmt.setTimestamp(3, expiredAt == null ? null : Timestamp.valueOf(expiredAt));
+            stmt.setInt(4, createdBy);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE group_id = ? AND parent_id = ?";
-        LocalDateTime createAt = database.query(selectSql, null, resultSet ->
-                resultSet.getTimestamp("created_at").toLocalDateTime(), groupId, parentId);
+        LocalDateTime createAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
+                stmt -> {
+                    stmt.setInt(1, groupId);
+                    stmt.setInt(2, parentId);
+                });
         if (createAt == null) return null;
 
         GroupParent groupParent = new GroupParent(groupId, parentId, expiredAt, createdBy, createAt, null, null);
@@ -89,7 +99,10 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         if (groupId < 1 || parentId < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ? AND parent_id = ?";
-        int row = database.update(sql, groupId, parentId);
+        int row = database.update(sql, stmt -> {
+            stmt.setInt(1, groupId);
+            stmt.setInt(2, parentId);
+        });
         if (row < 1) return 0;
 
         cache.remove(groupId, parentId);
@@ -102,7 +115,8 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         if (groupId < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ?";
-        int row = database.update(sql, groupId);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
         cache.remove(groupId);
@@ -123,12 +137,21 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
             return existing; // No changes, return existing
 
         String updateSql = "UPDATE " + TABLE_NAME + " SET expires_at = ?, changed_by = ? WHERE group_id = ? AND parent_id = ?";
-        int row = database.update(updateSql, expiresAt, changedBy, groupId, parentId);
+        int row = database.update(updateSql, stmt -> {
+            stmt.setTimestamp(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
+            stmt.setInt(2, changedBy);
+            stmt.setInt(3, groupId);
+            stmt.setInt(4, parentId);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE group_id = ? AND parent_id = ?";
-        LocalDateTime changedAt = database.query(selectSql, null, resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
-                groupId, parentId);
+        LocalDateTime changedAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
+                stmt -> {
+                    stmt.setInt(1, groupId);
+                    stmt.setInt(2, parentId);
+                });
         if (changedAt == null) return null;
 
         GroupParent groupParent = existing.withUpdateMeta(expiresAt, changedBy, changedAt);

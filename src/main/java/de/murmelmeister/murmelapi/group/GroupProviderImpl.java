@@ -32,21 +32,28 @@ public final class GroupProviderImpl implements GroupProvider {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
-                                         "group_name VARCHAR(100) NOT NULL UNIQUE, " +
-                                         "team_tag_id VARCHAR(110) NOT NULL UNIQUE, " +
-                                         "priority INT NOT NULL DEFAULT 0, " +
-                                         "is_default BOOLEAN NOT NULL DEFAULT FALSE, " +
-                                         "created_by INT NOT NULL, " +
-                                         "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                                         "changed_by INT NULL, " +
-                                         "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                                         "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                                         "FOREIGN KEY (changed_by) REFERENCES users(id)");
+                "group_name VARCHAR(100) NOT NULL UNIQUE, " +
+                "team_tag_id VARCHAR(110) NOT NULL UNIQUE, " +
+                "priority INT NOT NULL DEFAULT 0, " +
+                "is_default BOOLEAN NOT NULL DEFAULT FALSE, " +
+                "created_by INT NOT NULL, " +
+                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
+                "changed_by INT NULL, " +
+                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
+                "FOREIGN KEY (created_by) REFERENCES users(id), " +
+                "FOREIGN KEY (changed_by) REFERENCES users(id)");
     }
 
     public static void createDefaultGroup(Database database) {
         String sql = "INSERT IGNORE INTO " + TABLE_NAME + " (id, group_name, team_tag_id, priority, is_default, created_by) VALUES (?, ?, ?, ?, ?, ?)";
-        database.update(sql, DEFAULT_GROUP_ID, "default", "9999Default", 1, true, CONSOLE_USER_ID);
+        database.update(sql, stmt -> {
+            stmt.setInt(1, DEFAULT_GROUP_ID);
+            stmt.setString(2, "default");
+            stmt.setString(3, "9999Default");
+            stmt.setInt(4, 1);
+            stmt.setBoolean(5, true);
+            stmt.setInt(6, CONSOLE_USER_ID);
+        });
     }
 
     @Override
@@ -90,12 +97,21 @@ public final class GroupProviderImpl implements GroupProvider {
         String teamId = tag + groupName;
 
         String insertSql = "INSERT INTO " + TABLE_NAME + " (group_name, priority, team_tag_id, created_by) " +
-                           "VALUES (?, ?, ?, ?)";
-        int groupId = (int) database.updateWithGeneratedKeys(insertSql, groupName, priority, teamId, createdBy);
+                "VALUES (?, ?, ?, ?)";
+        String finalGroupName = groupName;
+        int groupId = (int) database.updateAndGetGeneratedKeys(insertSql, stmt -> {
+            stmt.setString(1, finalGroupName);
+            stmt.setInt(2, priority);
+            stmt.setString(3, teamId);
+            stmt.setInt(4, createdBy);
+        });
+        //groupName, priority, teamId, createdBy);
         if (groupId < 1) return null;
 
         String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE id = ?";
-        LocalDateTime createdAt = database.query(selectSql, null, resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(), groupId);
+        LocalDateTime createdAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
+                stmt -> stmt.setInt(1, groupId));
         if (createdAt == null) return null;
 
         Group group = new Group(groupId, groupName, teamId, priority, false, createdBy, createdAt, null, null);
@@ -109,7 +125,8 @@ public final class GroupProviderImpl implements GroupProvider {
         if (groupId < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
-        int row = database.update(sql, groupId);
+        int row = database.update(sql,
+                stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
         cache.remove(groupId);
@@ -131,16 +148,25 @@ public final class GroupProviderImpl implements GroupProvider {
         if (existing == null) return null;
 
         if (Objects.equals(groupName, existing.groupName()) &&
-            Objects.equals(teamTagId, existing.teamTagId()) &&
-            priority == existing.priority())
+                Objects.equals(teamTagId, existing.teamTagId()) &&
+                priority == existing.priority())
             return existing; // No changes, return an existing group
 
         String updateSql = "UPDATE " + TABLE_NAME + " SET group_name = ?, priority = ?, team_tag_id = ?, changed_by = ? WHERE id = ?";
-        int row = database.update(updateSql, groupName, priority, teamTagId, changedBy, groupId);
+        String finalGroupName = groupName;
+        int row = database.update(updateSql, stmt -> {
+            stmt.setString(1, finalGroupName);
+            stmt.setInt(2, priority);
+            stmt.setString(3, teamTagId);
+            stmt.setInt(4, changedBy);
+            stmt.setInt(5, groupId);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE id = ?";
-        LocalDateTime changedAt = database.query(selectSql, null, resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(), groupId);
+        LocalDateTime changedAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
+                stmt -> stmt.setInt(1, groupId));
         if (changedAt == null) return null;
 
         Group group = existing.withUpdateMeta(groupName, teamTagId, priority, changedBy, changedAt);
