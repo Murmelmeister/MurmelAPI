@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +38,7 @@ public class GroupParentCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.GROUP_PARENTS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_GROUP_PARENT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -92,12 +93,17 @@ public class GroupParentCache implements RefreshListener, AutoCloseable {
 
     public List<GroupParent> loadByGroupId(int groupId) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_id = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupParent(), groupId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupParent(),
+                stmt -> stmt.setInt(1, groupId));
     }
 
     private GroupParent loadByKey(ParentKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_id = ? AND parent_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupParent(), key.groupId(), key.parentId());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupParent(),
+                stmt -> {
+                    stmt.setInt(1, key.groupId());
+                    stmt.setInt(2, key.parentId());
+                });
     }
 
     public GroupParent get(int groupId, int parentId) {
@@ -138,7 +144,10 @@ public class GroupParentCache implements RefreshListener, AutoCloseable {
     }
 
     public List<GroupParent> getCachedParents() {
-        return listCache.get(ALL_KEY);
+        List<GroupParent> parents = listCache.get(ALL_KEY);
+        if (parents == null || parents.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(parents);
     }
 
     protected record ParentKey(int groupId, int parentId) {

@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +38,7 @@ public class UserPermissionCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.USER_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_USER_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -92,12 +93,17 @@ public class UserPermissionCache implements RefreshListener, AutoCloseable {
 
     private List<UserPermission> loadByUserId(int userId) {
         String sql = "SELECT * FROM " + tableName + " WHERE user_id = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userPermission(), userId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userPermission(),
+                stmt -> stmt.setInt(1, userId));
     }
 
     private UserPermission loadByKey(PermissionKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE user_id = ? AND permission = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userPermission(), key.userId(), key.permission());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userPermission(),
+                stmt -> {
+                    stmt.setInt(1, key.userId());
+                    stmt.setString(2, key.permission());
+                });
     }
 
     public UserPermission get(int userId, String permission) {
@@ -137,7 +143,10 @@ public class UserPermissionCache implements RefreshListener, AutoCloseable {
     }
 
     public List<UserPermission> getCachedPermissions() {
-        return listCache.get(ALL_KEY);
+        List<UserPermission> permissions = listCache.get(ALL_KEY);
+        if (permissions == null || permissions.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(permissions);
     }
 
     protected record PermissionKey(int userId, String permission) {

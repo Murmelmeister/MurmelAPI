@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 
 public class GroupCache implements RefreshListener, AutoCloseable {
@@ -35,7 +36,7 @@ public class GroupCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.GROUPS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_GROUP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -75,12 +76,14 @@ public class GroupCache implements RefreshListener, AutoCloseable {
 
     private Group loadByName(String name) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_name = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.group(), name);
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.group(),
+                stmt -> stmt.setString(1, name));
     }
 
     private Group loadById(int id) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.group(), id);
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.group(),
+                stmt -> stmt.setInt(1, id));
     }
 
     public Group getById(int id) {
@@ -113,6 +116,9 @@ public class GroupCache implements RefreshListener, AutoCloseable {
     }
 
     public List<Group> getCachedGroups() {
-        return listCache.get(ALL_KEY);
+        List<Group> groups = listCache.get(ALL_KEY);
+        if (groups == null || groups.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(groups);
     }
 }

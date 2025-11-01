@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +38,7 @@ public class UserParentCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.USER_PARENTS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -92,12 +93,17 @@ public class UserParentCache implements RefreshListener, AutoCloseable {
 
     private List<UserParent> loadByUserId(int userId) {
         String sql = "SELECT * FROM " + tableName + " WHERE user_id = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userParent(), userId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userParent(),
+                stmt -> stmt.setInt(1, userId));
     }
 
     private UserParent loadByKey(ParentKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE user_id = ? AND parent_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userParent(), key.userId(), key.parentId());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userParent(),
+                stmt -> {
+                    stmt.setInt(1, key.userId());
+                    stmt.setInt(2, key.parentId());
+                });
     }
 
     public UserParent get(int userId, int parentId) {
@@ -138,7 +144,10 @@ public class UserParentCache implements RefreshListener, AutoCloseable {
     }
 
     public List<UserParent> getCachedParents() {
-        return listCache.get(ALL_KEY);
+        List<UserParent> parents = listCache.get(ALL_KEY);
+        if (parents == null || parents.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(parents);
     }
 
     protected record ParentKey(int userId, int parentId) {

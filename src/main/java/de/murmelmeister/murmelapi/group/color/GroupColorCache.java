@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +38,7 @@ public class GroupColorCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.GROUP_COLORS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_GROUP_COLOR.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -92,12 +93,19 @@ public class GroupColorCache implements RefreshListener, AutoCloseable {
 
     private List<GroupColor> loadByGroupId(int groupId) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_id = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupColor(), groupId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupColor(),
+                stmt -> {
+                    stmt.setInt(1, groupId);
+                });
     }
 
     private GroupColor loadByKey(ColorKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_id = ? AND type_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupColor(), key.groupId(), key.typeId());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupColor(),
+                stmt -> {
+                    stmt.setInt(1, key.groupId());
+                    stmt.setInt(2, key.typeId());
+                });
     }
 
     public GroupColor get(int groupId, int typeId) {
@@ -138,7 +146,10 @@ public class GroupColorCache implements RefreshListener, AutoCloseable {
     }
 
     public List<GroupColor> getCachedColors() {
-        return listCache.get(ALL_KEY);
+        List<GroupColor> colors = listCache.get(ALL_KEY);
+        if (colors == null || colors.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(colors);
     }
 
     protected record ColorKey(int groupId, int typeId) {

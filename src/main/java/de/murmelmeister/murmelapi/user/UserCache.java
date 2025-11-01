@@ -84,17 +84,20 @@ public class UserCache implements RefreshListener, AutoCloseable {
 
     private User loadByName(String name) {
         String sql = "SELECT * FROM " + tableName + " WHERE username = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), stmt -> stmt.setString(1, name));
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+                stmt -> stmt.setString(1, name));
     }
 
     private User loadByUUID(UUID uuid) {
         String sql = "SELECT * FROM " + tableName + " WHERE mojang_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), stmt -> stmt.setString(1, uuid.toString()));
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+                stmt -> stmt.setString(1, uuid.toString()));
     }
 
     private User loadById(int id) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(), stmt -> stmt.setInt(1, id));
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+                stmt -> stmt.setInt(1, id));
     }
 
     public User getById(int id) {

@@ -9,6 +9,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshListener;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -36,7 +37,7 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.LANGUAGES.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_LANGUAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -76,12 +77,15 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
 
     private Integer loadByName(String name) {
         String sql = "SELECT id FROM " + tableName + " WHERE name = ?";
-        return CacheUtil.loadSingle(database, sql, null, resultSet -> resultSet.getInt("id"), name);
+        return CacheUtil.loadSingle(database, sql, null,
+                resultSet -> resultSet.getInt("id"),
+                stmt -> stmt.setString(1, name));
     }
 
     private Language loadById(int id) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, null, ResultSetUtil.language(), id);
+        return CacheUtil.loadSingle(database, sql, null, ResultSetUtil.language(),
+                stmt -> stmt.setInt(1, id));
     }
 
     public Language getById(int id) {
@@ -116,6 +120,9 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
     }
 
     public List<Language> getCachedLanguages() {
-        return listCache.get(ALL_KEY);
+        List<Language> languages = listCache.get(ALL_KEY);
+        if (languages == null || languages.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(languages);
     }
 }

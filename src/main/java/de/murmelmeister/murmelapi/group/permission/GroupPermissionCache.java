@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +38,7 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.GROUP_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -92,12 +93,17 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
 
     private List<GroupPermission> loadByUserId(int groupId) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_id = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupPermission(), groupId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupPermission(),
+                stmt -> stmt.setInt(1, groupId));
     }
 
     private GroupPermission loadByKey(PermissionKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE group_id = ? AND permission = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupPermission(), key.groupId(), key.permission());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupPermission(),
+                stmt -> {
+                    stmt.setInt(1, key.groupId());
+                    stmt.setString(2, key.permission());
+                });
     }
 
     public GroupPermission get(int groupId, String permission) {
@@ -140,7 +146,10 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
     }
 
     public List<GroupPermission> getCachedPermissions() {
-        return listCache.get(ALL_KEY);
+        List<GroupPermission> permissions = listCache.get(ALL_KEY);
+        if (permissions == null || permissions.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(permissions);
     }
 
     protected record PermissionKey(int groupId, String permission) {

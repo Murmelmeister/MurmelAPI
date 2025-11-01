@@ -40,7 +40,7 @@ public class MessageCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.MESSAGES.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_MESSAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -108,17 +108,23 @@ public class MessageCache implements RefreshListener, AutoCloseable {
 
     private List<Message> loadByLanguage(int languageId) {
         String sql = "SELECT * FROM " + tableName + " WHERE language_id = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.message(), languageId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.message(),
+                stmt -> stmt.setInt(1, languageId));
     }
 
     private Message loadByTag(TagKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE tag_id = ? AND language_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.message(), key.tagId(), key.languageId());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.message(),
+                stmt -> {
+                    stmt.setString(1, key.tagId());
+                    stmt.setInt(2, key.languageId());
+                });
     }
 
     private Message loadById(int id) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.message(), id);
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.message(),
+                stmt -> stmt.setInt(1, id));
     }
 
     public Message getById(int id) {

@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 
 public class PunishmentReasonCache implements RefreshListener, AutoCloseable {
@@ -35,7 +36,7 @@ public class PunishmentReasonCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.PUNISHMENT_REASONS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_PUNISHMENT_REASON.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -75,12 +76,14 @@ public class PunishmentReasonCache implements RefreshListener, AutoCloseable {
 
     private List<PunishmentReason> loadByType(int typeId) {
         String sql = "SELECT * FROM " + tableName + " WHERE type_id = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentReason(), typeId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentReason(),
+                stmt -> stmt.setInt(1, typeId));
     }
 
     private PunishmentReason loadById(int reasonId) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentReason(), reasonId);
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentReason(),
+                stmt -> stmt.setInt(1, reasonId));
     }
 
     public PunishmentReason getById(int reasonId) {
@@ -114,6 +117,9 @@ public class PunishmentReasonCache implements RefreshListener, AutoCloseable {
     }
 
     public List<PunishmentReason> getCachedPunishReasons() {
-        return listCache.get(ALL_KEY);
+        List<PunishmentReason> reasons = listCache.get(ALL_KEY);
+        if (reasons == null || reasons.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(reasons);
     }
 }

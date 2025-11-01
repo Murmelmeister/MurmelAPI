@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,7 +39,7 @@ public class UserLoginCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.USER_LOGINS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_USER_LOGIN.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -78,17 +79,20 @@ public class UserLoginCache implements RefreshListener, AutoCloseable {
 
     private List<UserLogin> loadByUserId(int userId) {
         String sql = "SELECT * FROM " + tableName + " WHERE user_id = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userLogin(), userId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userLogin(),
+                stmt -> stmt.setInt(1, userId));
     }
 
     private List<UserLogin> loadByIpAddress(String ipAddress) {
         String sql = "SELECT * FROM " + tableName + " WHERE ip_address = ?";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userLogin(), ipAddress);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userLogin(),
+                stmt -> stmt.setString(1, ipAddress));
     }
 
     private UserLogin loadById(UUID id) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userLogin(), id.toString());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userLogin(),
+                stmt -> stmt.setString(1, id.toString()));
     }
 
     public UserLogin getById(UUID id) {
@@ -128,6 +132,9 @@ public class UserLoginCache implements RefreshListener, AutoCloseable {
     }
 
     public List<UserLogin> getCachedLogins() {
-        return listCache.get(ALL_KEY);
+        List<UserLogin> logins = listCache.get(ALL_KEY);
+        if (logins == null || logins.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(logins);
     }
 }

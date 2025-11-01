@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +36,7 @@ public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable 
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.PUNISHMENT_IPS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_PUNISHMENT_IP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -81,7 +82,11 @@ public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable 
 
     private PunishmentCurrentIp loadFromDatabase(IpTypeKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE ip_address = ? AND type_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentCurrentIp(), key.ipAddress(), key.typeId());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentCurrentIp(),
+                stmt -> {
+                    stmt.setString(1, key.ipAddress());
+                    stmt.setInt(2, key.typeId());
+                });
     }
 
     public PunishmentCurrentIp get(String ipAddress, int typeId) {
@@ -108,7 +113,10 @@ public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable 
     }
 
     public List<PunishmentCurrentIp> getCachedPunishIPs() {
-        return listCache.get(ALL_KEY);
+        List<PunishmentCurrentIp> ips = listCache.get(ALL_KEY);
+        if (ips == null || ips.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(ips);
     }
 
     protected record IpTypeKey(String ipAddress, int typeId) {

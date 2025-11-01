@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -76,12 +77,14 @@ public class UserSessionCache implements RefreshListener, AutoCloseable {
 
     private UserSession loadByUserId(int userId) {
         String sql = "SELECT * FROM " + tableName + " WHERE user_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(), userId);
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
+                stmt -> stmt.setInt(1, userId));
     }
 
     private UserSession loadById(UUID sessionId) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(), sessionId.toString());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
+                stmt -> stmt.setString(1, sessionId.toString()));
     }
 
     public UserSession getById(UUID sessionId) {
@@ -114,6 +117,9 @@ public class UserSessionCache implements RefreshListener, AutoCloseable {
     }
 
     public List<UserSession> getCachedSessions() {
-        return listCache.get(ALL_KEY);
+        List<UserSession> sessions = listCache.get(ALL_KEY);
+        if (sessions == null || sessions.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(sessions);
     }
 }

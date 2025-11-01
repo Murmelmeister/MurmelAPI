@@ -37,7 +37,7 @@ public class PunishmentLogCache implements RefreshListener, AutoCloseable {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.PUNISHMENT_LOGS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_PUNISHMENT_LOG.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -79,18 +79,21 @@ public class PunishmentLogCache implements RefreshListener, AutoCloseable {
     private List<PunishmentLog> loadByUserId(int userId) {
         // Note: IDK if this is the best order, but it makes sense to have the latest logs first
         String sql = "SELECT * FROM " + tableName + " WHERE user_id = ? ORDER BY created_at DESC";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog(), userId);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog(),
+                stmt -> stmt.setInt(1, userId));
     }
 
     private List<PunishmentLog> loadByIpAddress(String ipAddress) {
         // Note: IDK if this is the best order, but it makes sense to have the latest logs first
         String sql = "SELECT * FROM " + tableName + " WHERE ip_address = ? ORDER BY created_at DESC";
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog(), ipAddress);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog(),
+                stmt -> stmt.setString(1, ipAddress));
     }
 
     private PunishmentLog loadById(UUID id) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentLog(), id.toString());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentLog(),
+                stmt -> stmt.setString(1, id.toString()));
     }
 
     public PunishmentLog getById(UUID logId) {
@@ -131,6 +134,9 @@ public class PunishmentLogCache implements RefreshListener, AutoCloseable {
     }
 
     public List<PunishmentLog> getCachedPunishLogs() {
-        return listCache.get(ALL_KEY);
+        List<PunishmentLog> logs = listCache.get(ALL_KEY);
+        if (logs == null || logs.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(logs);
     }
 }

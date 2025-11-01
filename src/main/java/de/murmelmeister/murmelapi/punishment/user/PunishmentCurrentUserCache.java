@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,7 +36,7 @@ public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseabl
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.PUNISHMENT_USERS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_PUNISHMENT_USER.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -81,7 +82,11 @@ public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseabl
 
     private PunishmentCurrentUser loadFromDatabase(UserTypeKey key) {
         String sql = "SELECT * FROM " + tableName + " WHERE user_id = ? AND type_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentCurrentUser(), key.userId(), key.typeId());
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentCurrentUser(),
+                stmt -> {
+                    stmt.setInt(1, key.userId());
+                    stmt.setInt(2, key.typeId());
+                });
     }
 
     public PunishmentCurrentUser get(int userId, int typeId) {
@@ -108,7 +113,10 @@ public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseabl
     }
 
     public List<PunishmentCurrentUser> getCachedPunishUsers() {
-        return listCache.get(ALL_KEY);
+        List<PunishmentCurrentUser> users = listCache.get(ALL_KEY);
+        if (users == null || users.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(users);
     }
 
     protected record UserTypeKey(int userId, int typeId) {

@@ -10,6 +10,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.Collections;
 import java.util.List;
 
 public class UserPlayTimeCache implements RefreshListener, AutoCloseable {
@@ -73,7 +74,8 @@ public class UserPlayTimeCache implements RefreshListener, AutoCloseable {
 
     private UserPlayTime loadById(int userId) {
         String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userPlayTime(), userId);
+        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userPlayTime(),
+                stmt -> stmt.setInt(1, userId));
     }
 
     public UserPlayTime get(int userId) {
@@ -96,6 +98,9 @@ public class UserPlayTimeCache implements RefreshListener, AutoCloseable {
     }
 
     public List<UserPlayTime> getCachedPlayTimes() {
-        return listCache.get(ALL_KEY);
+        List<UserPlayTime> playTimes = listCache.get(ALL_KEY);
+        if (playTimes == null || playTimes.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(playTimes);
     }
 }
