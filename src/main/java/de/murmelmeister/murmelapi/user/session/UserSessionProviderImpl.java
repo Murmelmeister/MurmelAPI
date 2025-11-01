@@ -24,12 +24,12 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
 
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id VARCHAR(36) PRIMARY KEY, " +
-                                         "user_id INT NOT NULL UNIQUE, " +
-                                         "login_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                                         "ip_address VARCHAR(45) NOT NULL, " +
-                                         "client_version VARCHAR(100) NULL, " +
-                                         "protocol_version VARCHAR(100) NULL, " +
-                                         "FOREIGN KEY (user_id) REFERENCES users(id)"
+                "user_id INT NOT NULL UNIQUE, " +
+                "login_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
+                "ip_address VARCHAR(45) NOT NULL, " +
+                "client_version VARCHAR(100) NULL, " +
+                "protocol_version VARCHAR(100) NULL, " +
+                "FOREIGN KEY (user_id) REFERENCES users(id)"
         ); // Maybe session_type in the future?
     }
 
@@ -74,12 +74,20 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
 
         UUID sessionId = UUID.randomUUID();
         String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, ip_address, client_version, protocol_version) VALUES (?, ?, ?, ?, ?)";
-        int row = database.update(insertSql, sessionId.toString(), userId, ipAddress, clientVersion, protocolVersion);
+        String finalIpAddress = ipAddress;
+        int row = database.update(insertSql, stmt -> {
+            stmt.setString(1, sessionId.toString());
+            stmt.setInt(2, userId);
+            stmt.setString(3, finalIpAddress);
+            stmt.setString(4, clientVersion);
+            stmt.setString(5, protocolVersion);
+        });
         if (row < 1) return null;
 
         String selectSql = "SELECT login_time FROM " + TABLE_NAME + " WHERE id = ?";
         LocalDateTime loginTime = database.query(selectSql, null, resultSet ->
-                resultSet.getTimestamp("login_time").toLocalDateTime(), sessionId.toString());
+                        resultSet.getTimestamp("login_time").toLocalDateTime(),
+                stmt -> stmt.setString(1, sessionId.toString()));
         if (loginTime == null) return null;
 
         UserSession session = new UserSession(sessionId, userId, loginTime, ipAddress, clientVersion, protocolVersion);
@@ -93,7 +101,8 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
         if (sessionId == null) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
-        int row = database.update(sql, sessionId.toString());
+        int row = database.update(sql,
+                stmt -> stmt.setString(1, sessionId.toString()));
         if (row < 1) return 0;
 
         cache.remove(sessionId);
