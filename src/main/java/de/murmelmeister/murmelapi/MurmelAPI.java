@@ -44,6 +44,7 @@ import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
 
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
+import java.util.Properties;
 
 /**
  * The MurmelAPI main class.
@@ -85,8 +86,18 @@ public final class MurmelAPI {
         DATABASE = new Database();
     }
 
-    public static void connect(String driver, String url, String user, String password) {
-        DATABASE.connect(driver, url, user, password);
+    public static void connect(String propertyFileName) {
+        DATABASE.connect(propertyFileName);
+        setup();
+    }
+
+    public static void connect(Properties properties) {
+        DATABASE.connect(properties);
+        setup();
+    }
+
+    public static void connect(String url, String user, String password) {
+        DATABASE.connect(url, user, password);
         setup();
     }
 
