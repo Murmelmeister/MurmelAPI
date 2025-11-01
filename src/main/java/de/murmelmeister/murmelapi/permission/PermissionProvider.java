@@ -47,7 +47,9 @@ public final class PermissionProvider implements Permission, RefreshListener, Au
     }
 
     private Set<String> loadAllFromDatabase(int userId) {
-        return new LinkedHashSet<>(database.queryListCallable("getUserPermission", resultSet -> resultSet.getString("permission"), userId));
+        return new LinkedHashSet<>(database.queryListCallable("getUserPermission",
+                resultSet -> resultSet.getString("permission"),
+                stmt -> stmt.setInt(1, userId)));
     }
 
     public static void setup(Database database) {
@@ -138,14 +140,14 @@ public final class PermissionProvider implements Permission, RefreshListener, Au
         String cacheName = event.type();
         // Let the cache refresh by single and all events (Not really optimal, but works for now)
         if (RefreshType.USER_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.GROUP_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.USER_PARENTS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.GROUP_PARENTS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.SINGLE_USER_PERMISSION.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.SINGLE_GROUP_PARENT.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.GROUP_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.USER_PARENTS.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.GROUP_PARENTS.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.SINGLE_USER_PERMISSION.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.SINGLE_GROUP_PARENT.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             cache.invalidateAll();
             List<Integer> userIds = userProvider.findAll().stream().map(User::id).toList();
             userIds.forEach(id -> cache.put(id, loadAllFromDatabase(id)));
