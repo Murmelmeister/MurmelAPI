@@ -47,7 +47,7 @@ public final class PermissionProvider implements Permission, RefreshListener, Au
     }
 
     private Set<String> loadAllFromDatabase(int userId) {
-        return new LinkedHashSet<>(database.queryListCallable("getUserPermission",
+        return new LinkedHashSet<>(database.queryListCallable("CALL getUserPermission(?)",
                 resultSet -> resultSet.getString("permission"),
                 stmt -> stmt.setInt(1, userId)));
     }
