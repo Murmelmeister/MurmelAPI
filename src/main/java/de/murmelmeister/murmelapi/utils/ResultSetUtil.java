@@ -27,7 +27,7 @@ public final class ResultSetUtil {
         return resultSet -> {
             int id = resultSet.getInt("id");
             String code = resultSet.getString("code");
-            Locale locale = code != null && !code.isBlank() ? Locale.forLanguageTag(code) : Locale.ROOT;
+            Locale locale = code != null && !code.isBlank() ? Locale.forLanguageTag(code) : Locale.ENGLISH;
             return new Language(id, locale);
         };
     }

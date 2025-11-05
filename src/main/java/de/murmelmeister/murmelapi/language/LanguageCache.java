@@ -133,6 +133,6 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
     }
 
     private static String toKey(Locale locale) {
-        return locale.toLanguageTag().toLowerCase(Locale.ROOT);
+        return locale.toLanguageTag().toLowerCase(Locale.ENGLISH);
     }
 }
