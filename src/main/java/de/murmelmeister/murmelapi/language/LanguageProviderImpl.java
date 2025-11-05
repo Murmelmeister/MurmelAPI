@@ -4,11 +4,11 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
-import java.util.Set;
+
+import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
+import static de.murmelmeister.murmelapi.MurmelAPI.GERMAN_CODE;
 
 /**
  * Provides CRUD operations for {@link Language} entities backed by a relational database
@@ -41,19 +41,16 @@ public final class LanguageProviderImpl implements LanguageProvider {
         String upsertDefaults = "REPLACE INTO " + TABLE_NAME + " (id, code) VALUES (?, ?)";
         database.updateBatch(upsertDefaults, stmt -> {
             stmt.setInt(1, 1);
-            stmt.setString(2, Locale.ENGLISH.toLanguageTag());
+            stmt.setString(2, ENGLISH_CODE);
             stmt.addBatch();
 
             stmt.setInt(1, 2);
-            stmt.setString(2, Locale.GERMAN.toLanguageTag());
+            stmt.setString(2, GERMAN_CODE);
             stmt.addBatch();
         });
 
-        String insertOthers = "INSERT IGNORE INTO " + TABLE_NAME + " (code) VALUES (?)";
-        Set<String> defaultTags = Set.of(
-                Locale.ENGLISH.toLanguageTag(),
-                Locale.GERMAN.toLanguageTag()
-        );
+        /*String insertOthers = "INSERT IGNORE INTO " + TABLE_NAME + " (code) VALUES (?)";
+        Set<String> defaultTags = Set.of(ENGLISH_CODE, GERMAN_CODE);
 
         database.updateBatch(insertOthers, stmt -> {
             Set<String> locales = new LinkedHashSet<>();
@@ -67,7 +64,7 @@ public final class LanguageProviderImpl implements LanguageProvider {
                 stmt.setString(1, tag);
                 stmt.addBatch();
             }
-        });
+        });*/
     }
 
     @Override
@@ -86,9 +83,9 @@ public final class LanguageProviderImpl implements LanguageProvider {
     }
 
     @Override
-    public Language get(Locale locale) {
-        Locale normalized = normalize(locale);
-        return normalized != null ? cache.getByLocale(normalized) : null;
+    public Language get(String code) {
+        String normalized = normalize(code);
+        return normalized != null ? cache.getByCode(normalized) : null;
     }
 
     @Override
@@ -97,14 +94,13 @@ public final class LanguageProviderImpl implements LanguageProvider {
     }
 
     @Override
-    public Language create(Locale locale) {
-        Locale normalized = normalize(locale);
+    public Language create(String code) {
+        String normalized = normalize(code);
         if (normalized == null) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (code) VALUES (?)";
-        String localeTag = normalized.toLanguageTag();
         int id = (int) database.updateAndGetGeneratedKeys(sql,
-                stmt -> stmt.setString(1, localeTag));
+                stmt -> stmt.setString(1, normalized));
         if (id < 1) return null;
 
         Language language = new Language(id, normalized);
@@ -128,39 +124,37 @@ public final class LanguageProviderImpl implements LanguageProvider {
     }
 
     @Override
-    public Language update(int id, Locale locale) {
-        if (id < 1 || locale == null) return null;
-        Locale normalized = normalize(locale);
+    public Language update(int id, String code) {
+        if (id < 1 || code == null) return null;
+        String normalized = normalize(code);
         if (normalized == null) return null;
-        if ((id == 1 && !Locale.ENGLISH.equals(normalized))
-                || (id == 2 && !Locale.GERMAN.equals(normalized))) {
+        if ((id == 1 && !ENGLISH_CODE.equals(normalized))
+                || (id == 2 && !GERMAN_CODE.equals(normalized))) {
             return null;
         }
 
         Language existing = cache.getById(id);
         if (existing == null) return null;
 
-        if (Objects.equals(normalized, existing.locale()))
+        if (Objects.equals(normalized, existing.code()))
             return existing; // No changes, return existing
 
         String sql = "UPDATE " + TABLE_NAME + " SET code = ? WHERE id = ?";
-        String localeTag = normalized.toLanguageTag();
         int rows = database.update(sql, stmt -> {
-            stmt.setString(1, localeTag);
+            stmt.setString(1, normalized);
             stmt.setInt(2, id);
         });
         if (rows < 1) return null;
 
-        Language language = existing.withLocale(normalized);
+        Language language = existing.withCode(normalized);
         RefreshUtil.fireSingle(single, id);
         cache.put(language);
         return language;
     }
 
-    private static Locale normalize(Locale locale) {
-        if (locale == null) return null;
-        String tag = locale.toLanguageTag();
-        if (tag.isBlank()) return null;
-        return Locale.forLanguageTag(tag);
+    private String normalize(String code) {
+        if (code == null) return null;
+        if (code.isBlank()) return null;
+        return code;
     }
 }

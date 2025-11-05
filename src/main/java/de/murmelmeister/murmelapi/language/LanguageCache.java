@@ -11,24 +11,23 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 /**
- * LanguageCache provides a Caffeine-backed cache for language lookups by id and locale.
+ * LanguageCache provides a Caffeine-backed cache for language lookups by id and language code.
  */
 public class LanguageCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
     private final Database database;
     private final String tableName;
     private final LoadingCache<Integer, Language> cacheById;
-    private final LoadingCache<String, Integer> localeToId;
+    private final LoadingCache<String, Integer> codeToId;
     private final LoadingCache<String, List<Language>> listCache;
 
     public LanguageCache(Database database, String tableName, long cacheCapacity) {
         this.database = database;
         this.tableName = tableName;
         this.cacheById = CacheUtil.buildCache(this::loadById, cacheCapacity);
-        this.localeToId = CacheUtil.buildCache(this::loadByLocaleKey, cacheCapacity);
+        this.codeToId = CacheUtil.buildCache(this::loadByCodeKey, cacheCapacity);
         this.listCache = CacheUtil.buildCache(key -> loadAllFromDatabase(), 1);
         RefreshUtil.register(this);
     }
@@ -64,7 +63,7 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
             return;
         languages.forEach(language -> {
             cacheById.put(language.id(), language);
-            localeToId.put(toKey(language.locale()), language.id());
+            codeToId.put(toKey(language.code()), language.id());
         });
         listCache.put(ALL_KEY, List.copyOf(languages));
     }
@@ -81,7 +80,7 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
         return CacheUtil.loadList(database, sql, null, ResultSetUtil.language());
     }
 
-    private Integer loadByLocaleKey(String key) {
+    private Integer loadByCodeKey(String key) {
         String sql = "SELECT id FROM " + tableName + " WHERE LOWER(code) = ?";
         return CacheUtil.loadSingle(database, sql, null,
                 resultSet -> resultSet.getInt("id"),
@@ -98,15 +97,15 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
         return cacheById.get(id);
     }
 
-    public Language getByLocale(Locale locale) {
-        if (locale == null) return null;
-        Integer id = localeToId.get(toKey(locale));
+    public Language getByCode(String code) {
+        if (code == null) return null;
+        Integer id = codeToId.get(toKey(code));
         return id != null ? cacheById.get(id) : null;
     }
 
     public void put(Language language) {
         cacheById.put(language.id(), language);
-        localeToId.put(toKey(language.locale()), language.id());
+        codeToId.put(toKey(language.code()), language.id());
         CacheUtil.put(listCache, ALL_KEY, language, v -> v.id() == language.id());
     }
 
@@ -114,14 +113,14 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
         Language removed = cacheById.getIfPresent(id);
         if (removed != null) {
             cacheById.invalidate(id);
-            localeToId.invalidate(toKey(removed.locale()));
+            codeToId.invalidate(toKey(removed.code()));
         }
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
     }
 
     public void clear() {
         cacheById.invalidateAll();
-        localeToId.invalidateAll();
+        codeToId.invalidateAll();
         listCache.invalidateAll();
     }
 
@@ -132,7 +131,7 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
         return List.copyOf(languages);
     }
 
-    private static String toKey(Locale locale) {
-        return locale.toLanguageTag().toLowerCase(Locale.ENGLISH);
+    private static String toKey(String code) {
+        return code.toLowerCase();
     }
 }

@@ -52,6 +52,9 @@ import java.util.Properties;
 public final class MurmelAPI {
     private static final Database DATABASE;
 
+    public static final String ENGLISH_CODE = "en-US";
+    public static final String GERMAN_CODE = "de-DE";
+
     private static String databaseName = "MurmelAPI";
     private static Long fetchLimit = null;
     private static long cacheCapacity = 10_000; // Default cache size

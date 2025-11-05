@@ -19,16 +19,16 @@ import de.murmelmeister.murmelapi.user.playtime.UserPlayTime;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 
 import java.time.LocalDateTime;
-import java.util.Locale;
 import java.util.UUID;
+
+import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
 
 public final class ResultSetUtil {
     public static ResultSetProcessor<Language> language() {
         return resultSet -> {
             int id = resultSet.getInt("id");
             String code = resultSet.getString("code");
-            Locale locale = code != null && !code.isBlank() ? Locale.forLanguageTag(code) : Locale.ENGLISH;
-            return new Language(id, locale);
+            return new Language(id, code != null && !code.isBlank() ? code : ENGLISH_CODE);
         };
     }
 
