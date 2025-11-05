@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.language;
 
 import java.util.List;
+import java.util.Locale;
 
 public interface LanguageProvider {
     void closeCache();
@@ -9,13 +10,13 @@ public interface LanguageProvider {
 
     Language get(int id);
 
-    Language get(String name);
+    Language get(Locale locale);
 
     List<Language> getLanguages();
 
-    Language create(String name);
+    Language create(Locale locale);
 
     int delete(int id);
 
-    Language update(int id, String name);
+    Language update(int id, Locale locale);
 }

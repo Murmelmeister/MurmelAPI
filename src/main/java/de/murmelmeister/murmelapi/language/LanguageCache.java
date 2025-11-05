@@ -11,24 +11,24 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 /**
- * LanguageCache is a thread-safe cache for storing Language objects.
- * It uses a ConcurrentHashMap to allow concurrent access and modifications.
+ * LanguageCache provides a Caffeine-backed cache for language lookups by id and locale.
  */
 public class LanguageCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
     private final Database database;
     private final String tableName;
     private final LoadingCache<Integer, Language> cacheById;
-    private final LoadingCache<String, Integer> nameToId;
+    private final LoadingCache<String, Integer> localeToId;
     private final LoadingCache<String, List<Language>> listCache;
 
     public LanguageCache(Database database, String tableName, long cacheCapacity) {
         this.database = database;
         this.tableName = tableName;
         this.cacheById = CacheUtil.buildCache(this::loadById, cacheCapacity);
-        this.nameToId = CacheUtil.buildCache(this::loadByName, cacheCapacity);
+        this.localeToId = CacheUtil.buildCache(this::loadByLocaleKey, cacheCapacity);
         this.listCache = CacheUtil.buildCache(key -> loadAllFromDatabase(), 1);
         RefreshUtil.register(this);
     }
@@ -60,7 +60,13 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<Language> languages = loadAllFromDatabase();
-        languages.forEach(this::put);
+        if (languages.isEmpty())
+            return;
+        languages.forEach(language -> {
+            cacheById.put(language.id(), language);
+            localeToId.put(toKey(language.locale()), language.id());
+        });
+        listCache.put(ALL_KEY, List.copyOf(languages));
     }
 
     private void refreshSingle(int id) {
@@ -71,15 +77,15 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
     }
 
     private List<Language> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+        String sql = "SELECT id, code FROM " + tableName;
         return CacheUtil.loadList(database, sql, null, ResultSetUtil.language());
     }
 
-    private Integer loadByName(String name) {
-        String sql = "SELECT id FROM " + tableName + " WHERE name = ?";
+    private Integer loadByLocaleKey(String key) {
+        String sql = "SELECT id FROM " + tableName + " WHERE LOWER(code) = ?";
         return CacheUtil.loadSingle(database, sql, null,
                 resultSet -> resultSet.getInt("id"),
-                stmt -> stmt.setString(1, name));
+                stmt -> stmt.setString(1, key));
     }
 
     private Language loadById(int id) {
@@ -92,15 +98,15 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
         return cacheById.get(id);
     }
 
-    public Language getByName(String name) {
-        if (name == null) return null;
-        Integer id = nameToId.get(name.toLowerCase());
+    public Language getByLocale(Locale locale) {
+        if (locale == null) return null;
+        Integer id = localeToId.get(toKey(locale));
         return id != null ? cacheById.get(id) : null;
     }
 
     public void put(Language language) {
         cacheById.put(language.id(), language);
-        nameToId.put(language.name().toLowerCase(), language.id());
+        localeToId.put(toKey(language.locale()), language.id());
         CacheUtil.put(listCache, ALL_KEY, language, v -> v.id() == language.id());
     }
 
@@ -108,14 +114,14 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
         Language removed = cacheById.getIfPresent(id);
         if (removed != null) {
             cacheById.invalidate(id);
-            nameToId.invalidate(removed.name().toLowerCase());
+            localeToId.invalidate(toKey(removed.locale()));
         }
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
     }
 
     public void clear() {
         cacheById.invalidateAll();
-        nameToId.invalidateAll();
+        localeToId.invalidateAll();
         listCache.invalidateAll();
     }
 
@@ -124,5 +130,9 @@ public class LanguageCache implements RefreshListener, AutoCloseable {
         if (languages == null || languages.isEmpty())
             return Collections.emptyList();
         return List.copyOf(languages);
+    }
+
+    private static String toKey(Locale locale) {
+        return locale.toLanguageTag().toLowerCase(Locale.ROOT);
     }
 }
