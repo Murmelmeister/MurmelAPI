@@ -57,7 +57,6 @@ public final class MurmelAPI {
     public static final int DEFAULT_GROUP_ID = 1;
     public static final int CONSOLE_USER_ID = -1;
 
-    private static String databaseName = "MurmelAPI";
     private static Long fetchLimit = null;
     private static long cacheCapacity = 10_000; // Default cache size
     private static Duration refreshInterval = Duration.ofMinutes(30);
@@ -215,14 +214,6 @@ public final class MurmelAPI {
 
     public static Database getDatabase() {
         return DATABASE;
-    }
-
-    public static String getDatabaseName() {
-        return databaseName;
-    }
-
-    public static void setDatabaseName(String databaseName) {
-        MurmelAPI.databaseName = databaseName;
     }
 
     public static DateTimeFormatter getDateTimeFormatter(int languageId) {
