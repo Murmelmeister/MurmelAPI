@@ -25,9 +25,9 @@ public sealed interface GroupProvider permits GroupProviderImpl {
 
     List<String> findAllGroupNames();
 
-    Group create(String groupName, int priority, String tag, int createdBy);
+    Group create(String groupName, int priority, int createdBy);
 
     int delete(int groupId);
 
-    Group update(int groupId, String groupName, int priority, String tag, int changedBy);
+    Group update(int groupId, String groupName, int priority, int changedBy);
 }
