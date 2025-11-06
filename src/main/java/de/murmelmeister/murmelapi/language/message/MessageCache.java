@@ -10,7 +10,10 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,6 +22,9 @@ import java.util.regex.Pattern;
  * It allows for quick retrieval and management of messages based on their unique identifiers.
  */
 public class MessageCache implements RefreshListener, AutoCloseable {
+    private static final Pattern LANGUAGE_KEY_PATTERN = Pattern.compile("^LanguageKey\\[languageId=(\\d+)]$");
+    private static final Pattern TAG_KEY_PATTERN = Pattern.compile("^TagKey\\[tagId=(\\w+), languageId=(\\d+)]$");
+
     private final Database database;
     private final String tableName;
     private final LoadingCache<Integer, Message> cacheById;
@@ -52,8 +58,8 @@ public class MessageCache implements RefreshListener, AutoCloseable {
                 else if (key instanceof LanguageKey languageKey)
                     refreshSingle(languageKey);
             } else {
-                Matcher languageMatcher = Pattern.compile("^LanguageKey\\[languageId=(\\d+)]$").matcher((String) key);
-                Matcher tagMatcher = Pattern.compile("^TagKey\\[tagId=(\\w+), languageId=(\\d+)]$").matcher((String) key);
+                Matcher languageMatcher = LANGUAGE_KEY_PATTERN.matcher((String) key);
+                Matcher tagMatcher = TAG_KEY_PATTERN.matcher((String) key);
                 if (languageMatcher.matches()) {
                     int languageId = Integer.parseInt(languageMatcher.group(1));
                     refreshSingle(new LanguageKey(languageId));
@@ -78,13 +84,31 @@ public class MessageCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<Message> messages = loadAllFromDatabase();
-        messages.forEach(this::put);
+        if (messages.isEmpty())
+            return;
+
+        Map<LanguageKey, List<Message>> byLanguage = new HashMap<>();
+        for (Message message : messages) {
+            cacheById.put(message.id(), message);
+            cacheByTag.put(new TagKey(message.tagId(), message.languageId()), message);
+            LanguageKey languageKey = new LanguageKey(message.languageId());
+            byLanguage.computeIfAbsent(languageKey, ignored -> new ArrayList<>()).add(message);
+        }
+
+        byLanguage.forEach((key, value) -> cacheByLanguage.put(key, List.copyOf(value)));
     }
 
     private void refreshSingle(LanguageKey key) {
         removeByLanguage(key.languageId());
         List<Message> messages = loadByLanguage(key.languageId());
-        messages.forEach(this::put);
+        if (messages.isEmpty())
+            return;
+
+        for (Message message : messages) {
+            cacheById.put(message.id(), message);
+            cacheByTag.put(new TagKey(message.tagId(), message.languageId()), message);
+        }
+        cacheByLanguage.put(key, List.copyOf(messages));
     }
 
     private void refreshSingle(TagKey key) {
