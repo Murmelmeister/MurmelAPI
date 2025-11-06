@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.language.message;
 
 import java.util.List;
+import java.util.Properties;
 
 public interface MessageProvider {
     void closeCache();
@@ -15,6 +16,8 @@ public interface MessageProvider {
 
     Message create(String tagId, int languageId, String message);
 
+    int[] createAll(Properties properties);
+
     int delete(int id);
 
     int delete(String tagId, int languageId);
@@ -22,4 +25,6 @@ public interface MessageProvider {
     int deleteAll(int languageId);
 
     Message update(int id, String tagId, int languageId, String message);
+
+    int[] updateAll(Properties properties);
 }
