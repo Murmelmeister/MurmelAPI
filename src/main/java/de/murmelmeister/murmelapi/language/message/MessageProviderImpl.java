@@ -79,6 +79,41 @@ public final class MessageProviderImpl implements MessageProvider {
     }
 
     @Override
+    public int[] createAll(Properties properties) {
+        if (properties == null || properties.isEmpty())
+            throw new IllegalArgumentException("missing properties file");
+
+        String language = properties.getProperty("language.id");
+        if (language == null || language.isBlank())
+            throw new IllegalArgumentException("missing language.id property");
+
+        int languageId;
+        try {
+            languageId = Integer.parseInt(language);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("invalid language.id property is not a integer", e);
+        }
+
+        String sql = "INSERT IGNORE INTO " + TABLE_NAME + " (tag_id, language_id, message) VALUES (?, ?, ?)";
+        int[] result = database.updateBatch(sql, stmt -> {
+            for (String tagId : properties.stringPropertyNames()) {
+                if (tagId.isBlank() || tagId.startsWith("#") || tagId.equals("language.id")) continue;
+                String msg = properties.getProperty(tagId);
+                if (msg == null || msg.isBlank()) continue;
+
+                stmt.setString(1, tagId);
+                stmt.setInt(2, languageId);
+                stmt.setString(3, msg);
+                stmt.addBatch();
+            }
+        });
+
+        if (result != null && result.length > 0)
+            RefreshUtil.fireCache(all);
+        return result;
+    }
+
+    @Override
     public int delete(int id) {
         if (id < 1) return 0;
 
@@ -152,5 +187,40 @@ public final class MessageProviderImpl implements MessageProvider {
         Message msg = existing.withUpdateMeta(tagId, languageId, message);
         RefreshUtil.fireSingle(single, id);
         return msg;
+    }
+
+    @Override
+    public int[] updateAll(Properties properties) {
+        if (properties == null || properties.isEmpty())
+            throw new IllegalArgumentException("missing properties file");
+
+        String language = properties.getProperty("language.id");
+        if (language == null || language.isBlank())
+            throw new IllegalArgumentException("missing language.id property");
+
+        int languageId;
+        try {
+            languageId = Integer.parseInt(language);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("invalid language.id property is not a integer", e);
+        }
+
+        String sql = "UPDATE " + TABLE_NAME + " SET message = ? WHERE tag_id = ? AND language_id = ?";
+        int[] result = database.updateBatch(sql, stmt -> {
+            for (String tagId : properties.stringPropertyNames()) {
+                if (tagId.isBlank() || tagId.startsWith("#") || tagId.equals("language.id")) continue;
+                String msg = properties.getProperty(tagId);
+                if (msg == null || msg.isBlank()) continue;
+
+                stmt.setString(1, msg);
+                stmt.setString(2, tagId);
+                stmt.setInt(3, languageId);
+                stmt.addBatch();
+            }
+        });
+
+        if (result != null && result.length > 0)
+            RefreshUtil.fireCache(all);
+        return result;
     }
 }
