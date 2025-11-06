@@ -67,7 +67,14 @@ public class UserCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<User> users = loadAllFromDatabase();
-        users.forEach(this::put);
+        if (users.isEmpty())
+            return;
+        users.forEach(user -> {
+            cacheById.put(user.id(), user);
+            cacheByUUID.put(user.mojangId(), user);
+            cacheByName.put(user.username(), user);
+        });
+        listCache.put(ALL_KEY, List.copyOf(users));
     }
 
     private void refreshSingle(int id) {

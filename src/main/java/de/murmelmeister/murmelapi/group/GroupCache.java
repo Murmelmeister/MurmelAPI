@@ -59,7 +59,13 @@ public class GroupCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<Group> groups = loadAllFromDatabase();
-        groups.forEach(this::put);
+        if (groups.isEmpty())
+            return;
+        groups.forEach(group -> {
+            cacheById.put(group.id(), group);
+            cacheByName.put(group.groupName(), group);
+        });
+        listCache.put(ALL_KEY, List.copyOf(groups));
     }
 
     private void refreshSingle(int id) {

@@ -10,13 +10,17 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GroupColorCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*groupId=(\\d+), typeId=(\\d+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<ColorKey, GroupColor> cacheByKey;
@@ -48,7 +52,7 @@ public class GroupColorCache implements RefreshListener, AutoCloseable {
                 else if (key instanceof Integer groupId)
                     refreshSingle(groupId);
             } else {
-                Matcher matcher = Pattern.compile(".*groupId=(\\d+), typeId=(\\d+).*").matcher((String) key);
+                Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     int groupId = Integer.parseInt(matcher.group(1));
                     int typeId = Integer.parseInt(matcher.group(2));
@@ -70,7 +74,18 @@ public class GroupColorCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<GroupColor> colors = loadAllFromDatabase();
-        colors.forEach(this::put);
+        if (colors.isEmpty())
+            return;
+
+        Map<Integer, List<GroupColor>> byGroup = new HashMap<>();
+        for (GroupColor color : colors) {
+            ColorKey key = new ColorKey(color.groupId(), color.typeId());
+            cacheByKey.put(key, color);
+            byGroup.computeIfAbsent(color.groupId(), ignored -> new ArrayList<>()).add(color);
+        }
+
+        byGroup.forEach((groupId, values) -> cacheByGroupId.put(groupId, List.copyOf(values)));
+        listCache.put(ALL_KEY, List.copyOf(colors));
     }
 
     private void refreshSingle(int groupId) {

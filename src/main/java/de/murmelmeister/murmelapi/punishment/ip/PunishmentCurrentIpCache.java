@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 
 public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*ipAddress=([^,]+), typeId=(\\d+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<IpTypeKey, PunishmentCurrentIp> cache;
@@ -44,7 +45,7 @@ public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable 
                 if (key instanceof IpTypeKey ipTypeKey)
                     refreshSingle(ipTypeKey);
             } else {
-                Matcher matcher = Pattern.compile(".*ipAddress=([^,]+), typeId=(\\d+).*").matcher((String) key);
+                Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     String ipAddress = matcher.group(1);
                     int typeId = Integer.parseInt(matcher.group(2));
@@ -65,7 +66,11 @@ public class PunishmentCurrentIpCache implements RefreshListener, AutoCloseable 
     private void refreshAll() {
         clear();
         List<PunishmentCurrentIp> punishments = loadAllFromDatabase();
-        punishments.forEach(this::put);
+        if (punishments.isEmpty())
+            return;
+
+        punishments.forEach(punish -> cache.put(new IpTypeKey(punish.ipAddress(), punish.typeId()), punish));
+        listCache.put(ALL_KEY, List.copyOf(punishments));
     }
 
     private void refreshSingle(IpTypeKey key) {

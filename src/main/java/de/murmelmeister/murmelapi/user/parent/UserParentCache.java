@@ -10,13 +10,17 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class UserParentCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*userId=(\\d+), parentId=(\\d+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<ParentKey, UserParent> cacheByKey;
@@ -48,7 +52,7 @@ public class UserParentCache implements RefreshListener, AutoCloseable {
                 else if (key instanceof Integer userId)
                     refreshSingle(userId);
             } else {
-                Matcher matcher = Pattern.compile(".*userId=(\\d+), parentId=(\\d+).*").matcher((String) key);
+                Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     int userId = Integer.parseInt(matcher.group(1));
                     int parentId = Integer.parseInt(matcher.group(2));
@@ -70,7 +74,18 @@ public class UserParentCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<UserParent> parents = loadAllFromDatabase();
-        parents.forEach(this::put);
+        if (parents.isEmpty())
+            return;
+
+        Map<Integer, List<UserParent>> byUser = new HashMap<>();
+        for (UserParent parent : parents) {
+            ParentKey key = new ParentKey(parent.userId(), parent.parentId());
+            cacheByKey.put(key, parent);
+            byUser.computeIfAbsent(parent.userId(), ignored -> new ArrayList<>()).add(parent);
+        }
+
+        byUser.forEach((userId, values) -> cacheByUserId.put(userId, List.copyOf(values)));
+        listCache.put(ALL_KEY, List.copyOf(parents));
     }
 
     private void refreshSingle(int userId) {

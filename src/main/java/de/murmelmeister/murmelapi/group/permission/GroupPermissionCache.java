@@ -10,13 +10,17 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GroupPermissionCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*groupId=(\\d+), permission=([^,\\]]+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<PermissionKey, GroupPermission> cacheByKey;
@@ -48,7 +52,7 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
                 else if (key instanceof Integer groupId)
                     refreshSingle(groupId);
             } else {
-                Matcher matcher = Pattern.compile(".*groupId=(\\d+), permission=([^,\\]]+).*").matcher((String) key);
+                Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     int groupId = Integer.parseInt(matcher.group(1));
                     String permission = matcher.group(2);
@@ -70,7 +74,18 @@ public class GroupPermissionCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<GroupPermission> permissions = loadAllFromDatabase();
-        permissions.forEach(this::put);
+        if (permissions.isEmpty())
+            return;
+
+        Map<Integer, List<GroupPermission>> byGroup = new HashMap<>();
+        for (GroupPermission permission : permissions) {
+            PermissionKey key = new PermissionKey(permission.groupId(), permission.permission());
+            cacheByKey.put(key, permission);
+            byGroup.computeIfAbsent(permission.groupId(), ignored -> new ArrayList<>()).add(permission);
+        }
+
+        byGroup.forEach((groupId, values) -> cacheByGroupId.put(groupId, List.copyOf(values)));
+        listCache.put(ALL_KEY, List.copyOf(permissions));
     }
 
     private void refreshSingle(int groupId) {

@@ -10,13 +10,17 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GroupParentCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*groupId=(\\d+), parentId=(\\d+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<ParentKey, GroupParent> cacheByKey;
@@ -48,7 +52,7 @@ public class GroupParentCache implements RefreshListener, AutoCloseable {
                 else if (key instanceof Integer groupId)
                     refreshSingle(groupId);
             } else {
-                Matcher matcher = Pattern.compile(".*groupId=(\\d+), parentId=(\\d+).*").matcher((String) key);
+                Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     int groupId = Integer.parseInt(matcher.group(1));
                     int parentId = Integer.parseInt(matcher.group(2));
@@ -70,7 +74,18 @@ public class GroupParentCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<GroupParent> parents = loadAllFromDatabase();
-        parents.forEach(this::put);
+        if (parents.isEmpty())
+            return;
+
+        Map<Integer, List<GroupParent>> byGroup = new HashMap<>();
+        for (GroupParent parent : parents) {
+            ParentKey key = new ParentKey(parent.groupId(), parent.parentId());
+            cacheByKey.put(key, parent);
+            byGroup.computeIfAbsent(parent.groupId(), ignored -> new ArrayList<>()).add(parent);
+        }
+
+        byGroup.forEach((groupId, values) -> cacheByGroupId.put(groupId, List.copyOf(values)));
+        listCache.put(ALL_KEY, List.copyOf(parents));
     }
 
     private void refreshSingle(int groupId) {

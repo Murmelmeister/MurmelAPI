@@ -10,8 +10,11 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PunishmentReasonCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
@@ -59,7 +62,17 @@ public class PunishmentReasonCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<PunishmentReason> reasons = loadAllFromDatabase();
-        reasons.forEach(this::put);
+        if (reasons.isEmpty())
+            return;
+
+        Map<Integer, List<PunishmentReason>> byType = new HashMap<>();
+        for (PunishmentReason reason : reasons) {
+            cacheById.put(reason.id(), reason);
+            byType.computeIfAbsent(reason.typeId(), ignored -> new ArrayList<>()).add(reason);
+        }
+
+        byType.forEach((typeId, values) -> cacheByType.put(typeId, List.copyOf(values)));
+        listCache.put(ALL_KEY, List.copyOf(reasons));
     }
 
     private void refreshSingle(int reasonId) {

@@ -10,8 +10,11 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class UserLoginCache implements RefreshListener, AutoCloseable {
@@ -62,7 +65,21 @@ public class UserLoginCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<UserLogin> userLogins = loadAllFromDatabase();
-        userLogins.forEach(this::put);
+        if (userLogins.isEmpty())
+            return;
+
+        Map<Integer, List<UserLogin>> byUser = new HashMap<>();
+        Map<String, List<UserLogin>> byIpAddress = new HashMap<>();
+
+        for (UserLogin userLogin : userLogins) {
+            cacheById.put(userLogin.id(), userLogin);
+            byUser.computeIfAbsent(userLogin.userId(), ignored -> new ArrayList<>()).add(userLogin);
+            byIpAddress.computeIfAbsent(userLogin.ipAddress(), ignored -> new ArrayList<>()).add(userLogin);
+        }
+
+        byUser.forEach((userId, logins) -> cacheByUserId.put(userId, List.copyOf(logins)));
+        byIpAddress.forEach((ip, logins) -> cacheByIpAddress.put(ip, List.copyOf(logins)));
+        listCache.put(ALL_KEY, List.copyOf(userLogins));
     }
 
     private void refreshSingle(UUID sessionId) {
@@ -115,9 +132,9 @@ public class UserLoginCache implements RefreshListener, AutoCloseable {
     }
 
     public void remove(UUID id) {
-        UserLogin userLogin = cacheById.get(id);
+        UserLogin userLogin = cacheById.getIfPresent(id);
+        cacheById.invalidate(id);
         if (userLogin != null) {
-            cacheById.invalidate(id);
             CacheUtil.remove(cacheByUserId, userLogin.userId(), v -> v.id().equals(id));
             CacheUtil.remove(cacheByIpAddress, userLogin.ipAddress(), v -> v.id().equals(id));
         }

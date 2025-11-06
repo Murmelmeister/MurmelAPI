@@ -60,7 +60,25 @@ public class PunishmentLogCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<PunishmentLog> logs = loadAllFromDatabase();
-        logs.forEach(this::put);
+        if (logs.isEmpty())
+            return;
+
+        Map<Integer, List<PunishmentLog>> byUser = new HashMap<>();
+        Map<String, List<PunishmentLog>> byIp = new HashMap<>();
+
+        for (PunishmentLog log : logs) {
+            cacheById.put(log.id(), log);
+            Integer userId = log.userId();
+            if (userId != null)
+                byUser.computeIfAbsent(userId, ignored -> new ArrayList<>()).add(log);
+            String ipAddress = log.ipAddress();
+            if (ipAddress != null)
+                byIp.computeIfAbsent(ipAddress, ignored -> new ArrayList<>()).add(log);
+        }
+
+        byUser.forEach((userId, userLogs) -> cacheByUser.put(userId, List.copyOf(userLogs)));
+        byIp.forEach((ip, ipLogs) -> cacheByIp.put(ip, List.copyOf(ipLogs)));
+        listCache.put(ALL_KEY, List.copyOf(logs));
     }
 
     private void refreshSingle(UUID logId) {

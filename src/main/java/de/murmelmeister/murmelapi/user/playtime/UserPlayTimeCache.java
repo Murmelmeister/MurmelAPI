@@ -57,7 +57,11 @@ public class UserPlayTimeCache implements RefreshListener, AutoCloseable {
     private void refreshAll() {
         clear();
         List<UserPlayTime> playTimes = loadAllFromDatabase();
-        playTimes.forEach(this::put);
+        if (playTimes.isEmpty())
+            return;
+
+        playTimes.forEach(playTime -> cache.put(playTime.getUserId(), playTime));
+        listCache.put(ALL_KEY, List.copyOf(playTimes));
     }
 
     private void refreshSingle(int userId) {

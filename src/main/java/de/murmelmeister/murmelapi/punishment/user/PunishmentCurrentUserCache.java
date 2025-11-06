@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 
 public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseable {
     private static final String ALL_KEY = "ALL";
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*userId=(\\d+), typeId=(\\d+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<UserTypeKey, PunishmentCurrentUser> cache;
@@ -44,7 +45,7 @@ public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseabl
                 if (key instanceof UserTypeKey userTypeKey)
                     refreshSingle(userTypeKey);
             } else {
-                Matcher matcher = Pattern.compile(".*userId=(\\d+), typeId=(\\d+).*").matcher((String) key);
+                Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     int userId = Integer.parseInt(matcher.group(1));
                     int typeId = Integer.parseInt(matcher.group(2));
@@ -65,7 +66,11 @@ public class PunishmentCurrentUserCache implements RefreshListener, AutoCloseabl
     private void refreshAll() {
         clear();
         List<PunishmentCurrentUser> punishments = loadAllFromDatabase();
-        punishments.forEach(this::put);
+        if (punishments.isEmpty())
+            return;
+
+        punishments.forEach(punish -> cache.put(new UserTypeKey(punish.userId(), punish.typeId()), punish));
+        listCache.put(ALL_KEY, List.copyOf(punishments));
     }
 
     private void refreshSingle(UserTypeKey key) {

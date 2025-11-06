@@ -58,36 +58,73 @@ public final class CacheUtil {
     }
 
     public static <V> V loadSingle(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet, ParameterProcessor args) {
-        String limitSql = sql + (limit != null && limit > 0 ? " LIMIT ?" : "");
-        ParameterProcessor limitProcessor = limit != null && limit > 0
-                ? stmt -> stmt.setLong(stmt.getParameterMetaData().getParameterCount(), limit)
-                : ParameterProcessor.noop();
-        ParameterProcessor processor = ParameterProcessor.of(args).andThen(limitProcessor);
-        return database.query(limitSql, null, resultSet, processor);
+        LimitBinding binding = prepareLimit(sql, limit);
+        ParameterProcessor processor = ParameterProcessor.of(args).andThen(binding.processor());
+        return database.query(binding.sql(), null, resultSet, processor);
     }
 
     public static <V> V loadSingle(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet) {
-        String limitSql = sql + (limit != null && limit > 0 ? " LIMIT ?" : "");
-        ParameterProcessor limitProcessor = limit != null && limit > 0
-                ? stmt -> stmt.setLong(stmt.getParameterMetaData().getParameterCount(), limit)
-                : ParameterProcessor.noop();
-        return database.query(limitSql, null, resultSet, limitProcessor);
+        LimitBinding binding = prepareLimit(sql, limit);
+        return database.query(binding.sql(), null, resultSet, binding.processor());
     }
 
     public static <V> List<V> loadList(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet, ParameterProcessor args) {
-        String limitSql = sql + (limit != null && limit > 0 ? " LIMIT ?" : "");
-        ParameterProcessor limitProcessor = limit != null && limit > 0
-                ? stmt -> stmt.setLong(stmt.getParameterMetaData().getParameterCount(), limit)
-                : ParameterProcessor.noop();
-        ParameterProcessor processor = ParameterProcessor.of(args).andThen(limitProcessor);
-        return database.queryList(limitSql, resultSet, processor);
+        LimitBinding binding = prepareLimit(sql, limit);
+        ParameterProcessor processor = ParameterProcessor.of(args).andThen(binding.processor());
+        return database.queryList(binding.sql(), resultSet, processor);
     }
 
     public static <V> List<V> loadList(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet) {
-        String limitSql = sql + (limit != null && limit > 0 ? " LIMIT ?" : "");
-        ParameterProcessor limitProcessor = limit != null && limit > 0
-                ? stmt -> stmt.setLong(stmt.getParameterMetaData().getParameterCount(), limit)
-                : ParameterProcessor.noop();
-        return database.queryList(limitSql, resultSet, limitProcessor);
+        LimitBinding binding = prepareLimit(sql, limit);
+        return database.queryList(binding.sql(), resultSet, binding.processor());
+    }
+
+    private static int countPlaceholders(String sql) {
+        if (sql == null || sql.isEmpty())
+            return 0;
+
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        int count = 0;
+
+        for (int i = 0; i < sql.length(); i++) {
+            char c = sql.charAt(i);
+
+            if (c == '\'' && !inDoubleQuote) {
+                if (inSingleQuote && i + 1 < sql.length() && sql.charAt(i + 1) == '\'') {
+                    i++; // skip escaped a single quote represented by ''
+                    continue;
+                }
+                boolean escaped = i > 0 && sql.charAt(i - 1) == '\\';
+                if (!escaped)
+                    inSingleQuote = !inSingleQuote;
+                continue;
+            }
+
+            if (c == '"' && !inSingleQuote) {
+                boolean escaped = i > 0 && sql.charAt(i - 1) == '\\';
+                if (!escaped)
+                    inDoubleQuote = !inDoubleQuote;
+                continue;
+            }
+
+            if (c == '?' && !inSingleQuote && !inDoubleQuote)
+                count++;
+        }
+
+        return count;
+    }
+
+    private static LimitBinding prepareLimit(String sql, Long limit) {
+        if (limit == null || limit <= 0)
+            return new LimitBinding(sql, ParameterProcessor.noop());
+
+        int limitIndex = countPlaceholders(sql) + 1;
+        String limitSql = sql + " LIMIT ?";
+        ParameterProcessor limitProcessor = stmt -> stmt.setLong(limitIndex, limit);
+        return new LimitBinding(limitSql, limitProcessor);
+    }
+
+    private record LimitBinding(String sql, ParameterProcessor processor) {
     }
 }
