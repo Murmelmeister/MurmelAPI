@@ -94,7 +94,6 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
 
         GroupPermission groupPermission = new GroupPermission(groupId, permission, expiresAt, createdBy, createdAt, null, null);
         RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, permission));
-        cache.put(groupPermission);
         return groupPermission;
     }
 
@@ -113,7 +112,6 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
         });
         if (row < 1) return 0;
 
-        cache.remove(groupId, permission);
         RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, permission));
         return row;
     }
@@ -127,7 +125,6 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        cache.remove(groupId);
         RefreshUtil.fireSingle(single, groupId);
         return row;
     }
@@ -168,7 +165,6 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
 
         GroupPermission groupPermission = existing.withUpdateMeta(expiresAt, changedBy, changedAt);
         RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, permission));
-        cache.put(groupPermission);
         return groupPermission;
     }
 

@@ -122,7 +122,6 @@ public final class UserProviderImpl implements UserProvider {
 
         User newUser = new User(id, uuid, username, null, false, false, false, 1);
         RefreshUtil.fireSingle(single, newUser.id());
-        cache.put(newUser);
         return newUser;
     }
 
@@ -134,7 +133,6 @@ public final class UserProviderImpl implements UserProvider {
         int row = database.update(sql, stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
-        cache.remove(userId);
         RefreshUtil.fireSingle(single, userId);
         return row;
     }
@@ -172,7 +170,6 @@ public final class UserProviderImpl implements UserProvider {
 
         User user = existing.withUpdateMeta(username, firstLogin, debugUser, debugEnabled, languageId);
         RefreshUtil.fireSingle(single, userId);
-        cache.put(user);
         return user;
     }
 }

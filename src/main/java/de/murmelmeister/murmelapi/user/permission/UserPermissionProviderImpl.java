@@ -97,7 +97,6 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
 
         UserPermission userPermission = new UserPermission(userId, permission, expiresAt, createdBy, createdAt, null, null);
         RefreshUtil.fireSingle(single, new UserPermissionCache.PermissionKey(userId, permission));
-        cache.put(userPermission);
         return userPermission;
     }
 
@@ -116,7 +115,6 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
         });
         if (row < 1) return 0;
 
-        cache.remove(userId, permission);
         RefreshUtil.fireSingle(single, new UserPermissionCache.PermissionKey(userId, permission));
         return row;
     }
@@ -130,7 +128,6 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
                 stmt -> stmt.setInt(1, userId));
         if (rows < 1) return 0;
 
-        cache.remove(userId);
         RefreshUtil.fireSingle(single, userId);
         return rows;
     }
@@ -171,7 +168,6 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
 
         UserPermission userPermission = existing.withUpdateMeta(expiresAt, changedBy, changedAt);
         RefreshUtil.fireSingle(single, new UserPermissionCache.PermissionKey(userId, permission));
-        cache.put(userPermission);
         return userPermission;
     }
 

@@ -63,7 +63,6 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
 
         UserPlayTime newPlayTime = new UserPlayTime(userId, 0, 1);
         RefreshUtil.fireSingle(single, userId);
-        cache.put(newPlayTime);
         return newPlayTime;
 
     }
@@ -77,7 +76,6 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
                 stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
-        cache.remove(userId);
         RefreshUtil.fireSingle(single, userId);
         return row;
     }
@@ -102,7 +100,6 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         if (row < 1) return null;
 
         RefreshUtil.fireSingle(single, playTime.getUserId());
-        cache.put(playTime);
         return playTime;
     }
 
@@ -118,7 +115,6 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
             return true; // No changes, return existing playtime
 
         RefreshUtil.fireSingle(single, playTime.getUserId());
-        cache.put(playTime);
         return true;
     }
 
@@ -140,6 +136,5 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
 
         playTime.setPlayTime(currentPlayTime);
         RefreshUtil.fireSingle(single, playTime.getUserId());
-        cache.put(playTime);
     }
 }

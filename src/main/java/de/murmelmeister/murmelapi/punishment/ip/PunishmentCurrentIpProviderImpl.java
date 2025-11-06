@@ -74,7 +74,6 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
 
         PunishmentCurrentIp punish = new PunishmentCurrentIp(ipAddress, typeId, logId);
         RefreshUtil.fireSingle(single, new PunishmentCurrentIpCache.IpTypeKey(ipAddress, typeId));
-        cache.put(punish);
         return punish;
     }
 
@@ -94,7 +93,6 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
         });
         if (row < 1) return 0;
 
-        cache.remove(ipAddress, typeId);
         RefreshUtil.fireSingle(single, new PunishmentCurrentIpCache.IpTypeKey(ipAddress, typeId));
         return row;
     }
@@ -124,7 +122,6 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
 
         PunishmentCurrentIp punish = existing.withUpdateLog(logId);
         RefreshUtil.fireSingle(single, new PunishmentCurrentIpCache.IpTypeKey(ipAddress, typeId));
-        cache.put(punish);
         return punish;
     }
 }

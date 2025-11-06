@@ -92,7 +92,6 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
 
         GroupColor groupColor = new GroupColor(groupId, typeId, value, createdBy, createdAt, null, null);
         RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
-        cache.put(groupColor);
         return groupColor;
     }
 
@@ -107,7 +106,6 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         });
         if (row < 1) return 0;
 
-        cache.remove(groupId, typeId);
         RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         return row;
     }
@@ -121,7 +119,6 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        cache.remove(groupId);
         RefreshUtil.fireSingle(single, groupId);
         return row;
     }
@@ -157,7 +154,6 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
 
         GroupColor groupColor = existing.withUpdateMeta(value, changedBy, changedAt);
         RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
-        cache.put(groupColor);
         return groupColor;
     }
 }

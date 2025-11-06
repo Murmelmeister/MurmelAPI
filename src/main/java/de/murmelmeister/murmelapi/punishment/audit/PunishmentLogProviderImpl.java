@@ -125,7 +125,6 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
         if (log == null) return null;
 
         RefreshUtil.fireSingle(single, log.id());
-        cache.put(log);
         return log;
     }
 
@@ -139,7 +138,6 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
         if (log == null) return null;
 
         RefreshUtil.fireSingle(single, log.id());
-        cache.put(log);
         return log;
     }
 
@@ -180,7 +178,6 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
                 log.reasonTypeId(), log.reasonText(), log.reasonDuration(),
                 log.reasonAutoFlagIp(), log.reasonAutoPunish(), createdBy, createdAt);
         RefreshUtil.fireSingle(single, newLog.id());
-        cache.put(newLog);
         return newLog;
     }
 }

@@ -71,7 +71,6 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
 
         PunishmentCurrentUser punish = new PunishmentCurrentUser(userId, typeId, logId);
         RefreshUtil.fireSingle(single, new PunishmentCurrentUserCache.UserTypeKey(userId, typeId));
-        cache.put(punish);
         return punish;
     }
 
@@ -87,7 +86,6 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
         });
         if (row < 1) return 0;
 
-        cache.remove(userId, typeId);
         RefreshUtil.fireSingle(single, new PunishmentCurrentUserCache.UserTypeKey(userId, typeId));
         return row;
     }
@@ -112,7 +110,6 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
 
         PunishmentCurrentUser punish = existing.withUpdateLog(logId);
         RefreshUtil.fireSingle(single, new PunishmentCurrentUserCache.UserTypeKey(userId, typeId));
-        cache.put(punish);
         return punish;
     }
 }

@@ -93,7 +93,6 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
 
         PunishmentReason reason = new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp, autoPunish, createdBy, createdAt, null, null);
         RefreshUtil.fireSingle(single, reason.id());
-        cache.put(reason);
         return reason;
     }
 
@@ -104,7 +103,6 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
                 stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
-        cache.remove(id);
         RefreshUtil.fireSingle(single, id);
         return row;
     }
@@ -145,7 +143,6 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
 
         PunishmentReason reason = existing.withUpdateMeta(typeId, reasonText, durationSecs, autoFlagIp, autoPunish, changedBy, changedAt);
         RefreshUtil.fireSingle(single, id);
-        cache.put(reason);
         return reason;
     }
 }

@@ -92,7 +92,6 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
 
         UserSession session = new UserSession(sessionId, userId, loginTime, ipAddress, clientVersion, protocolVersion);
         RefreshUtil.fireSingle(single, session.id());
-        cache.put(session);
         return session;
     }
 
@@ -105,7 +104,6 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
                 stmt -> stmt.setString(1, sessionId.toString()));
         if (row < 1) return 0;
 
-        cache.remove(sessionId);
         RefreshUtil.fireSingle(single, sessionId);
         return row;
     }

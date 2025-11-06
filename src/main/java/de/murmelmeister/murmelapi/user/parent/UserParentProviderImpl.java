@@ -90,7 +90,6 @@ public final class UserParentProviderImpl implements UserParentProvider {
 
         UserParent userParent = new UserParent(userId, parentId, expiresAt, createdBy, createdAt, null, null);
         RefreshUtil.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
-        cache.put(userParent);
         return userParent;
     }
 
@@ -105,7 +104,6 @@ public final class UserParentProviderImpl implements UserParentProvider {
         });
         if (row < 1) return 0;
 
-        cache.remove(userId, parentId);
         RefreshUtil.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
         return row;
     }
@@ -119,7 +117,6 @@ public final class UserParentProviderImpl implements UserParentProvider {
                 stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
-        cache.remove(userId);
         RefreshUtil.fireSingle(single, userId);
         return row;
     }
@@ -156,7 +153,6 @@ public final class UserParentProviderImpl implements UserParentProvider {
 
         UserParent userParent = existing.withUpdateMeta(expiresAt, changedBy, changedAt);
         RefreshUtil.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
-        cache.put(userParent);
         return userParent;
     }
 

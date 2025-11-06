@@ -97,7 +97,6 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
 
         UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, ipAddress, clientVersion, protocolVersion);
         RefreshUtil.fireSingle(single, sessionId);
-        cache.put(login);
         return login;
     }
 
@@ -117,7 +116,6 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
                 stmt -> stmt.setString(1, id.toString()));
         if (row < 1) return 0;
 
-        cache.remove(id);
         RefreshUtil.fireSingle(single, id);
         return row;
     }

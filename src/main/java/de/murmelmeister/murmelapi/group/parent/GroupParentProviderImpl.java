@@ -90,7 +90,6 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
 
         GroupParent groupParent = new GroupParent(groupId, parentId, expiredAt, createdBy, createAt, null, null);
         RefreshUtil.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
-        cache.put(groupParent);
         return groupParent;
     }
 
@@ -105,7 +104,6 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         });
         if (row < 1) return 0;
 
-        cache.remove(groupId, parentId);
         RefreshUtil.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
         return row;
     }
@@ -119,7 +117,6 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        cache.remove(groupId);
         RefreshUtil.fireSingle(single, groupId);
         return row;
     }
@@ -156,7 +153,6 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
 
         GroupParent groupParent = existing.withUpdateMeta(expiresAt, changedBy, changedAt);
         RefreshUtil.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
-        cache.put(groupParent);
         return groupParent;
     }
 
