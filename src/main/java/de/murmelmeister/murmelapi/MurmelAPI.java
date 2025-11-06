@@ -54,6 +54,8 @@ public final class MurmelAPI {
 
     public static final String ENGLISH_CODE = "en-US";
     public static final String GERMAN_CODE = "de-DE";
+    public static final int DEFAULT_GROUP_ID = 1;
+    public static final int CONSOLE_USER_ID = -1;
 
     private static String databaseName = "MurmelAPI";
     private static Long fetchLimit = null;

@@ -10,14 +10,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static de.murmelmeister.murmelapi.user.UserProviderImpl.CONSOLE_USER_ID;
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+import static de.murmelmeister.murmelapi.MurmelAPI.DEFAULT_GROUP_ID;
 
 /**
  * GroupProvider is a class that provides methods to manage groups in the database.
  * It implements the Group interface and uses the Database class to interact with the database.
  */
 public final class GroupProviderImpl implements GroupProvider {
-    public static final int DEFAULT_GROUP_ID = 1;
     private static final String TABLE_NAME = "groups";
 
     private final Database database;

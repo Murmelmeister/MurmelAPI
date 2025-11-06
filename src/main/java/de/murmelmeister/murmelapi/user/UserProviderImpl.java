@@ -12,12 +12,13 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
 /**
  * UserProvider class to manage users in the database.
  * This class implements the User interface and provides methods to interact with user data.
  */
 public final class UserProviderImpl implements UserProvider {
-    public static final int CONSOLE_USER_ID = -1;
     private static final String TABLE_NAME = "users";
 
     private final Database database;
