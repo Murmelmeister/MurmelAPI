@@ -7,6 +7,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 
 public final class MessageProviderImpl implements MessageProvider {
     private static final String TABLE_NAME = "messages";
@@ -22,12 +23,12 @@ public final class MessageProviderImpl implements MessageProvider {
     }
 
     public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
-                "tag_id VARCHAR(255), " +
-                "language_id INT, " +
+        database.createTable(TABLE_NAME, "id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, " +
+                "tag_id VARCHAR(255) NOT NULL, " +
+                "language_id INT NOT NULL, " +
                 "UNIQUE (tag_id, language_id), " +
-                "message TEXT, " +
-                "FOREIGN KEY (language_id) REFERENCES languages(id)");
+                "message TEXT NOT NULL, " +
+                "FOREIGN KEY (language_id) REFERENCES languages(id) ON DELETE CASCADE");
     }
 
     @Override
@@ -57,7 +58,7 @@ public final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public Message create(String tagId, int languageId, String message) {
-        if (tagId == null || languageId < 1 || (message == null || message.isEmpty()))
+        if (tagId == null || languageId < 1 || (message == null || message.isBlank()))
             return null;
 
         tagId = tagId.strip();
@@ -74,7 +75,6 @@ public final class MessageProviderImpl implements MessageProvider {
 
         Message msg = new Message(id, tagId, languageId, message);
         RefreshUtil.fireSingle(single, msg.id());
-        cache.put(msg);
         return msg;
     }
 
@@ -87,7 +87,6 @@ public final class MessageProviderImpl implements MessageProvider {
                 stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
-        cache.remove(id);
         RefreshUtil.fireSingle(single, id);
         return row;
     }
@@ -107,7 +106,6 @@ public final class MessageProviderImpl implements MessageProvider {
         });
         if (row < 1) return 0;
 
-        cache.removeByTag(tagId, languageId);
         RefreshUtil.fireSingle(single, new MessageCache.TagKey(tagId, languageId));
         return row;
     }
@@ -121,14 +119,13 @@ public final class MessageProviderImpl implements MessageProvider {
                 stmt -> stmt.setInt(1, languageId));
         if (row < 1) return 0;
 
-        cache.removeByLanguage(languageId);
         RefreshUtil.fireSingle(single, new MessageCache.LanguageKey(languageId));
         return row;
     }
 
     @Override
     public Message update(int id, String tagId, int languageId, String message) {
-        if (id < 1 || tagId == null || languageId < 1 || (message == null || message.isEmpty()))
+        if (id < 1 || tagId == null || languageId < 1 || (message == null || message.isBlank()))
             return null;
 
         tagId = tagId.strip();
@@ -153,7 +150,6 @@ public final class MessageProviderImpl implements MessageProvider {
         if (rows < 1) return null;
 
         Message msg = existing.withUpdateMeta(tagId, languageId, message);
-        cache.put(msg);
         RefreshUtil.fireSingle(single, id);
         return msg;
     }
