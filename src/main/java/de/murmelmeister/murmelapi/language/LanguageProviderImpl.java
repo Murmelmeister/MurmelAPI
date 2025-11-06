@@ -105,7 +105,6 @@ public final class LanguageProviderImpl implements LanguageProvider {
 
         Language language = new Language(id, normalized);
         RefreshUtil.fireSingle(single, id);
-        cache.put(language);
         return language;
     }
 
@@ -118,7 +117,6 @@ public final class LanguageProviderImpl implements LanguageProvider {
                 stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
-        cache.remove(id);
         RefreshUtil.fireSingle(single, id);
         return row;
     }
@@ -148,7 +146,6 @@ public final class LanguageProviderImpl implements LanguageProvider {
 
         Language language = existing.withCode(normalized);
         RefreshUtil.fireSingle(single, id);
-        cache.put(language);
         return language;
     }
 
