@@ -143,7 +143,7 @@ public final class MurmelAPI {
         languageProvider = getLanguageProvider();
         messageProvider = getMessageProvider();
         messageService = getMessageService(languageProvider, messageProvider);
-        MurmelMessage.loadMessages(messageService);
+        MurmelMessage.loadMessages(messageProvider);
 
         userProvider = getUserProvider();
         userPlayTimeProvider = getUserPlayTimeProvider();
@@ -224,7 +224,10 @@ public final class MurmelAPI {
     }
 
     public static DateTimeFormatter getDateTimeFormatter(int languageId) {
-        return DateTimeFormatter.ofPattern(messageService.getMessage(MurmelMessage.DATE_TIME_FORMAT, languageId));
+        String pattern = messageService.getMessage(MurmelMessage.DATE_TIME_FORMAT.getTag(), languageId);
+        if (pattern == null)
+            throw new IllegalArgumentException("No pattern for language " + languageId + " found!");
+        return DateTimeFormatter.ofPattern(pattern);
     }
 
     public static Long getFetchLimit() {

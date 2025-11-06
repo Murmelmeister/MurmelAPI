@@ -5,7 +5,7 @@ import de.murmelmeister.murmelapi.language.LanguageProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
+import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
 
 /**
  * Service layer for managing application messages, handling loading, synchronization,
@@ -27,39 +27,39 @@ public final class MessageService {
         this.messageProvider = provider;
     }
 
-    public void checkAndLoad(MessageDefinition[] values) {
-        Arrays.stream(values).forEach(value -> {
-            String tag = value.getTag();
-            value.getMessages().forEach((languageId, messageText) -> {
-                if (messageProvider.get(tag, languageId) == null) {
-                    messageProvider.create(tag, languageId, messageText);
-                }
-            });
-        });
+    public String getMessage(String key, int languageId) {
+        Language language = languageProvider.get(languageId);
+        if (language != null) {
+            Message message = messageProvider.get(key, language.id());
+            if (message != null)
+                return message.message();
+
+            logger.warn("Message with tag '{}' and language ID '{}' not found.", key, language.id());
+        }
+
+        Language defaultLanguage = languageProvider.get(ENGLISH_CODE);
+        if (defaultLanguage != null) {
+            Message fallback = messageProvider.get(key, defaultLanguage.id());
+            if (fallback != null)
+                return fallback.message();
+        }
+
+        return null;
     }
 
-    /**
-     * Retrieves the persisted message text for the given definition and language.
-     * <p>
-     * Attempts to fetch the message via {@link MessageProviderImpl#get(String, int)}.
-     * If no persisted entry is found, logs a warning and falls back to the default
-     * English text from the provider.
-     * </p>
-     *
-     * @param messages   The {@link MessageDefinition} enum instance identifying the message tag
-     * @param languageId The desired language identifier
-     * @return The localized message text, never {@code null}
-     */
-    public String getMessage(MessageDefinition messages, int languageId) {
-        Message message = messageProvider.get(messages.getTag(), languageId);
-        if (message != null)
-            return message.message();
+    public String getMessage(String key, String code) {
+        Language language = languageProvider.get(code);
+        if (language != null) {
+            Message message = messageProvider.get(key, language.id());
+            if (message != null)
+                return message.message();
 
-        logger.warn("Message with tag '{}' and language ID '{}' not found.", messages.getTag(), languageId);
+            logger.warn("Message with tag '{}' and language ID '{}' not found.", key, language.id());
+        }
 
-        Language defaultLanguage = languageProvider.get("english");
+        Language defaultLanguage = languageProvider.get(ENGLISH_CODE);
         if (defaultLanguage != null) {
-            Message fallback = messageProvider.get(messages.getTag(), defaultLanguage.id());
+            Message fallback = messageProvider.get(key, defaultLanguage.id());
             if (fallback != null)
                 return fallback.message();
         }

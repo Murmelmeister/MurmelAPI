@@ -4,9 +4,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static de.murmelmeister.murmelapi.language.message.LocalizedMessage.of;
+import static de.murmelmeister.murmelapi.language.message.MurmelMessage.LocalizedMessage.of;
 
-public enum MurmelMessage implements MessageDefinition {
+public enum MurmelMessage {
     TIME_SECOND_SINGULAR(
             of(1, "second"),
             of(2, "Sekunde")
@@ -63,17 +63,27 @@ public enum MurmelMessage implements MessageDefinition {
         this.messages = Collections.unmodifiableMap(messageMap);
     }
 
-    @Override
     public String getTag() {
-        return name().toUpperCase();
+        return name().toLowerCase().replace('_', '.');
     }
 
-    @Override
     public Map<Integer, String> getMessages() {
         return messages;
     }
 
-    public static void loadMessages(MessageService service) {
-        service.checkAndLoad(VALUES);
+    public static void loadMessages(MessageProvider provider) {
+        for (MurmelMessage message : VALUES) {
+            String tag = message.getTag();
+            message.getMessages().forEach((languageId, msg) -> {
+                if (provider.get(tag, languageId) == null)
+                    provider.create(tag, languageId, msg);
+            });
+        }
+    }
+
+    record LocalizedMessage(int languageId, String message) {
+        public static LocalizedMessage of(int languageId, String message) {
+            return new LocalizedMessage(languageId, message);
+        }
     }
 }
