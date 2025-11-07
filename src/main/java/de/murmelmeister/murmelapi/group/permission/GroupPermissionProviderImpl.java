@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.group.permission;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -66,18 +67,15 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
 
     @Override
     public GroupPermission add(int groupId, String permission, long duration, int createdBy) {
-        if (groupId < 1 || permission == null || duration < -1 || createdBy < CONSOLE_USER_ID)
+        String normalizedPermission = StringUtil.normalize(permission);
+        if (groupId < 1 || normalizedPermission == null || duration < -1 || createdBy < CONSOLE_USER_ID)
             return null;
-
-        permission = permission.strip();
-        if (permission.isEmpty()) return null;
 
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
         String insertSql = "INSERT INTO " + TABLE_NAME + " (group_id, permission, expires_at, created_by) VALUES (?, ?, ?, ?)";
-        String finalPermission = permission;
         int row = database.update(insertSql, stmt -> {
             stmt.setInt(1, groupId);
-            stmt.setString(2, finalPermission);
+            stmt.setString(2, normalizedPermission);
             stmt.setTimestamp(3, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
             stmt.setInt(4, createdBy);
         });
@@ -88,31 +86,28 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> {
                     stmt.setInt(1, groupId);
-                    stmt.setString(2, finalPermission);
+                    stmt.setString(2, normalizedPermission);
                 });
         if (createdAt == null) return null;
 
-        GroupPermission groupPermission = new GroupPermission(groupId, permission, expiresAt, createdBy, createdAt, null, null);
-        RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, permission));
+        GroupPermission groupPermission = new GroupPermission(groupId, normalizedPermission, expiresAt, createdBy, createdAt, null, null);
+        RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, normalizedPermission));
         return groupPermission;
     }
 
     @Override
     public int remove(int groupId, String permission) {
-        if (groupId < 1 || permission == null) return 0;
-
-        permission = permission.strip();
-        if (permission.isEmpty()) return 0;
+        String normalizedPermission = StringUtil.normalize(permission);
+        if (groupId < 1 || normalizedPermission == null) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ? AND permission = ?";
-        String finalPermission = permission;
         int row = database.update(sql, stmt -> {
             stmt.setInt(1, groupId);
-            stmt.setString(2, finalPermission);
+            stmt.setString(2, normalizedPermission);
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, permission));
+        RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, normalizedPermission));
         return row;
     }
 
@@ -131,26 +126,23 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
 
     @Override
     public GroupPermission update(int groupId, String permission, long duration, int changedBy) {
-        if (groupId < 1 || permission == null || duration < -1 || changedBy < CONSOLE_USER_ID)
+        String normalizedPermission = StringUtil.normalize(permission);
+        if (groupId < 1 || normalizedPermission == null || duration < -1 || changedBy < CONSOLE_USER_ID)
             return null;
 
-        permission = permission.strip();
-        if (permission.isEmpty()) return null;
-
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
-        GroupPermission existing = cache.get(groupId, permission);
+        GroupPermission existing = cache.get(groupId, normalizedPermission);
         if (existing == null) return null;
 
         if (Objects.equals(expiresAt, existing.expiresAt()))
             return existing; // No changes, return existing
 
         String updateSql = "UPDATE " + TABLE_NAME + " SET expires_at = ?, changed_by = ? WHERE group_id = ? AND permission = ?";
-        String finalPermission = permission;
         int row = database.update(updateSql, stmt -> {
             stmt.setString(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt).toString());
             stmt.setInt(2, changedBy);
             stmt.setInt(3, groupId);
-            stmt.setString(4, finalPermission);
+            stmt.setString(4, normalizedPermission);
         });
         if (row < 1) return null;
 
@@ -159,12 +151,12 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
                     stmt.setInt(1, groupId);
-                    stmt.setString(2, finalPermission);
+                    stmt.setString(2, normalizedPermission);
                 });
         if (changedAt == null) return null;
 
         GroupPermission groupPermission = existing.withUpdateMeta(expiresAt, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, permission));
+        RefreshUtil.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, normalizedPermission));
         return groupPermission;
     }
 

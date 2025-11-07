@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.user.session;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -67,18 +68,15 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
 
     @Override
     public UserSession create(int userId, String ipAddress, String clientVersion, String protocolVersion) {
-        if (userId < 1 || ipAddress == null) return null;
-
-        ipAddress = ipAddress.strip();
-        if (ipAddress.isEmpty()) return null;
+        String normalizeIpAddress = StringUtil.normalize(ipAddress);
+        if (userId < 1 || normalizeIpAddress == null) return null;
 
         UUID sessionId = UUID.randomUUID();
         String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, ip_address, client_version, protocol_version) VALUES (?, ?, ?, ?, ?)";
-        String finalIpAddress = ipAddress;
         int row = database.update(insertSql, stmt -> {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
-            stmt.setString(3, finalIpAddress);
+            stmt.setString(3, normalizeIpAddress);
             stmt.setString(4, clientVersion);
             stmt.setString(5, protocolVersion);
         });
@@ -90,7 +88,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
                 stmt -> stmt.setString(1, sessionId.toString()));
         if (loginTime == null) return null;
 
-        UserSession session = new UserSession(sessionId, userId, loginTime, ipAddress, clientVersion, protocolVersion);
+        UserSession session = new UserSession(sessionId, userId, loginTime, normalizeIpAddress, clientVersion, protocolVersion);
         RefreshUtil.fireSingle(single, session.id());
         return session;
     }

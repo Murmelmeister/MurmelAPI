@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.group;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -86,17 +87,14 @@ public final class GroupProviderImpl implements GroupProvider {
 
     @Override
     public Group create(String groupName, int priority, int createdBy) {
-        if (groupName == null || priority < 0 || createdBy < CONSOLE_USER_ID)
+        String normalizedGroupName = StringUtil.normalize(groupName);
+        if (normalizedGroupName == null || priority < 0 || createdBy < CONSOLE_USER_ID)
             return null;
-
-        groupName = groupName.strip();
-        if (groupName.isEmpty()) return null;
 
         String insertSql = "INSERT INTO " + TABLE_NAME + " (group_name, priority, created_by) " +
                 "VALUES (?, ?, ?)";
-        String finalGroupName = groupName;
         int groupId = (int) database.updateAndGetGeneratedKeys(insertSql, stmt -> {
-            stmt.setString(1, finalGroupName);
+            stmt.setString(1, normalizedGroupName);
             stmt.setInt(2, priority);
             stmt.setInt(3, createdBy);
         });
@@ -108,7 +106,7 @@ public final class GroupProviderImpl implements GroupProvider {
                 stmt -> stmt.setInt(1, groupId));
         if (createdAt == null) return null;
 
-        Group group = new Group(groupId, groupName, priority, false, createdBy, createdAt, null, null);
+        Group group = new Group(groupId, normalizedGroupName, priority, false, createdBy, createdAt, null, null);
         RefreshUtil.fireSingle(single, groupId);
         return group;
     }
@@ -128,23 +126,20 @@ public final class GroupProviderImpl implements GroupProvider {
 
     @Override
     public Group update(int groupId, String groupName, int priority, int changedBy) {
-        if (groupName == null || priority < 0 || changedBy < CONSOLE_USER_ID)
+        String normalizedGroupName = StringUtil.normalize(groupName);
+        if (normalizedGroupName == null || priority < 0 || changedBy < CONSOLE_USER_ID)
             return null;
-
-        groupName = groupName.strip();
-        if (groupName.isEmpty()) return null;
 
         Group existing = cache.getById(groupId);
         if (existing == null) return null;
 
-        if (Objects.equals(groupName, existing.groupName()) &&
+        if (Objects.equals(normalizedGroupName, existing.groupName()) &&
                 priority == existing.priority())
             return existing; // No changes, return an existing group
 
         String updateSql = "UPDATE " + TABLE_NAME + " SET group_name = ?, priority = ?, changed_by = ? WHERE id = ?";
-        String finalGroupName = groupName;
         int row = database.update(updateSql, stmt -> {
-            stmt.setString(1, finalGroupName);
+            stmt.setString(1, normalizedGroupName);
             stmt.setInt(2, priority);
             stmt.setInt(3, changedBy);
             stmt.setInt(4, groupId);
@@ -157,7 +152,7 @@ public final class GroupProviderImpl implements GroupProvider {
                 stmt -> stmt.setInt(1, groupId));
         if (changedAt == null) return null;
 
-        Group group = existing.withUpdateMeta(groupName, priority, changedBy, changedAt);
+        Group group = existing.withUpdateMeta(normalizedGroupName, priority, changedBy, changedAt);
         RefreshUtil.fireSingle(single, groupId);
         return group;
     }

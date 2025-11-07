@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -108,20 +109,17 @@ public final class UserProviderImpl implements UserProvider {
 
     @Override
     public User create(UUID uuid, String username) {
-        if (uuid == null || username == null) return null;
-
-        username = username.strip();
-        if (username.isEmpty()) return null;
+        String normalizedUsername = StringUtil.normalize(username);
+        if (uuid == null || normalizedUsername == null) return null;
 
         String sql = "INSERT INTO " + TABLE_NAME + " (mojang_id, username) VALUES (?, ?)";
-        String finalUsername = username;
         int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> {
             stmt.setString(1, uuid.toString());
-            stmt.setString(2, finalUsername);
+            stmt.setString(2, normalizedUsername);
         });
         if (id < 1) return null;
 
-        User newUser = new User(id, uuid, username, null, false, false, false, 1);
+        User newUser = new User(id, uuid, normalizedUsername, null, false, false, false, 1);
         RefreshUtil.fireSingle(single, newUser.id());
         return newUser;
     }
@@ -140,16 +138,14 @@ public final class UserProviderImpl implements UserProvider {
 
     @Override
     public User update(int userId, String username, LocalDateTime firstLogin, boolean debugUser, boolean debugEnabled, int languageId) {
-        if (userId < 1 || firstLogin == null || username == null || languageId < 1)
+        String normalizedUsername = StringUtil.normalize(username);
+        if (userId < 1 || firstLogin == null || normalizedUsername == null || languageId < 1)
             return null;
-
-        username = username.strip();
-        if (username.isEmpty()) return null;
 
         User existing = cache.getById(userId);
         if (existing == null) return null;
 
-        if (Objects.equals(username, existing.username()) &&
+        if (Objects.equals(normalizedUsername, existing.username()) &&
                 Objects.equals(firstLogin, existing.firstLogin()) &&
                 debugUser == existing.debugUser() &&
                 debugEnabled == existing.debugEnabled() &&
@@ -157,10 +153,9 @@ public final class UserProviderImpl implements UserProvider {
             return existing; // No changes, return existing user
 
         String sql = "UPDATE " + TABLE_NAME + " SET mojang_id = ?, username = ?, first_login = ?, debug_user = ?, debug_enabled = ?, language_id = ? WHERE id = ?";
-        String finalUsername = username;
         int row = database.update(sql, stmt -> {
                     stmt.setString(1, existing.mojangId().toString());
-                    stmt.setString(2, finalUsername);
+                    stmt.setString(2, normalizedUsername);
                     stmt.setTimestamp(3, Timestamp.valueOf(firstLogin));
                     stmt.setBoolean(4, debugUser);
                     stmt.setBoolean(5, debugEnabled);
@@ -169,7 +164,7 @@ public final class UserProviderImpl implements UserProvider {
                 });
         if (row < 1) return null;
 
-        User user = existing.withUpdateMeta(username, firstLogin, debugUser, debugEnabled, languageId);
+        User user = existing.withUpdateMeta(normalizedUsername, firstLogin, debugUser, debugEnabled, languageId);
         RefreshUtil.fireSingle(single, userId);
         return user;
     }

@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.user.login;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
@@ -71,19 +72,16 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
 
     @Override
     public UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, String ipAddress, String clientVersion, String protocolVersion) {
-        if (sessionId == null || userId < 1 || loginTime == null || ipAddress == null)
+        String normalizedIpAddress = StringUtil.normalize(ipAddress);
+        if (sessionId == null || userId < 1 || loginTime == null || normalizedIpAddress == null)
             return null;
 
-        ipAddress = ipAddress.strip();
-        if (ipAddress.isEmpty()) return null;
-
         String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, login_time, ip_address, client_version, protocol_version) VALUES (?, ?, ?, ?, ?, ?)";
-        String finalIpAddress = ipAddress;
         int row = database.update(insertSql, stmt -> {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
             stmt.setTimestamp(3, Timestamp.valueOf(loginTime));
-            stmt.setString(4, finalIpAddress);
+            stmt.setString(4, normalizedIpAddress);
             stmt.setString(5, clientVersion);
             stmt.setString(6, protocolVersion);
         });
@@ -95,7 +93,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
                 stmt -> stmt.setString(1, sessionId.toString()));
         if (logoutTime == null) return null;
 
-        UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, ipAddress, clientVersion, protocolVersion);
+        UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, normalizedIpAddress, clientVersion, protocolVersion);
         RefreshUtil.fireSingle(single, sessionId);
         return login;
     }

@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.language.message;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -58,22 +59,19 @@ public final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public Message create(String tagId, int languageId, String message) {
-        if (tagId == null || languageId < 1 || (message == null || message.isBlank()))
+        String normalizedTagId = StringUtil.normalize(tagId);
+        if (normalizedTagId == null || languageId < 1 || (message == null || message.isBlank()))
             return null;
 
-        tagId = tagId.strip();
-        if (tagId.isEmpty()) return null;
-
         String sql = "INSERT INTO " + TABLE_NAME + " (tag_id, language_id, message) VALUES (?, ?, ?)";
-        String finalTagId = tagId;
         int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> {
-            stmt.setString(1, finalTagId);
+            stmt.setString(1, normalizedTagId);
             stmt.setInt(2, languageId);
             stmt.setString(3, message);
         });
         if (id < 1) return null;
 
-        Message msg = new Message(id, tagId, languageId, message);
+        Message msg = new Message(id, normalizedTagId, languageId, message);
         RefreshUtil.fireSingle(single, msg.id());
         return msg;
     }
@@ -128,20 +126,17 @@ public final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public int delete(String tagId, int languageId) {
-        if (tagId == null || languageId < 1) return 0;
-
-        tagId = tagId.strip();
-        if (tagId.isEmpty()) return 0;
+        String normalizedTagId = StringUtil.normalize(tagId);
+        if (normalizedTagId == null || languageId < 1) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE tag_id = ? AND language_id = ?";
-        String finalTagId = tagId;
         int row = database.update(sql, stmt -> {
-            stmt.setString(1, finalTagId);
+            stmt.setString(1, normalizedTagId);
             stmt.setInt(2, languageId);
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new MessageCache.TagKey(tagId, languageId));
+        RefreshUtil.fireSingle(single, new MessageCache.TagKey(normalizedTagId, languageId));
         return row;
     }
 
@@ -160,31 +155,28 @@ public final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public Message update(int id, String tagId, int languageId, String message) {
-        if (id < 1 || tagId == null || languageId < 1 || (message == null || message.isBlank()))
+        String normalizedTagId = StringUtil.normalize(tagId);
+        if (id < 1 || normalizedTagId == null || languageId < 1 || (message == null || message.isBlank()))
             return null;
-
-        tagId = tagId.strip();
-        if (tagId.isEmpty()) return null;
 
         Message existing = cache.getById(id);
         if (existing == null) return null;
 
-        if (Objects.equals(tagId, existing.tagId()) &&
+        if (Objects.equals(normalizedTagId, existing.tagId()) &&
                 languageId == existing.languageId() &&
                 Objects.equals(message, existing.message()))
             return existing; // No changes, return existing
 
         String sql = "UPDATE " + TABLE_NAME + " SET tag_id = ?, language_id = ?, message = ? WHERE id = ?";
-        String finalTagId = tagId;
         int rows = database.update(sql, stmt -> {
-            stmt.setString(1, finalTagId);
+            stmt.setString(1, normalizedTagId);
             stmt.setInt(2, languageId);
             stmt.setString(3, message);
             stmt.setInt(4, id);
         });
         if (rows < 1) return null;
 
-        Message msg = existing.withUpdateMeta(tagId, languageId, message);
+        Message msg = existing.withUpdateMeta(normalizedTagId, languageId, message);
         RefreshUtil.fireSingle(single, id);
         return msg;
     }

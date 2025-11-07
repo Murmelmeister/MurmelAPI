@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.punishment.ip;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -99,29 +100,26 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
 
     @Override
     public PunishmentCurrentIp update(String ipAddress, int typeId, UUID logId) {
-        if (ipAddress == null || typeId < 1 || logId == null)
+        String normalizedIpAddress = StringUtil.normalize(ipAddress);
+        if (normalizedIpAddress == null || typeId < 1 || logId == null)
             return null;
 
-        ipAddress = ipAddress.strip();
-        if (ipAddress.isEmpty()) return null;
-
-        PunishmentCurrentIp existing = cache.get(ipAddress, typeId);
+        PunishmentCurrentIp existing = cache.get(normalizedIpAddress, typeId);
         if (existing == null) return null;
 
         if (Objects.equals(logId, existing.logId()))
             return existing; // No update needed if the log ID is the same
 
         String sql = "UPDATE " + TABLE_NAME + " SET log_id = ? WHERE ip_address = ? AND type_id = ?";
-        String finalIpAddress = ipAddress;
         int row = database.update(sql, stmt -> {
             stmt.setString(1, logId.toString());
-            stmt.setString(2, finalIpAddress);
+            stmt.setString(2, normalizedIpAddress);
             stmt.setInt(3, typeId);
         });
         if (row < 1) return null;
 
         PunishmentCurrentIp punish = existing.withUpdateLog(logId);
-        RefreshUtil.fireSingle(single, new PunishmentCurrentIpCache.IpTypeKey(ipAddress, typeId));
+        RefreshUtil.fireSingle(single, new PunishmentCurrentIpCache.IpTypeKey(normalizedIpAddress, typeId));
         return punish;
     }
 }
