@@ -17,7 +17,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 import java.time.Duration;
 import java.util.*;
 
-import static de.murmelmeister.murmelapi.user.UserProviderImpl.CONSOLE_USER_ID;
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
 /**
  * The PermissionProvider class provides methods to manage and check permissions for users and groups.

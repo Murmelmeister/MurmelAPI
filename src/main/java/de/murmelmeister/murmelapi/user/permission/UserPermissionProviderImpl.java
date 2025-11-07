@@ -12,7 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static de.murmelmeister.murmelapi.user.UserProviderImpl.CONSOLE_USER_ID;
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
 /**
  * UserPermissionProvider class to manage user permissions in the database.

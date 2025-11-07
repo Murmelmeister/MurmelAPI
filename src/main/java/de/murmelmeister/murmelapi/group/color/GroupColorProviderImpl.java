@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
-import static de.murmelmeister.murmelapi.user.UserProviderImpl.CONSOLE_USER_ID;
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
 /**
  * The GroupColorProvider class provides methods to manage group colors in the database.
