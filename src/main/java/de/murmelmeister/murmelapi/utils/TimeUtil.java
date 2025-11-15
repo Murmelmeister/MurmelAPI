@@ -75,35 +75,40 @@ public final class TimeUtil {
         if (!excludedFilters.contains(TimeFilterUtil.YEARS)) {
             if (years > 0) {
                 builder.append(years).append(" ").append(years == 1 ?
-                        messageService.getMessage(MurmelMessage.TIME_YEAR_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_YEAR_PLURAL, languageId)).append(" ");
+                        messageService.getMessage(MurmelMessage.TIME_YEAR_SINGULAR.getTag(), languageId)
+                        : messageService.getMessage(MurmelMessage.TIME_YEAR_PLURAL.getTag(), languageId)).append(" ");
                 appended = true;
             }
         }
         if (!excludedFilters.contains(TimeFilterUtil.DAYS)) {
             if (days > 0) {
                 builder.append(days).append(" ").append(days == 1 ?
-                        messageService.getMessage(MurmelMessage.TIME_DAY_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_DAY_PLURAL, languageId)).append(" ");
+                        messageService.getMessage(MurmelMessage.TIME_DAY_SINGULAR.getTag(), languageId)
+                        : messageService.getMessage(MurmelMessage.TIME_DAY_PLURAL.getTag(), languageId)).append(" ");
                 appended = true;
             }
         }
         if (!excludedFilters.contains(TimeFilterUtil.HOURS)) {
             if (hours > 0) {
                 builder.append(hours).append(" ").append(hours == 1 ?
-                        messageService.getMessage(MurmelMessage.TIME_HOUR_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_HOUR_PLURAL, languageId)).append(" ");
+                        messageService.getMessage(MurmelMessage.TIME_HOUR_SINGULAR.getTag(), languageId)
+                        : messageService.getMessage(MurmelMessage.TIME_HOUR_PLURAL.getTag(), languageId)).append(" ");
                 appended = true;
             }
         }
         if (!excludedFilters.contains(TimeFilterUtil.MINUTES)) {
             if (minutes > 0) {
                 builder.append(minutes).append(" ").append(minutes == 1 ?
-                        messageService.getMessage(MurmelMessage.TIME_MINUTE_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_MINUTE_PLURAL, languageId)).append(" ");
+                        messageService.getMessage(MurmelMessage.TIME_MINUTE_SINGULAR.getTag(), languageId)
+                        : messageService.getMessage(MurmelMessage.TIME_MINUTE_PLURAL.getTag(), languageId)).append(" ");
                 appended = true;
             }
         }
         if (!excludedFilters.contains(TimeFilterUtil.SECONDS)) {
             if (seconds > 0) {
                 builder.append(seconds).append(" ").append(seconds == 1 ?
-                        messageService.getMessage(MurmelMessage.TIME_SECOND_SINGULAR, languageId) : messageService.getMessage(MurmelMessage.TIME_SECOND_PLURAL, languageId));
+                        messageService.getMessage(MurmelMessage.TIME_SECOND_SINGULAR.getTag(), languageId)
+                        : messageService.getMessage(MurmelMessage.TIME_SECOND_PLURAL.getTag(), languageId));
                 appended = true;
             }
         }
@@ -123,7 +128,7 @@ public final class TimeUtil {
                 case MINUTES -> MurmelMessage.TIME_MINUTE_PLURAL;
                 case SECONDS -> MurmelMessage.TIME_SECOND_PLURAL;
             };
-            builder.append("0 ").append(messageService.getMessage(pluralMessage, languageId));
+            builder.append("0 ").append(messageService.getMessage(pluralMessage.getTag(), languageId));
             return builder.toString();
         }
 
