@@ -121,14 +121,13 @@ public final class ResultSetUtil {
         return resultSet -> {
             int id = resultSet.getInt("id");
             String groupName = resultSet.getString("group_name");
-            String teamTagId = resultSet.getString("team_tag_id");
             int priority = resultSet.getInt("priority");
             boolean isDefault = resultSet.getBoolean("is_default");
             int createdBy = resultSet.getInt("created_by");
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
             Integer changedBy = resultSet.getObject("changed_by") != null ? resultSet.getInt("changed_by") : null;
             LocalDateTime changedAt = resultSet.getObject("changed_at") != null ? resultSet.getTimestamp("changed_at").toLocalDateTime() : null;
-            return new Group(id, groupName, teamTagId, priority, isDefault, createdBy, createdAt, changedBy, changedAt);
+            return new Group(id, groupName, priority, isDefault, createdBy, createdAt, changedBy, changedAt);
         };
     }
 
