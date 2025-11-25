@@ -42,6 +42,8 @@ import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProviderImpl;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
 
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.Properties;
@@ -60,6 +62,7 @@ public final class MurmelAPI {
     private static Long fetchLimit = null;
     private static long cacheCapacity = 10_000; // Default cache size
     private static Duration refreshInterval = Duration.ofMinutes(30);
+    private static boolean bootstrapMessages = true;
 
     private static LanguageProvider languageProvider;
     private static MessageProvider messageProvider;
@@ -91,11 +94,13 @@ public final class MurmelAPI {
     }
 
     public static void connect(String propertyFileName) {
+        readBootstrapFlag(loadProperties(propertyFileName));
         DATABASE.connect(propertyFileName);
         setup();
     }
 
     public static void connect(Properties properties) {
+        readBootstrapFlag(properties);
         DATABASE.connect(properties);
         setup();
     }
@@ -144,7 +149,8 @@ public final class MurmelAPI {
         languageProvider = getLanguageProvider();
         messageProvider = getMessageProvider();
         messageService = getMessageService(languageProvider, messageProvider);
-        MurmelMessage.loadMessages(messageProvider);
+        if (bootstrapMessages)
+            MurmelMessage.loadMessages(messageProvider);
 
         userProvider = getUserProvider();
         userPlayTimeProvider = getUserPlayTimeProvider();
@@ -245,6 +251,14 @@ public final class MurmelAPI {
 
     public static void setRefreshInterval(Duration refreshInterval) {
         MurmelAPI.refreshInterval = refreshInterval;
+    }
+
+    public static boolean isBootstrapMessages() {
+        return bootstrapMessages;
+    }
+
+    public static void setBootstrapMessages(boolean bootstrapMessages) {
+        MurmelAPI.bootstrapMessages = bootstrapMessages;
     }
 
     public static LanguageProvider getLanguageProvider() {
@@ -390,5 +404,27 @@ public final class MurmelAPI {
 
     public static PunishmentService getPunishmentService() {
         return getPunishmentService(getPunishmentReasonProvider(), getPunishmentLogProvider(), getPunishmentCurrentIpProvider(), getPunishmentCurrentUserProvider());
+    }
+
+    private static void readBootstrapFlag(Properties properties) {
+        if (properties == null)
+            return;
+
+        String flag = properties.getProperty("murmelapi.bootstrap.messages");
+        if (flag != null)
+            setBootstrapMessages(Boolean.parseBoolean(flag.trim()));
+    }
+
+    private static Properties loadProperties(String propertyFileName) {
+        if (propertyFileName == null)
+            return null;
+
+        Properties properties = new Properties();
+        try (FileInputStream stream = new FileInputStream(propertyFileName)) {
+            properties.load(stream);
+            return properties;
+        } catch (IOException ignored) {
+            return null;
+        }
     }
 }
