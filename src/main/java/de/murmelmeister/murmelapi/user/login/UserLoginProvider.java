@@ -19,7 +19,7 @@ public interface UserLoginProvider {
 
     List<UserLogin> findAllLogins();
 
-    UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, String ipAddress, String clientVersion, String protocolVersion);
+    UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, String ipAddress, String clientBrand, int protocolVersion);
 
     UserLogin create(UserSession session);
 

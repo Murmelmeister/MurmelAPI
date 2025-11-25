@@ -27,7 +27,7 @@ public final class UserService {
     }
 
 
-    public void startSession(int userId, String ipAddress, String clientVersion, String protocolVersion) {
+    public void startSession(int userId, String ipAddress, String clientBrand, int protocolVersion) {
         if (userId < 1 || ipAddress == null)
             throw new IllegalArgumentException("Invalid parameters for session handling");
 
@@ -37,7 +37,7 @@ public final class UserService {
             if (sessionProvider.delete(session.id()) < 1)
                 throw new UserSessionException("Failed to delete existing session for user ID: " + userId);
         }
-        sessionProvider.create(userId, ipAddress, clientVersion, protocolVersion);
+        sessionProvider.create(userId, ipAddress, clientBrand, protocolVersion);
     }
 
     public void closeSession(int userId) {

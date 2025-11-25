@@ -32,8 +32,8 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
                 "login_time DATETIME NOT NULL, " +
                 "logout_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
                 "ip_address VARCHAR(45) NOT NULL, " +
-                "client_version VARCHAR(100) NULL, " +
-                "protocol_version VARCHAR(100) NULL, " +
+                "client_brand VARCHAR(50) NULL, " +
+                "protocol_version INT NULL, " +
                 "FOREIGN KEY (user_id) REFERENCES users(id)"
         ); // Maybe add session_type or something similar in the future
         database.update("CREATE INDEX IF NOT EXISTS idx_user_id ON " + TABLE_NAME + " (user_id)");
@@ -71,19 +71,19 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, String ipAddress, String clientVersion, String protocolVersion) {
+    public UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, String ipAddress, String clientBrand, int protocolVersion) {
         String normalizedIpAddress = StringUtil.normalize(ipAddress);
         if (sessionId == null || userId < 1 || loginTime == null || normalizedIpAddress == null)
             return null;
 
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, login_time, ip_address, client_version, protocol_version) VALUES (?, ?, ?, ?, ?, ?)";
+        String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, login_time, ip_address, client_brand, protocol_version) VALUES (?, ?, ?, ?, ?, ?)";
         int row = database.update(insertSql, stmt -> {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
             stmt.setTimestamp(3, Timestamp.valueOf(loginTime));
             stmt.setString(4, normalizedIpAddress);
-            stmt.setString(5, clientVersion);
-            stmt.setString(6, protocolVersion);
+            stmt.setString(5, clientBrand);
+            stmt.setInt(6, protocolVersion);
         });
         if (row < 1) return null;
 
@@ -93,7 +93,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
                 stmt -> stmt.setString(1, sessionId.toString()));
         if (logoutTime == null) return null;
 
-        UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, normalizedIpAddress, clientVersion, protocolVersion);
+        UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, normalizedIpAddress, clientBrand, protocolVersion);
         RefreshUtil.fireSingle(single, sessionId);
         return login;
     }
@@ -102,7 +102,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     public UserLogin create(UserSession session) {
         if (session == null) return null;
         return create(session.id(), session.userId(), session.loginTime(),
-                session.ipAddress(), session.clientVersion(), session.protocolVersion());
+                session.ipAddress(), session.clientBrand(), session.protocolVersion());
     }
 
     @Override

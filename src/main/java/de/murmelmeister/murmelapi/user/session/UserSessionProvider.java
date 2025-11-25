@@ -16,7 +16,7 @@ public interface UserSessionProvider {
 
     List<UserSession> findUserSessions(int userId);
 
-    UserSession create(int userId, String ipAddress, String clientVersion, String protocolVersion);
+    UserSession create(int userId, String ipAddress, String clientBrand, int protocolVersion);
 
     int delete(UUID sessionId);
 

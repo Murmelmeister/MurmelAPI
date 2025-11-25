@@ -71,9 +71,9 @@ public final class ResultSetUtil {
             int userId = result.getInt("user_id");
             LocalDateTime loginTime = result.getTimestamp("login_time").toLocalDateTime();
             String ipAddress = result.getString("ip_address");
-            String clientVersion = result.getString("client_version");
-            String protocolVersion = result.getString("protocol_version");
-            return new UserSession(id, userId, loginTime, ipAddress, clientVersion, protocolVersion);
+            String clientBrand = result.getString("client_brand");
+            int protocolVersion = result.getInt("protocol_version");
+            return new UserSession(id, userId, loginTime, ipAddress, clientBrand, protocolVersion);
         };
     }
 
@@ -84,10 +84,10 @@ public final class ResultSetUtil {
             LocalDateTime loginTime = resultSet.getTimestamp("login_time").toLocalDateTime();
             LocalDateTime logoutTime = resultSet.getTimestamp("logout_time").toLocalDateTime();
             String ipAddress = resultSet.getString("ip_address");
-            String clientVersion = resultSet.getString("client_version");
-            String protocolVersion = resultSet.getString("protocol_version");
+            String clientBrand = resultSet.getString("client_brand");
+            int protocolVersion = resultSet.getInt("protocol_version");
 
-            return new UserLogin(id, userId, loginTime, logoutTime, ipAddress, clientVersion, protocolVersion);
+            return new UserLogin(id, userId, loginTime, logoutTime, ipAddress, clientBrand, protocolVersion);
         };
     }
 

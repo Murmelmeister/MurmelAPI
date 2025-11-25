@@ -28,8 +28,8 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
                 "user_id INT NOT NULL UNIQUE, " +
                 "login_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
                 "ip_address VARCHAR(45) NOT NULL, " +
-                "client_version VARCHAR(100) NULL, " +
-                "protocol_version VARCHAR(100) NULL, " +
+                "client_brand VARCHAR(50) NULL, " +
+                "protocol_version INT NULL, " +
                 "FOREIGN KEY (user_id) REFERENCES users(id)"
         ); // Maybe session_type in the future?
     }
@@ -67,18 +67,18 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
-    public UserSession create(int userId, String ipAddress, String clientVersion, String protocolVersion) {
+    public UserSession create(int userId, String ipAddress, String clientBrand, int protocolVersion) {
         String normalizeIpAddress = StringUtil.normalize(ipAddress);
         if (userId < 1 || normalizeIpAddress == null) return null;
 
         UUID sessionId = UUID.randomUUID();
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, ip_address, client_version, protocol_version) VALUES (?, ?, ?, ?, ?)";
+        String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, ip_address, client_brand, protocol_version) VALUES (?, ?, ?, ?, ?)";
         int row = database.update(insertSql, stmt -> {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
             stmt.setString(3, normalizeIpAddress);
-            stmt.setString(4, clientVersion);
-            stmt.setString(5, protocolVersion);
+            stmt.setString(4, clientBrand);
+            stmt.setInt(5, protocolVersion);
         });
         if (row < 1) return null;
 
@@ -88,7 +88,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
                 stmt -> stmt.setString(1, sessionId.toString()));
         if (loginTime == null) return null;
 
-        UserSession session = new UserSession(sessionId, userId, loginTime, normalizeIpAddress, clientVersion, protocolVersion);
+        UserSession session = new UserSession(sessionId, userId, loginTime, normalizeIpAddress, clientBrand, protocolVersion);
         RefreshUtil.fireSingle(single, session.id());
         return session;
     }
