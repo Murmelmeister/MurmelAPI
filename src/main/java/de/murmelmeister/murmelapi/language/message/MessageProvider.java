@@ -16,8 +16,6 @@ public interface MessageProvider {
 
     Message create(String tagId, int languageId, String message);
 
-    int[] createAll(Properties properties);
-
     int delete(int id);
 
     int delete(String tagId, int languageId);
@@ -26,5 +24,5 @@ public interface MessageProvider {
 
     Message update(int id, String tagId, int languageId, String message);
 
-    int[] updateAll(Properties properties);
+    int[] createOrUpdateAll(Properties properties);
 }
