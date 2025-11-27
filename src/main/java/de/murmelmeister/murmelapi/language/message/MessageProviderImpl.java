@@ -6,9 +6,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.Objects;
-import java.util.Properties;
+import java.util.*;
 
 public final class MessageProviderImpl implements MessageProvider {
     private static final String TABLE_NAME = "messages";
@@ -147,7 +145,44 @@ public final class MessageProviderImpl implements MessageProvider {
     }
 
     @Override
+    public int[] upsertAll(Properties properties) {
+        return upsertInternal(properties, true);
+    }
+
+    @Override
+    public int[] upsertAll(Collection<Properties> properties) {
+        if (properties == null || properties.isEmpty())
+            throw new IllegalArgumentException("Missing properties collection");
+
+        List<int[]> results = new ArrayList<>();
+        boolean changed = false;
+        for (Properties props : properties) {
+            int[] result = upsertInternal(props, false);
+            if (result.length > 0) {
+                results.add(result);
+                changed = true;
+            }
+        }
+
+        if (changed)
+            RefreshUtil.fireCache(all);
+
+        int total = results.stream().mapToInt(arr -> arr.length).sum();
+        int[] merged = new int[total];
+        int offset = 0;
+        for (int[] arr : results) {
+            System.arraycopy(arr, 0, merged, offset, arr.length);
+            offset += arr.length;
+        }
+        return merged;
+    }
+
+    @Override
     public int[] createOrUpdateAll(Properties properties) {
+        return upsertInternal(properties, true);
+    }
+
+    private int[] upsertInternal(Properties properties, boolean fireCache) {
         if (properties == null || properties.isEmpty())
             throw new IllegalArgumentException("Missing properties file");
 
@@ -162,12 +197,40 @@ public final class MessageProviderImpl implements MessageProvider {
             throw new IllegalArgumentException("Invalid language.id property is not a integer", e);
         }
 
-        String sql = "INSERT INTO " + TABLE_NAME + " (tag_id, language_id, message) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE message = VALUES(message)";
-        int[] result = database.updateBatch(sql, stmt -> {
+        // Load existing messages for the language at once
+        String selectSql = "SELECT tag_id, message FROM " + TABLE_NAME + " WHERE language_id = ?";
+        Map<String, String> existing = new HashMap<>();
+        database.queryList(selectSql, rs -> Map.entry(rs.getString(1), rs.getString(2)), stmt -> stmt.setInt(1, languageId))
+                .forEach(entry -> existing.put(entry.getKey(), entry.getValue()));
+
+        // Batch only changed rows for update
+        String updateSql = "UPDATE " + TABLE_NAME + " SET message = ? WHERE tag_id = ? AND language_id = ?";
+        int[] updated = database.updateBatch(updateSql, stmt -> {
             for (String tagId : properties.stringPropertyNames()) {
                 if (tagId.isBlank() || tagId.startsWith("#") || tagId.equals("language.id")) continue;
                 String msg = properties.getProperty(tagId);
                 if (msg == null || msg.isBlank()) continue;
+
+                String current = existing.get(tagId);
+                if (current == null) continue; // missing -> insert later
+                if (current.equals(msg)) continue; // no change
+
+                stmt.setString(1, msg);
+                stmt.setString(2, tagId);
+                stmt.setInt(3, languageId);
+                stmt.addBatch();
+            }
+        });
+
+        // Batch only truly new rows for insert
+        String insertSql = "INSERT INTO " + TABLE_NAME + " (tag_id, language_id, message) VALUES (?, ?, ?)";
+        int[] inserted = database.updateBatch(insertSql, stmt -> {
+            for (String tagId : properties.stringPropertyNames()) {
+                if (tagId.isBlank() || tagId.startsWith("#") || tagId.equals("language.id")) continue;
+                String msg = properties.getProperty(tagId);
+                if (msg == null || msg.isBlank()) continue;
+
+                if (existing.containsKey(tagId)) continue; // already present
 
                 stmt.setString(1, tagId);
                 stmt.setInt(2, languageId);
@@ -176,8 +239,16 @@ public final class MessageProviderImpl implements MessageProvider {
             }
         });
 
-        if (result != null && result.length > 0)
+        int totalOps = (updated == null ? 0 : updated.length) + (inserted == null ? 0 : inserted.length);
+        if (fireCache && totalOps > 0)
             RefreshUtil.fireCache(all);
+
+        // Merge counts for compatibility
+        int updateLen = updated == null ? 0 : updated.length;
+        int insertLen = inserted == null ? 0 : inserted.length;
+        int[] result = new int[updateLen + insertLen];
+        if (updated != null) System.arraycopy(updated, 0, result, 0, updateLen);
+        if (inserted != null) System.arraycopy(inserted, 0, result, updateLen, insertLen);
         return result;
     }
 }

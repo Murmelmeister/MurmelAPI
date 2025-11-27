@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.language.message;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
 
@@ -24,5 +25,20 @@ public interface MessageProvider {
 
     Message update(int id, String tagId, int languageId, String message);
 
-    int[] createOrUpdateAll(Properties properties);
+    /**
+     * Upserts all entries from a single properties file.
+     */
+    int[] upsertAll(Properties properties);
+
+    /**
+     * Upserts all entries from multiple properties files (e.g., multiple languages).
+     */
+    int[] upsertAll(Collection<Properties> properties);
+
+    /**
+     * Backwards-compatible alias.
+     */
+    default int[] createOrUpdateAll(Properties properties) {
+        return upsertAll(properties);
+    }
 }
