@@ -38,7 +38,9 @@ public final class LanguageProviderImpl implements LanguageProvider {
     }
 
     public static void createDefaultLanguages(Database database) {
-        String upsertDefaults = "REPLACE INTO " + TABLE_NAME + " (id, code) VALUES (?, ?)";
+        // Use an upsert that does not delete the row, otherwise ON DELETE CASCADE wipes messages.
+        String upsertDefaults = "INSERT INTO " + TABLE_NAME + " (id, code) VALUES (?, ?) " +
+                "ON DUPLICATE KEY UPDATE code = VALUES(code)";
         database.updateBatch(upsertDefaults, stmt -> {
             stmt.setInt(1, 1);
             stmt.setString(2, ENGLISH_CODE);
