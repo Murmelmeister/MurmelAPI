@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.settings;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -55,15 +56,17 @@ public final class SettingsProviderImpl implements SettingsProvider {
         if (existing != null && Objects.equals(settings.json(), existing.json()))
             return existing;
 
-        String sql = "INSERT INTO " + TABLE_NAME + " (tag_id, value_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE value_json = VALUES(value_json)";
-        int row = database.update(sql, stmt -> {
+        String sql = "INSERT INTO " + TABLE_NAME + " (tag_id, value_json) VALUES (?, ?) " +
+                "ON DUPLICATE KEY UPDATE value_json = VALUES(value_json) " +
+                "RETURNING tag_id, value_json, updated_at";
+        Settings saved = database.query(sql, null, ResultSetUtil.settings(), stmt -> {
             stmt.setString(1, settings.tagId());
             stmt.setString(2, settings.json());
         });
-        if (row < 1) return null;
 
-        RefreshUtil.fireSingle(single, settings.tagId());
-        return settings;
+        if (saved == null) return null;
+        RefreshUtil.fireSingle(single, saved.tagId());
+        return saved;
     }
 
     @Override

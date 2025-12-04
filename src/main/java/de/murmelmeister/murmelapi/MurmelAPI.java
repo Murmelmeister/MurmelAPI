@@ -30,6 +30,7 @@ import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProviderImpl;
 import de.murmelmeister.murmelapi.settings.SettingsProvider;
 import de.murmelmeister.murmelapi.settings.SettingsProviderImpl;
+import de.murmelmeister.murmelapi.settings.SettingsService;
 import de.murmelmeister.murmelapi.user.UserProvider;
 import de.murmelmeister.murmelapi.user.UserProviderImpl;
 import de.murmelmeister.murmelapi.user.UserService;
@@ -67,6 +68,8 @@ public final class MurmelAPI {
     private static boolean bootstrapMessages = true;
 
     private static SettingsProvider settingsProvider;
+    private static SettingsService settingsService;
+
     private static LanguageProvider languageProvider;
     private static MessageProvider messageProvider;
     private static MessageService messageService;
@@ -151,6 +154,8 @@ public final class MurmelAPI {
         PunishmentCurrentUserProviderImpl.setup(DATABASE);
         // Initialize all providers
         settingsProvider = getSettingsProvider();
+        settingsService = getSettingsService(settingsProvider);
+
         languageProvider = getLanguageProvider();
         messageProvider = getMessageProvider();
         messageService = getMessageService(languageProvider, messageProvider);
@@ -271,6 +276,16 @@ public final class MurmelAPI {
         if (settingsProvider == null)
             settingsProvider = new SettingsProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
         return settingsProvider;
+    }
+
+    public static SettingsService getSettingsService(SettingsProvider settingsProvider) {
+        if (settingsService == null)
+            settingsService = new SettingsService(settingsProvider);
+        return settingsService;
+    }
+
+    public static SettingsService getSettingsService() {
+        return getSettingsService(getSettingsProvider());
     }
 
     public static LanguageProvider getLanguageProvider() {
