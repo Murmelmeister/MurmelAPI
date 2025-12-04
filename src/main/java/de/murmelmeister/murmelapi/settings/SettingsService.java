@@ -30,6 +30,10 @@ public final class SettingsService {
         return get(tagId, type, null);
     }
 
+    public <T> T get(Settings settings, Class<T> type) {
+        return get(settings.tagId(), type);
+    }
+
     public <T> Settings set(String tagId, T value) {
         String json = gson.toJson(value);
         return provider.upsert(new Settings(tagId, json, null));
