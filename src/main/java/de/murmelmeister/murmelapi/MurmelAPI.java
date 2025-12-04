@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi;
 
+import com.zaxxer.hikari.HikariConfig;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
@@ -97,6 +98,10 @@ public final class MurmelAPI {
 
     static {
         DATABASE = new Database();
+    }
+
+    public static void connect(HikariConfig config) {
+        DATABASE.connect(config);
     }
 
     public static void connect(String propertyFileName) {
