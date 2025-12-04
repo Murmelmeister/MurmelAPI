@@ -11,6 +11,7 @@ import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIp;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUser;
+import de.murmelmeister.murmelapi.settings.Settings;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
@@ -24,6 +25,15 @@ import java.util.UUID;
 import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
 
 public final class ResultSetUtil {
+    public static ResultSetProcessor<Settings> settings() {
+        return resultSet -> {
+            String tagId = resultSet.getString("tag_id");
+            String json = resultSet.getString("value_json");
+            LocalDateTime updatedAt = resultSet.getObject("updated_at") != null ? resultSet.getTimestamp("updated_at").toLocalDateTime() : null;
+            return new Settings(tagId, json, updatedAt);
+        };
+    }
+
     public static ResultSetProcessor<Language> language() {
         return resultSet -> {
             int id = resultSet.getInt("id");

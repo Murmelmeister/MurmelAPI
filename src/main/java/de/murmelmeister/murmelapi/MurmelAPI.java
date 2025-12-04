@@ -28,6 +28,8 @@ import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProviderImpl
 import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProviderImpl;
+import de.murmelmeister.murmelapi.settings.SettingsProvider;
+import de.murmelmeister.murmelapi.settings.SettingsProviderImpl;
 import de.murmelmeister.murmelapi.user.UserProvider;
 import de.murmelmeister.murmelapi.user.UserProviderImpl;
 import de.murmelmeister.murmelapi.user.UserService;
@@ -64,6 +66,7 @@ public final class MurmelAPI {
     private static Duration refreshInterval = Duration.ofMinutes(30);
     private static boolean bootstrapMessages = true;
 
+    private static SettingsProvider settingsProvider;
     private static LanguageProvider languageProvider;
     private static MessageProvider messageProvider;
     private static MessageService messageService;
@@ -94,20 +97,20 @@ public final class MurmelAPI {
     }
 
     public static void connect(String propertyFileName) {
-        readBootstrapFlag(loadProperties(propertyFileName));
+        //readBootstrapFlag(loadProperties(propertyFileName));
         DATABASE.connect(propertyFileName);
-        setup();
+        //setup();
     }
 
     public static void connect(Properties properties) {
-        readBootstrapFlag(properties);
+        //readBootstrapFlag(properties);
         DATABASE.connect(properties);
-        setup();
+        //setup();
     }
 
     public static void connect(String url, String user, String password) {
         DATABASE.connect(url, user, password);
-        setup();
+        //setup();
     }
 
     public static void disconnect() {
@@ -117,6 +120,7 @@ public final class MurmelAPI {
 
     public static void setup() {
         // Create all tables
+        SettingsProviderImpl.setup(DATABASE);
         LanguageProviderImpl.setup(DATABASE);
         LanguageProviderImpl.createDefaultLanguages(DATABASE);
         MessageProviderImpl.setup(DATABASE);
@@ -146,6 +150,7 @@ public final class MurmelAPI {
         PunishmentCurrentIpProviderImpl.setup(DATABASE);
         PunishmentCurrentUserProviderImpl.setup(DATABASE);
         // Initialize all providers
+        settingsProvider = getSettingsProvider();
         languageProvider = getLanguageProvider();
         messageProvider = getMessageProvider();
         messageService = getMessageService(languageProvider, messageProvider);
@@ -175,6 +180,7 @@ public final class MurmelAPI {
     }
 
     public static void closeCache() {
+        settingsProvider.closeCache();
         languageProvider.closeCache();
         messageProvider.closeCache();
 
@@ -259,6 +265,12 @@ public final class MurmelAPI {
 
     public static void setBootstrapMessages(boolean bootstrapMessages) {
         MurmelAPI.bootstrapMessages = bootstrapMessages;
+    }
+
+    public static SettingsProvider getSettingsProvider() {
+        if (settingsProvider == null)
+            settingsProvider = new SettingsProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return settingsProvider;
     }
 
     public static LanguageProvider getLanguageProvider() {

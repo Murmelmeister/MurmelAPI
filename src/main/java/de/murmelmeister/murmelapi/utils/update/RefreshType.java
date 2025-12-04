@@ -8,6 +8,7 @@ package de.murmelmeister.murmelapi.utils.update;
  */
 public enum RefreshType {
     ALL("all"),
+    SETTINGS("settings"),
     MESSAGES("messages"),
     LANGUAGES("languages"),
     PUNISHMENT_REASONS("punishment_reasons"),
@@ -39,7 +40,8 @@ public enum RefreshType {
     SINGLE_MESSAGE("single_message"),
     SINGLE_LANGUAGE("single_language"),
     SINGLE_GROUP("single_group"),
-    SINGLE_GROUP_COLOR("single_group_color")
+    SINGLE_GROUP_COLOR("single_group_color"),
+    SINGLE_SETTING("single_setting"),
     ;
     private static final RefreshType[] VALUES = values();
 
