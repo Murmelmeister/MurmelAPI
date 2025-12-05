@@ -16,7 +16,7 @@ public final class SettingsService {
     }
 
     public <T> T get(String tagId, Class<T> type, T defaultValue) {
-        Settings settings = provider.get(tagId);
+        Settings settings = provider.findById(tagId);
         if (settings == null) return defaultValue;
 
         try {

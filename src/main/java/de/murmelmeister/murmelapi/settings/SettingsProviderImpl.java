@@ -34,12 +34,12 @@ public final class SettingsProviderImpl implements SettingsProvider {
     }
 
     @Override
-    public Settings get(String tag) {
+    public Settings findById(String tag) {
         return cache.get(tag);
     }
 
     @Override
-    public List<Settings> getAll() {
+    public List<Settings> findAll() {
         return cache.getCachedSettings();
     }
 

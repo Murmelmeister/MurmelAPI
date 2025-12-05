@@ -5,9 +5,9 @@ import java.util.List;
 public interface SettingsProvider {
     void refreshCache();
 
-    Settings get(String tag);
+    Settings findById(String tag);
 
-    List<Settings> getAll();
+    List<Settings> findAll();
 
     Settings upsert(Settings settings);
 
