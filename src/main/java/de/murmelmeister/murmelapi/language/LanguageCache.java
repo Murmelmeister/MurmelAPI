@@ -3,9 +3,9 @@ package de.murmelmeister.murmelapi.language;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
+import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
-import de.murmelmeister.murmelapi.utils.update.RefreshListener;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * LanguageCache provides a Caffeine-backed cache for language lookups by id and language code.
  */
-public class LanguageCache implements RefreshListener, AutoCloseable {
+public class LanguageCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
     private final Database database;
     private final String tableName;

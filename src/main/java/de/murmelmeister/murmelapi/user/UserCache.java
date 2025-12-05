@@ -3,9 +3,9 @@ package de.murmelmeister.murmelapi.user;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
+import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
-import de.murmelmeister.murmelapi.utils.update.RefreshListener;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -14,7 +14,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-public class UserCache implements RefreshListener, AutoCloseable {
+public class UserCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
     private final Database database;
     private final String tableName;

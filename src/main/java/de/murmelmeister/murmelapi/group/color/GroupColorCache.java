@@ -3,22 +3,18 @@ package de.murmelmeister.murmelapi.group.color;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
+import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
-import de.murmelmeister.murmelapi.utils.update.RefreshListener;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class GroupColorCache implements RefreshListener, AutoCloseable {
+public class GroupColorCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
     private static final Pattern KEY_PATTERN = Pattern.compile(".*groupId=(\\d+), typeId=(\\d+).*");
     private final Database database;

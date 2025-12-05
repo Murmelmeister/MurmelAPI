@@ -9,13 +9,16 @@ import de.murmelmeister.murmelapi.user.UserProvider;
 import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
 import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
+import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
-import de.murmelmeister.murmelapi.utils.update.RefreshListener;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
@@ -23,7 +26,7 @@ import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
  * The PermissionProvider class provides methods to manage and check permissions for users and groups.
  * It implements the Permission interface.
  */
-public final class PermissionProvider implements Permission, RefreshListener, AutoCloseable {
+public final class PermissionProvider implements Permission, MurmelCache {
     private final Database database;
     private final UserProvider userProvider;
     private final GroupParentProvider groupParentProvider;

@@ -3,9 +3,9 @@ package de.murmelmeister.murmelapi.language.message;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
+import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
-import de.murmelmeister.murmelapi.utils.update.RefreshListener;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  * MessageCache is a thread-safe cache for storing messages by their ID and tag.
  * It allows for quick retrieval and management of messages based on their unique identifiers.
  */
-public class MessageCache implements RefreshListener, AutoCloseable {
+public class MessageCache implements MurmelCache {
     private static final Pattern LANGUAGE_KEY_PATTERN = Pattern.compile("^LanguageKey\\[languageId=(\\d+)]$");
     private static final Pattern TAG_KEY_PATTERN = Pattern.compile("^TagKey\\[tagId=(\\w+), languageId=(\\d+)]$");
 
