@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.settings;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,7 +12,7 @@ public final class SettingsService {
 
     public SettingsService(SettingsProvider provider) {
         this.provider = provider;
-        this.gson = new Gson();
+        this.gson = new GsonBuilder().disableHtmlEscaping().create();
     }
 
     public <T> T get(String tagId, Class<T> type, T defaultValue) {
