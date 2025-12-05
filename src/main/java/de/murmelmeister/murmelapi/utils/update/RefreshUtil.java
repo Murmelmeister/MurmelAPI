@@ -1,6 +1,5 @@
 package de.murmelmeister.murmelapi.utils.update;
 
-import de.murmelmeister.murmelapi.utils.MurmelCache;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
@@ -9,7 +8,7 @@ import java.util.Set;
 import java.util.concurrent.*;
 
 public final class RefreshUtil {
-    private static final CopyOnWriteArrayList<MurmelCache> LISTENERS = new CopyOnWriteArrayList<>();
+    private static final CopyOnWriteArrayList<RefreshListener> LISTENERS = new CopyOnWriteArrayList<>();
 
     private static final Set<RefreshEvent<?>> RECENT = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private static final ScheduledExecutorService DEBOUNCER = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -18,19 +17,19 @@ public final class RefreshUtil {
         return thread;
     });
 
-    public static void register(MurmelCache cache) {
+    public static void register(RefreshListener cache) {
         LISTENERS.add(cache);
     }
 
-    public static void unregister(MurmelCache cache) {
+    public static void unregister(RefreshListener cache) {
         LISTENERS.remove(cache);
     }
 
-    public static boolean isRegistered(MurmelCache cache) {
+    public static boolean isRegistered(RefreshListener cache) {
         return LISTENERS.contains(cache);
     }
 
-    public static Collection<MurmelCache> getListeners() {
+    public static Collection<RefreshListener> getListeners() {
         return Collections.unmodifiableCollection(LISTENERS);
     }
 

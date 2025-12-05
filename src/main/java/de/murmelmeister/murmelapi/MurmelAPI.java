@@ -45,18 +45,23 @@ import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProviderImpl;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
+import de.murmelmeister.murmelapi.utils.update.RefreshListener;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Properties;
 
 /**
  * The MurmelAPI main class.
  */
 public final class MurmelAPI {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MurmelAPI.class);
     private static final Database DATABASE;
 
     public static final String ENGLISH_CODE = "en-US";
@@ -201,9 +206,16 @@ public final class MurmelAPI {
     }
 
     public static void closeCaches() {
-        RefreshUtil.getListeners().forEach(cache -> {
-            if (RefreshUtil.isRegistered(cache))
-                cache.close();
+        List<RefreshListener> listeners = List.copyOf(RefreshUtil.getListeners());
+         listeners.forEach(listener -> {
+            if (RefreshUtil.isRegistered(listener) && listener instanceof AutoCloseable closeable) {
+                try {
+                    closeable.close();
+                } catch (Exception e) {
+                    LOGGER.warn("Failed to close listener {}", listener, e);
+                }
+                RefreshUtil.unregister(listener);
+            }
         });
     }
 
