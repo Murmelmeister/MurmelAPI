@@ -12,11 +12,7 @@ public interface UserSessionProvider {
 
     List<UserSession> findAll();
 
-    List<UserSession> findUserSessions(int userId);
-
     UserSession create(int userId, String ipAddress, String clientBrand, int protocolVersion);
 
     int delete(UUID sessionId);
-
-    boolean isOnline(int userId);
 }

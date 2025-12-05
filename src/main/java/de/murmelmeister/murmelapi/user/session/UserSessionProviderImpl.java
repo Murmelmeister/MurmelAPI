@@ -55,13 +55,6 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
-    public List<UserSession> findUserSessions(int userId) {
-        return findAll().stream()
-                .filter(session -> session.userId() == userId)
-                .toList();
-    }
-
-    @Override
     public UserSession create(int userId, String ipAddress, String clientBrand, int protocolVersion) {
         String normalizeIpAddress = StringUtil.normalize(ipAddress);
         if (userId < 1 || normalizeIpAddress == null) return null;
@@ -99,11 +92,5 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
 
         RefreshUtil.fireSingle(single, sessionId);
         return row;
-    }
-
-    @Override
-    public boolean isOnline(int userId) {
-        if (userId < 1) return false;
-        return findByUserId(userId) != null;
     }
 }

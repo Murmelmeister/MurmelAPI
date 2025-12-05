@@ -127,4 +127,9 @@ public final class UserService {
 
         return user;
     }
+
+    public boolean isOnline(int userId) {
+        if (userId < 1) return false;
+        return sessionProvider.findByUserId(userId) != null;
+    }
 }
