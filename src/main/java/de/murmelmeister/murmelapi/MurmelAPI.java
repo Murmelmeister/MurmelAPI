@@ -45,6 +45,7 @@ import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProviderImpl;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
+import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -105,29 +106,37 @@ public final class MurmelAPI {
     }
 
     public static void connect(String propertyFileName) {
-        //readBootstrapFlag(loadProperties(propertyFileName));
         DATABASE.connect(propertyFileName);
-        //setup();
     }
 
     public static void connect(Properties properties) {
-        //readBootstrapFlag(properties);
         DATABASE.connect(properties);
-        //setup();
     }
 
     public static void connect(String url, String user, String password) {
         DATABASE.connect(url, user, password);
-        //setup();
+    }
+
+    public static void connectToMariadb(String hostname, int port, String databaseName, String user, String password) {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl("jdbc:mariadb://" + hostname + ":" + port + "/" + databaseName);
+        config.setUsername(user);
+        config.setPassword(password);
+        config.setDriverClassName("org.mariadb.jdbc.Driver");
+        DATABASE.connect(config);
     }
 
     public static void disconnect() {
-        closeCache();
+        closeCaches();
         DATABASE.disconnect();
     }
 
     public static void setup() {
-        // Create all tables
+        createAllTables();
+        initProviders();
+    }
+
+    public static void createAllTables() {
         SettingsProviderImpl.setup(DATABASE);
         LanguageProviderImpl.setup(DATABASE);
         LanguageProviderImpl.createDefaultLanguages(DATABASE);
@@ -157,7 +166,9 @@ public final class MurmelAPI {
         PunishmentLogProviderImpl.setup(DATABASE);
         PunishmentCurrentIpProviderImpl.setup(DATABASE);
         PunishmentCurrentUserProviderImpl.setup(DATABASE);
-        // Initialize all providers
+    }
+
+    public static void initProviders() {
         settingsProvider = getSettingsProvider();
         settingsService = getSettingsService(settingsProvider);
 
@@ -189,29 +200,11 @@ public final class MurmelAPI {
         punishmentService = getPunishmentService(punishReasonProvider, punishLogProvider, punishIpProvider, punishUserProvider);
     }
 
-    public static void closeCache() {
-        settingsProvider.closeCache();
-        languageProvider.closeCache();
-        messageProvider.closeCache();
-
-        userProvider.closeCache();
-        userPlayTimeProvider.closeCache();
-        userLoginProvider.closeCache();
-        userSessionProvider.closeCache();
-
-        groupProvider.closeCache();
-        groupColorProvider.closeCache();
-
-        userPermissionProvider.closeCache();
-        userParentProvider.closeCache();
-        groupParentProvider.closeCache();
-        groupPermissionProvider.closeCache();
-        permission.closeCache();
-
-        punishReasonProvider.closeCache();
-        punishLogProvider.closeCache();
-        punishIpProvider.closeCache();
-        punishUserProvider.closeCache();
+    public static void closeCaches() {
+        RefreshUtil.getListeners().forEach(cache -> {
+            if (RefreshUtil.isRegistered(cache))
+                cache.close();
+        });
     }
 
     /*public static int deleteUserSoft(int userId) {
