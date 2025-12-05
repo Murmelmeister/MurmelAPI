@@ -45,11 +45,6 @@ public final class UserParentProviderImpl implements UserParentProvider {
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

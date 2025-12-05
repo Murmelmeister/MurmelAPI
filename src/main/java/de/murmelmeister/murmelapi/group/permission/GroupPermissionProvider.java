@@ -7,8 +7,6 @@ import java.util.List;
  * It implements the GroupPermissionProvider interface and uses the Database class to interact with the database.
  */
 public sealed interface GroupPermissionProvider permits GroupPermissionProviderImpl {
-    void closeCache();
-
     void refreshCache();
 
     GroupPermission getPermission(int groupId, String permission);

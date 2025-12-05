@@ -31,11 +31,6 @@ public final class MessageProviderImpl implements MessageProvider {
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

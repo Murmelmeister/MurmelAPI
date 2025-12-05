@@ -13,8 +13,6 @@ import java.util.List;
  * </p>
  */
 public interface GroupColorProvider {
-    void closeCache();
-
     void refreshCache();
 
     GroupColor getGroupColor(int groupId, int typeId);

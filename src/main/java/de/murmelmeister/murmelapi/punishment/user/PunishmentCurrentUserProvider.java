@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PunishmentCurrentUserProvider {
-    void closeCache();
-
     void refreshCache();
 
     List<Integer> getAllPunishedUserIds(int typeId);

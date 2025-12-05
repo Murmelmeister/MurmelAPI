@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PunishmentLogProvider {
-    void closeCache();
-
     void refreshCache();
 
     PunishmentLog getLog(UUID logId);

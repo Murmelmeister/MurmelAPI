@@ -34,11 +34,6 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

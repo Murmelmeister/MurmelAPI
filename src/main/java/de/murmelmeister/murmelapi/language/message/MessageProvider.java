@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Properties;
 
 public interface MessageProvider {
-    void closeCache();
-
     void refreshCache();
 
     Message get(int messageId);

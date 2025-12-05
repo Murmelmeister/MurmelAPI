@@ -3,8 +3,6 @@ package de.murmelmeister.murmelapi.user.playtime;
 import java.util.List;
 
 public interface UserPlayTimeProvider {
-    void closeCache();
-
     void refreshCache();
 
     UserPlayTime findByUserId(int userId);

@@ -3,8 +3,6 @@ package de.murmelmeister.murmelapi.punishment.reason;
 import java.util.List;
 
 public interface PunishmentReasonProvider {
-    void closeCache();
-
     void refreshCache();
 
     PunishmentReason getReason(int id);

@@ -7,8 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserLoginProvider {
-    void closeCache();
-
     void refreshCache();
 
     UserLogin findById(UUID id);

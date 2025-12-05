@@ -162,9 +162,4 @@ public final class PermissionProvider implements Permission, MurmelCache {
         RefreshUtil.unregister(this);
         cache.invalidateAll();
     }
-
-    @Override
-    public void closeCache() {
-        close();
-    }
 }

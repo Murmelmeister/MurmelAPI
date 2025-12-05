@@ -10,8 +10,6 @@ import java.util.UUID;
  * This interface is designed to be implemented by classes that provide specific database interactions.
  */
 public interface UserProvider {
-    void closeCache();
-
     void refreshCache();
 
     User findById(int userId);

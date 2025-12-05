@@ -17,6 +17,4 @@ public sealed interface Permission permits PermissionProvider {
     boolean hasPermission(UUID uuid, String permission);
 
     int loadExpired();
-
-    void closeCache();
 }

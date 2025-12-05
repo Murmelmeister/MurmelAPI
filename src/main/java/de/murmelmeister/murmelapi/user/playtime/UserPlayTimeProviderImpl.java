@@ -30,11 +30,6 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

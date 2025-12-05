@@ -8,8 +8,6 @@ import java.util.List;
  * It also provides methods to manage permission expiration and track who created or updated a permission.
  */
 public interface UserPermissionProvider {
-    void closeCache();
-
     void refreshCache();
 
     UserPermission getPermission(int userId, String permission);

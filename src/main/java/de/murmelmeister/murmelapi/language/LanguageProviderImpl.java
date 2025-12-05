@@ -70,11 +70,6 @@ public final class LanguageProviderImpl implements LanguageProvider {
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

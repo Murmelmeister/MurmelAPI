@@ -8,8 +8,6 @@ import java.util.List;
  * It also provides methods for managing expiration dates and user information related to group parents.
  */
 public sealed interface GroupParentProvider permits GroupParentProviderImpl {
-    void closeCache();
-
     void refreshCache();
 
     GroupParent getParent(int groupId, int parentId);

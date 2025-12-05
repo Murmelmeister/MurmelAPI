@@ -56,11 +56,6 @@ public final class GroupProviderImpl implements GroupProvider {
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

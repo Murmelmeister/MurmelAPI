@@ -13,8 +13,6 @@ import java.util.List;
  * </p>
  */
 public sealed interface UserParentProvider permits UserParentProviderImpl {
-    void closeCache();
-
     void refreshCache();
 
     UserParent getParent(int userId, int parentId);

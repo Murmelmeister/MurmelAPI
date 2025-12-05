@@ -49,11 +49,6 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

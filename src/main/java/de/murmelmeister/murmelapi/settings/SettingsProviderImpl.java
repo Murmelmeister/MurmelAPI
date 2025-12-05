@@ -29,11 +29,6 @@ public final class SettingsProviderImpl implements SettingsProvider {
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

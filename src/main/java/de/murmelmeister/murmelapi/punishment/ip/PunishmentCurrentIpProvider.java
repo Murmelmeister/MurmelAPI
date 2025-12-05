@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface PunishmentCurrentIpProvider {
-    void closeCache();
-
     void refreshCache();
 
     List<String> getAllPunishedIps(int typeId);

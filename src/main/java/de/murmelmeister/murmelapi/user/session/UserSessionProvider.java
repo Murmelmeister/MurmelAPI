@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserSessionProvider {
-    void closeCache();
-
     void refreshCache();
 
     UserSession findById(UUID sessionId);

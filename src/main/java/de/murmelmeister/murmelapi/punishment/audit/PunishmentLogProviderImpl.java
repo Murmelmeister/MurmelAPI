@@ -50,11 +50,6 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

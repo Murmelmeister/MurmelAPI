@@ -41,11 +41,6 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public void closeCache() {
-        cache.close();
-    }
-
-    @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
     }

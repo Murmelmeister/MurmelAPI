@@ -13,8 +13,6 @@ import java.util.List;
  * </p>
  */
 public sealed interface GroupProvider permits GroupProviderImpl {
-    void closeCache();
-
     void refreshCache();
 
     Group findById(int id);
