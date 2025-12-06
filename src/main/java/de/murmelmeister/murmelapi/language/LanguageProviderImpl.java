@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.language;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
@@ -33,6 +34,8 @@ public final class LanguageProviderImpl implements LanguageProvider {
         this.cache = new LanguageCache(database, TABLE_NAME, cacheCapacity);
     }
 
+    /*
+    TODO: Remove this
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, code VARCHAR(32) UNIQUE");
     }
@@ -50,24 +53,8 @@ public final class LanguageProviderImpl implements LanguageProvider {
             stmt.setString(2, GERMAN_CODE);
             stmt.addBatch();
         });
-
-        /*String insertOthers = "INSERT IGNORE INTO " + TABLE_NAME + " (code) VALUES (?)";
-        Set<String> defaultTags = Set.of(ENGLISH_CODE, GERMAN_CODE);
-
-        database.updateBatch(insertOthers, stmt -> {
-            Set<String> locales = new LinkedHashSet<>();
-            for (Locale locale : Locale.getAvailableLocales()) {
-                String tag = locale.toLanguageTag();
-                if (tag.isEmpty() || defaultTags.contains(tag)) continue;
-                locales.add(tag);
-            }
-
-            for (String tag : locales) {
-                stmt.setString(1, tag);
-                stmt.addBatch();
-            }
-        });*/
     }
+    */
 
     @Override
     public void refreshCache() {
@@ -75,18 +62,18 @@ public final class LanguageProviderImpl implements LanguageProvider {
     }
 
     @Override
-    public Language get(int id) {
+    public Language findById(int id) {
         return cache.getById(id);
     }
 
     @Override
-    public Language get(String code) {
+    public Language findByCode(String code) {
         String normalized = normalize(code);
         return normalized != null ? cache.getByCode(normalized) : null;
     }
 
     @Override
-    public List<Language> getLanguages() {
+    public List<Language> findAll() {
         return cache.getCachedLanguages();
     }
 
@@ -144,6 +131,25 @@ public final class LanguageProviderImpl implements LanguageProvider {
         Language language = existing.withCode(normalized);
         RefreshUtil.fireSingle(single, id);
         return language;
+    }
+
+    @Override
+    public Language upsert(Language language) {
+        if (language == null) return null;
+
+        Language existing = cache.getById(language.id());
+        if (existing != null
+                && Objects.equals(language.id(), existing.id())
+                && Objects.equals(language.code(), existing.code()))
+            return existing;
+
+        String sql = "INSERT INTO " + TABLE_NAME + " (code) VALUES (?) " +
+                "ON DUPLICATE KEY UPDATE code = VALUES(code) " +
+                "RETURNING id, code";
+        Language saved = database.query(sql, null, ResultSetUtil.language(), stmt -> stmt.setString(1, language.code()));
+        if (saved == null) return null;
+        RefreshUtil.fireSingle(single, saved.id());
+        return saved;
     }
 
     private String normalize(String code) {

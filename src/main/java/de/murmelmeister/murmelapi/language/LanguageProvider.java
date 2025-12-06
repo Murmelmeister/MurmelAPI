@@ -5,15 +5,17 @@ import java.util.List;
 public interface LanguageProvider {
     void refreshCache();
 
-    Language get(int id);
+    Language findById(int id);
 
-    Language get(String code);
+    Language findByCode(String code);
 
-    List<Language> getLanguages();
+    List<Language> findAll();
 
     Language create(String code);
 
     int delete(int id);
 
     Language update(int id, String code);
+
+    Language upsert(Language language);
 }
