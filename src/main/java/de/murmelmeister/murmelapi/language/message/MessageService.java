@@ -28,7 +28,7 @@ public final class MessageService {
     }
 
     public String getMessage(String key, int languageId) {
-        Language language = languageProvider.get(languageId);
+        Language language = languageProvider.findById(languageId);
         if (language != null) {
             Message message = messageProvider.get(key, language.id());
             if (message != null)
@@ -37,7 +37,7 @@ public final class MessageService {
             logger.warn("Message with tag '{}' and language ID '{}' not found.", key, language.id());
         }
 
-        Language defaultLanguage = languageProvider.get(ENGLISH_CODE);
+        Language defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
         if (defaultLanguage != null) {
             Message fallback = messageProvider.get(key, defaultLanguage.id());
             if (fallback != null)
@@ -48,7 +48,7 @@ public final class MessageService {
     }
 
     public String getMessage(String key, String code) {
-        Language language = languageProvider.get(code);
+        Language language = languageProvider.findByCode(code);
         if (language != null) {
             Message message = messageProvider.get(key, language.id());
             if (message != null)
@@ -57,7 +57,7 @@ public final class MessageService {
             logger.warn("Message with tag '{}' and language ID '{}' not found.", key, language.id());
         }
 
-        Language defaultLanguage = languageProvider.get(ENGLISH_CODE);
+        Language defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
         if (defaultLanguage != null) {
             Message fallback = messageProvider.get(key, defaultLanguage.id());
             if (fallback != null)
