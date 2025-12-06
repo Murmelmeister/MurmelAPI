@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 public final class UserLoginProviderImpl implements UserLoginProvider {
-    private static final String TABLE_NAME = "user_login_history";
+    private static final String TABLE_NAME = "user_login";
 
     private final Database database;
     private final UserLoginCache cache;
