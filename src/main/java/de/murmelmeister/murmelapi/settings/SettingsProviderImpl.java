@@ -24,11 +24,14 @@ public final class SettingsProviderImpl implements SettingsProvider {
         this.cache = new SettingsCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
+    /*
+    TODO: Remove this
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "tag_id VARCHAR(100) NOT NULL PRIMARY KEY, " +
                 "value_json JSON NOT NULL, " +
                 "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP()");
     }
+    */
 
     @Override
     public void refreshCache() {
