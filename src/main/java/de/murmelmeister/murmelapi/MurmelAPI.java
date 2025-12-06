@@ -1,5 +1,7 @@
 package de.murmelmeister.murmelapi;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.zaxxer.hikari.HikariConfig;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.group.GroupProvider;
@@ -61,6 +63,7 @@ import java.util.Properties;
 public final class MurmelAPI {
     private static final Logger LOGGER = LoggerFactory.getLogger(MurmelAPI.class);
     private static final Database DATABASE;
+    private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
 
     public static final String ENGLISH_CODE = "en-US";
     public static final String GERMAN_CODE = "de-DE";
@@ -302,7 +305,7 @@ public final class MurmelAPI {
 
     public static SettingsService getSettingsService(SettingsProvider settingsProvider) {
         if (settingsService == null)
-            settingsService = new SettingsService(settingsProvider);
+            settingsService = new SettingsService(settingsProvider, GSON);
         return settingsService;
     }
 

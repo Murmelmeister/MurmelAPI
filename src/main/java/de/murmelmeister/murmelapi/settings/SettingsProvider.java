@@ -9,6 +9,10 @@ public interface SettingsProvider {
 
     List<Settings> findAll();
 
+    Settings create(String tagId, String json);
+
+    Settings update(String tagId, String json);
+
     Settings upsert(Settings settings);
 
     int delete(String tagId);
