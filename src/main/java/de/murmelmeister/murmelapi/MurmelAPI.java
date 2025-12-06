@@ -6,7 +6,6 @@ import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.group.color.GroupColorProviderImpl;
-import de.murmelmeister.murmelapi.group.color.GroupColorType;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProviderImpl;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
@@ -26,7 +25,6 @@ import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIpProvider;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIpProviderImpl;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProviderImpl;
-import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProviderImpl;
 import de.murmelmeister.murmelapi.settings.SettingsProvider;
@@ -50,8 +48,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -124,7 +122,7 @@ public final class MurmelAPI {
 
     public static void connectToMariadb(String hostname, int port, String databaseName, String user, String password) {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:mariadb://" + hostname + ":" + port + "/" + databaseName);
+        config.setJdbcUrl("jdbc:mariadb://" + hostname + ":" + port + "/" + databaseName + "?useUnicode=true&characterEncoding=UTF-8");
         config.setUsername(user);
         config.setPassword(password);
         config.setDriverClassName("org.mariadb.jdbc.Driver");
@@ -142,7 +140,7 @@ public final class MurmelAPI {
     }
 
     public static void createAllTables() {
-        SettingsProviderImpl.setup(DATABASE);
+        /*SettingsProviderImpl.setup(DATABASE);
         LanguageProviderImpl.setup(DATABASE);
         LanguageProviderImpl.createDefaultLanguages(DATABASE);
         MessageProviderImpl.setup(DATABASE);
@@ -170,7 +168,21 @@ public final class MurmelAPI {
         PunishmentReasonProviderImpl.setup(DATABASE);
         PunishmentLogProviderImpl.setup(DATABASE);
         PunishmentCurrentIpProviderImpl.setup(DATABASE);
-        PunishmentCurrentUserProviderImpl.setup(DATABASE);
+        PunishmentCurrentUserProviderImpl.setup(DATABASE);*/
+
+        runSqlScript("schema.sql");
+        runSqlScript("data.sql");
+    }
+
+    private static void runSqlScript(String script) {
+        try (InputStream in = MurmelAPI.class.getClassLoader().getResourceAsStream(script)) {
+            if (in == null) throw new IllegalStateException("Missing schema.sql");
+            try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+                DATABASE.runSqlScript(reader);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to run schema.sql", e);
+        }
     }
 
     public static void initProviders() {
