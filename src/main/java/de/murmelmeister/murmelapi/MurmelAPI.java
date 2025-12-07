@@ -175,6 +175,7 @@ public final class MurmelAPI {
 
         runSqlScript("schema.sql");
         runSqlScript("data.sql");
+        PermissionProvider.setup(DATABASE);
     }
 
     private static void runSqlScript(String script) {
