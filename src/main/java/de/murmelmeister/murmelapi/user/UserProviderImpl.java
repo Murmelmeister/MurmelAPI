@@ -6,7 +6,6 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.sql.Timestamp;
-import java.sql.Types;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -32,9 +31,11 @@ public final class UserProviderImpl implements UserProvider {
         this.cache = new UserCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
+    /*
+    TODO: Remove this
     public static void setup(Database database) {
         database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
-                "mojang_id VARCHAR(36) NOT NULL UNIQUE, " +
+                "mojang_id VARCHAR(36) NOT NULL, " +
                 "username VARCHAR(16) NOT NULL, " +
                 "first_login DATETIME NULL, " +
                 "system_user BOOLEAN NOT NULL DEFAULT FALSE, " +
@@ -42,6 +43,7 @@ public final class UserProviderImpl implements UserProvider {
                 "debug_enabled BOOLEAN NOT NULL DEFAULT FALSE, " +
                 "language_id INT NOT NULL DEFAULT 1, " +
                 "FOREIGN KEY (language_id) REFERENCES languages(id)");
+        database.update("CREATE INDEX IF NOT EXISTS idx_users_mojang_id ON " + TABLE_NAME + " (mojang_id)");
         database.update("CREATE INDEX IF NOT EXISTS idx_users_username ON " + TABLE_NAME + " (username)");
     }
 
@@ -58,6 +60,7 @@ public final class UserProviderImpl implements UserProvider {
             stmt.setInt(8, 1);
         });
     }
+    */
 
     @Override
     public void refreshCache() {
@@ -82,7 +85,7 @@ public final class UserProviderImpl implements UserProvider {
     @Override
     public List<User> findAll() {
         return cache.getCachedUsers().stream()
-                .filter(user -> user.id() != CONSOLE_USER_ID)
+                .filter(user -> user.id() != CONSOLE_USER_ID && !user.systemUser())
                 .toList();
     }
 
