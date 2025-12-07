@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS messages (
 -- Users and session/login data
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    mojang_id VARCHAR(36) NOT NULL UNIQUE,
+    mojang_id VARCHAR(36) NOT NULL,
     username VARCHAR(16) NOT NULL,
     first_login DATETIME NULL,
     system_user BOOLEAN NOT NULL DEFAULT FALSE,
@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     language_id INT NOT NULL DEFAULT 1,
     FOREIGN KEY (language_id) REFERENCES languages(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE INDEX IF NOT EXISTS idx_users_mojang_id ON users (mojang_id);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
 
 CREATE TABLE IF NOT EXISTS user_playtime (
