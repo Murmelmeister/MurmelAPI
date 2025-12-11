@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.user.session;
 
+import java.net.InetAddress;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,7 +13,7 @@ public interface UserSessionProvider {
 
     List<UserSession> findAll();
 
-    UserSession create(int userId, String ipAddress, String clientBrand, int protocolVersion);
+    UserSession create(int userId, InetAddress inetAddress, String clientBrand, int protocolVersion);
 
     int delete(UUID sessionId);
 }

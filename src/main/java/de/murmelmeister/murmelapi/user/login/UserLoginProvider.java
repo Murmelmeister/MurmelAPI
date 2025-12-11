@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.user.login;
 
 import de.murmelmeister.murmelapi.user.session.UserSession;
 
+import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -13,17 +14,13 @@ public interface UserLoginProvider {
 
     List<UserLogin> findByUserId(int userId);
 
-    List<UserLogin> findByIpAddress(String ipAddress);
+    List<UserLogin> findByIpAddress(InetAddress inetAddress);
 
-    List<UserLogin> findAllLogins();
+    List<UserLogin> findAll();
 
-    UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, String ipAddress, String clientBrand, int protocolVersion);
+    UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, InetAddress inetAddress, String clientBrand, int protocolVersion);
 
     UserLogin create(UserSession session);
 
     int delete(UUID id);
-
-    UserLogin getLastLogin(int userId);
-
-    LocalDateTime getLastLoginTime(int userId);
 }

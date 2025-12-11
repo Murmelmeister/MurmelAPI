@@ -1,15 +1,14 @@
 package de.murmelmeister.murmelapi.user.login;
 
 import de.murmelmeister.library.database.Database;
-import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.net.InetAddress;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -24,20 +23,6 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     public UserLoginProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
         this.cache = new UserLoginCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
-    }
-
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id VARCHAR(36) PRIMARY KEY, " +
-                "user_id INT NOT NULL, " +
-                "login_time DATETIME NOT NULL, " +
-                "logout_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "ip_address VARCHAR(45) NOT NULL, " +
-                "client_brand VARCHAR(50) NULL, " +
-                "protocol_version INT NULL, " +
-                "FOREIGN KEY (user_id) REFERENCES users(id)"
-        ); // Maybe add session_type or something similar in the future
-        database.update("CREATE INDEX IF NOT EXISTS idx_user_id ON " + TABLE_NAME + " (user_id)");
-        database.update("CREATE INDEX IF NOT EXISTS idx_ip_address ON " + TABLE_NAME + " (ip_address)");
     }
 
     @Override
@@ -56,19 +41,18 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public List<UserLogin> findByIpAddress(String ipAddress) {
-        return cache.getByIpAddress(ipAddress);
+    public List<UserLogin> findByIpAddress(InetAddress inetAddress) {
+        return cache.getByIpAddress(inetAddress);
     }
 
     @Override
-    public List<UserLogin> findAllLogins() {
+    public List<UserLogin> findAll() {
         return cache.getCachedLogins();
     }
 
     @Override
-    public UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, String ipAddress, String clientBrand, int protocolVersion) {
-        String normalizedIpAddress = StringUtil.normalize(ipAddress);
-        if (sessionId == null || userId < 1 || loginTime == null || normalizedIpAddress == null)
+    public UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, InetAddress inetAddress, String clientBrand, int protocolVersion) {
+        if (sessionId == null || userId < 1 || loginTime == null || inetAddress == null)
             return null;
 
         String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, login_time, ip_address, client_brand, protocol_version) VALUES (?, ?, ?, ?, ?, ?)";
@@ -76,7 +60,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
             stmt.setTimestamp(3, Timestamp.valueOf(loginTime));
-            stmt.setString(4, normalizedIpAddress);
+            stmt.setString(4, inetAddress.getHostAddress());
             stmt.setString(5, clientBrand);
             stmt.setInt(6, protocolVersion);
         });
@@ -88,7 +72,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
                 stmt -> stmt.setString(1, sessionId.toString()));
         if (logoutTime == null) return null;
 
-        UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, normalizedIpAddress, clientBrand, protocolVersion);
+        UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, inetAddress, clientBrand, protocolVersion);
         RefreshUtil.fireSingle(single, sessionId);
         return login;
     }
@@ -97,7 +81,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     public UserLogin create(UserSession session) {
         if (session == null) return null;
         return create(session.id(), session.userId(), session.loginTime(),
-                session.ipAddress(), session.clientBrand(), session.protocolVersion());
+                session.inetAddress(), session.clientBrand(), session.protocolVersion());
     }
 
     @Override
@@ -111,20 +95,5 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
 
         RefreshUtil.fireSingle(single, id);
         return row;
-    }
-
-    @Override
-    public UserLogin getLastLogin(int userId) {
-        return findByUserId(userId).stream()
-                .max(Comparator.comparing(UserLogin::loginTime))
-                .orElse(null);
-    }
-
-    @Override
-    public LocalDateTime getLastLoginTime(int userId) {
-        return findByUserId(userId).stream()
-                .map(UserLogin::loginTime)
-                .max(LocalDateTime::compareTo)
-                .orElse(null);
     }
 }

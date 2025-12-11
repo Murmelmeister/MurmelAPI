@@ -8,7 +8,9 @@ import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.jetbrains.annotations.NotNull;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.*;
 
@@ -16,10 +18,10 @@ public class UserLoginCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
     private final Database database;
     private final String tableName;
-    private final LoadingCache<UUID, UserLogin> cacheById;
-    private final LoadingCache<Integer, List<UserLogin>> cacheByUserId;
-    private final LoadingCache<String, List<UserLogin>> cacheByIpAddress;
-    private final LoadingCache<String, List<UserLogin>> listCache;
+    private final LoadingCache<@NotNull UUID, UserLogin> cacheById;
+    private final LoadingCache<@NotNull Integer, List<UserLogin>> cacheByUserId;
+    private final LoadingCache<@NotNull InetAddress, List<UserLogin>> cacheByIpAddress;
+    private final LoadingCache<@NotNull String, List<UserLogin>> listCache;
     private final Long fetchLimit;
 
     public UserLoginCache(Database database, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
@@ -64,12 +66,12 @@ public class UserLoginCache implements MurmelCache {
             return;
 
         Map<Integer, List<UserLogin>> byUser = new HashMap<>();
-        Map<String, List<UserLogin>> byIpAddress = new HashMap<>();
+        Map<InetAddress, List<UserLogin>> byIpAddress = new HashMap<>();
 
         for (UserLogin userLogin : userLogins) {
             cacheById.put(userLogin.id(), userLogin);
             byUser.computeIfAbsent(userLogin.userId(), ignored -> new ArrayList<>()).add(userLogin);
-            byIpAddress.computeIfAbsent(userLogin.ipAddress(), ignored -> new ArrayList<>()).add(userLogin);
+            byIpAddress.computeIfAbsent(userLogin.inetAddress(), ignored -> new ArrayList<>()).add(userLogin);
         }
 
         byUser.forEach((userId, logins) -> cacheByUserId.put(userId, List.copyOf(logins)));
@@ -95,10 +97,10 @@ public class UserLoginCache implements MurmelCache {
                 stmt -> stmt.setInt(1, userId));
     }
 
-    private List<UserLogin> loadByIpAddress(String ipAddress) {
+    private List<UserLogin> loadByIpAddress(InetAddress inetAddress) {
         String sql = "SELECT * FROM " + tableName + " WHERE ip_address = ?";
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userLogin(),
-                stmt -> stmt.setString(1, ipAddress));
+                stmt -> stmt.setString(1, inetAddress.getHostAddress()));
     }
 
     private UserLogin loadById(UUID id) {
@@ -115,14 +117,14 @@ public class UserLoginCache implements MurmelCache {
         return cacheByUserId.get(userId);
     }
 
-    public List<UserLogin> getByIpAddress(String ipAddress) {
-        return cacheByIpAddress.get(ipAddress);
+    public List<UserLogin> getByIpAddress(InetAddress inetAddress) {
+        return cacheByIpAddress.get(inetAddress);
     }
 
     public void put(UserLogin userLogin) {
         cacheById.put(userLogin.id(), userLogin);
         CacheUtil.put(cacheByUserId, userLogin.userId(), userLogin, v -> v.id().equals(userLogin.id()));
-        CacheUtil.put(cacheByIpAddress, userLogin.ipAddress(), userLogin, v -> v.id().equals(userLogin.id()));
+        CacheUtil.put(cacheByIpAddress, userLogin.inetAddress(), userLogin, v -> v.id().equals(userLogin.id()));
         CacheUtil.put(listCache, ALL_KEY, userLogin, v -> v.id().equals(userLogin.id()));
     }
 
@@ -131,7 +133,7 @@ public class UserLoginCache implements MurmelCache {
         cacheById.invalidate(id);
         if (userLogin != null) {
             CacheUtil.remove(cacheByUserId, userLogin.userId(), v -> v.id().equals(id));
-            CacheUtil.remove(cacheByIpAddress, userLogin.ipAddress(), v -> v.id().equals(id));
+            CacheUtil.remove(cacheByIpAddress, userLogin.inetAddress(), v -> v.id().equals(id));
         }
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(id));
     }

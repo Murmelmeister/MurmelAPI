@@ -3,14 +3,17 @@ package de.murmelmeister.murmelapi.user;
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
 import de.murmelmeister.murmelapi.exceptions.user.UserPlayTimeException;
 import de.murmelmeister.murmelapi.exceptions.user.UserSessionException;
+import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTime;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 
+import java.net.InetAddress;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.UUID;
 
 public final class UserService {
@@ -27,8 +30,8 @@ public final class UserService {
     }
 
 
-    public void startSession(int userId, String ipAddress, String clientBrand, int protocolVersion) {
-        if (userId < 1 || ipAddress == null)
+    public void startSession(int userId, InetAddress inetAddress, String clientBrand, int protocolVersion) {
+        if (userId < 1 || inetAddress == null)
             throw new IllegalArgumentException("Invalid parameters for session handling");
 
         UserSession session = sessionProvider.findByUserId(userId);
@@ -37,7 +40,7 @@ public final class UserService {
             if (sessionProvider.delete(session.id()) < 1)
                 throw new UserSessionException("Failed to delete existing session for user ID: " + userId);
         }
-        sessionProvider.create(userId, ipAddress, clientBrand, protocolVersion);
+        sessionProvider.create(userId, inetAddress, clientBrand, protocolVersion);
     }
 
     public void closeSession(int userId) {
@@ -118,7 +121,7 @@ public final class UserService {
             userProvider.update(user.id(), user.username(), LocalDateTime.now(), user.debugUser(), user.debugEnabled(), user.languageId());
 
         if (playTime.getLastSeenDate() == null) {
-            LocalDateTime lastLogin = loginProvider.getLastLoginTime(user.id());
+            LocalDateTime lastLogin = getLastLogin(user.id()) == null ? null : getLastLogin(user.id()).loginTime();
             LocalDate lastSeen = lastLogin != null ? lastLogin.toLocalDate() : LocalDate.now();
             playTime.setLastSeenDate(lastSeen);
             if (!playTimeProvider.updateOnlyCache(playTime))
@@ -132,5 +135,11 @@ public final class UserService {
     public boolean isOnline(int userId) {
         if (userId < 1) return false;
         return sessionProvider.findByUserId(userId) != null;
+    }
+
+    public UserLogin getLastLogin(int userId) {
+        return loginProvider.findByUserId(userId).stream()
+                .max(Comparator.comparing(UserLogin::loginTime))
+                .orElse(null);
     }
 }

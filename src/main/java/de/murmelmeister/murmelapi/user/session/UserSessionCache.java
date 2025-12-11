@@ -8,6 +8,7 @@ import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -18,9 +19,9 @@ public class UserSessionCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
     private final Database database;
     private final String tableName;
-    private final LoadingCache<UUID, UserSession> cacheById;
-    private final LoadingCache<Integer, UserSession> cacheByUserId;
-    private final LoadingCache<String, List<UserSession>> listCache;
+    private final LoadingCache<@NotNull UUID, UserSession> cacheById;
+    private final LoadingCache<@NotNull Integer, UserSession> cacheByUserId;
+    private final LoadingCache<@NotNull String, List<UserSession>> listCache;
     private final Long fetchLimit;
 
     public UserSessionCache(Database database, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
@@ -37,7 +38,7 @@ public class UserSessionCache implements MurmelCache {
     public void onRefresh(RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.USER_SESSIONS.getName().equalsIgnoreCase(cacheName)
-            || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
             refreshAll();
         else if (RefreshType.SINGLE_USER_SESSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
@@ -110,9 +111,8 @@ public class UserSessionCache implements MurmelCache {
     public void remove(UUID sessionId) {
         UserSession session = cacheById.getIfPresent(sessionId);
         cacheById.invalidate(sessionId);
-        if (session != null) {
+        if (session != null)
             cacheByUserId.invalidate(session.userId());
-        }
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(sessionId));
     }
 

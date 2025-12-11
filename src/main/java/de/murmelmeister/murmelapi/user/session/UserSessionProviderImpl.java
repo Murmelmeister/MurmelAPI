@@ -1,10 +1,10 @@
 package de.murmelmeister.murmelapi.user.session;
 
 import de.murmelmeister.library.database.Database;
-import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,17 +21,6 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     public UserSessionProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
         this.cache = new UserSessionCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
-    }
-
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id VARCHAR(36) PRIMARY KEY, " +
-                "user_id INT NOT NULL UNIQUE, " +
-                "login_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "ip_address VARCHAR(45) NOT NULL, " +
-                "client_brand VARCHAR(50) NULL, " +
-                "protocol_version INT NULL, " +
-                "FOREIGN KEY (user_id) REFERENCES users(id)"
-        ); // Maybe session_type in the future?
     }
 
     @Override
@@ -55,16 +44,15 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
-    public UserSession create(int userId, String ipAddress, String clientBrand, int protocolVersion) {
-        String normalizeIpAddress = StringUtil.normalize(ipAddress);
-        if (userId < 1 || normalizeIpAddress == null) return null;
+    public UserSession create(int userId, InetAddress inetAddress, String clientBrand, int protocolVersion) {
+        if (userId < 1 || inetAddress == null) return null;
 
         UUID sessionId = UUID.randomUUID();
         String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, ip_address, client_brand, protocol_version) VALUES (?, ?, ?, ?, ?)";
         int row = database.update(insertSql, stmt -> {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
-            stmt.setString(3, normalizeIpAddress);
+            stmt.setString(3, inetAddress.getHostAddress());
             stmt.setString(4, clientBrand);
             stmt.setInt(5, protocolVersion);
         });
@@ -76,7 +64,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
                 stmt -> stmt.setString(1, sessionId.toString()));
         if (loginTime == null) return null;
 
-        UserSession session = new UserSession(sessionId, userId, loginTime, normalizeIpAddress, clientBrand, protocolVersion);
+        UserSession session = new UserSession(sessionId, userId, loginTime, inetAddress, clientBrand, protocolVersion);
         RefreshUtil.fireSingle(single, session.id());
         return session;
     }

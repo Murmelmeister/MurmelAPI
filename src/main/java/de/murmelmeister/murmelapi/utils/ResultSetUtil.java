@@ -19,6 +19,8 @@ import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTime;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -81,9 +83,16 @@ public final class ResultSetUtil {
             int userId = result.getInt("user_id");
             LocalDateTime loginTime = result.getTimestamp("login_time").toLocalDateTime();
             String ipAddress = result.getString("ip_address");
+            InetAddress inetAddress;
+            try {
+                inetAddress = InetAddress.getByName(ipAddress);
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
             String clientBrand = result.getString("client_brand");
             int protocolVersion = result.getInt("protocol_version");
-            return new UserSession(id, userId, loginTime, ipAddress, clientBrand, protocolVersion);
+
+            return new UserSession(id, userId, loginTime, inetAddress, clientBrand, protocolVersion);
         };
     }
 
@@ -94,10 +103,16 @@ public final class ResultSetUtil {
             LocalDateTime loginTime = resultSet.getTimestamp("login_time").toLocalDateTime();
             LocalDateTime logoutTime = resultSet.getTimestamp("logout_time").toLocalDateTime();
             String ipAddress = resultSet.getString("ip_address");
+            InetAddress inetAddress;
+            try {
+                inetAddress = InetAddress.getByName(ipAddress);
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
             String clientBrand = resultSet.getString("client_brand");
             int protocolVersion = resultSet.getInt("protocol_version");
 
-            return new UserLogin(id, userId, loginTime, logoutTime, ipAddress, clientBrand, protocolVersion);
+            return new UserLogin(id, userId, loginTime, logoutTime, inetAddress, clientBrand, protocolVersion);
         };
     }
 
