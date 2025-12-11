@@ -75,7 +75,7 @@ public class UserCache implements MurmelCache {
         users.forEach(user -> {
             cacheById.put(user.id(), user);
             if (!isBlocked(user)) {
-                cacheByUUID.put(user.mojangId(), user);
+                if (user.mojangId() != null) cacheByUUID.put(user.mojangId(), user);
                 cacheByName.put(user.username(), user);
             }
         });
@@ -103,6 +103,7 @@ public class UserCache implements MurmelCache {
     }
 
     private User loadByUUID(UUID uuid) {
+        if (uuid == null) return null;
         String sql = "SELECT * FROM " + tableName + " WHERE mojang_id = ?";
         return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
                 stmt -> stmt.setString(1, uuid.toString()));
@@ -134,7 +135,7 @@ public class UserCache implements MurmelCache {
         if (user == null) return;
         cacheById.put(user.id(), user);
         if (!isBlocked(user)) {
-            cacheByUUID.put(user.mojangId(), user);
+            if (user.mojangId() != null) cacheByUUID.put(user.mojangId(), user);
             cacheByName.put(user.username(), user);
             CacheUtil.put(listCache, ALL_KEY, user, v -> v.id() == user.id());
         }

@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
-
 /**
  * UserProvider class to manage users in the database.
  * This class implements the User interface and provides methods to interact with user data.
@@ -30,37 +28,6 @@ public final class UserProviderImpl implements UserProvider {
         this.database = database;
         this.cache = new UserCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
-
-    /*
-    TODO: Remove this
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
-                "mojang_id VARCHAR(36) NOT NULL, " +
-                "username VARCHAR(16) NOT NULL, " +
-                "first_login DATETIME NULL, " +
-                "system_user BOOLEAN NOT NULL DEFAULT FALSE, " +
-                "debug_user BOOLEAN NOT NULL DEFAULT FALSE, " +
-                "debug_enabled BOOLEAN NOT NULL DEFAULT FALSE, " +
-                "language_id INT NOT NULL DEFAULT 1, " +
-                "FOREIGN KEY (language_id) REFERENCES languages(id)");
-        database.update("CREATE INDEX IF NOT EXISTS idx_users_mojang_id ON " + TABLE_NAME + " (mojang_id)");
-        database.update("CREATE INDEX IF NOT EXISTS idx_users_username ON " + TABLE_NAME + " (username)");
-    }
-
-    public static void createConsoleUser(Database database) {
-        String sql = "INSERT IGNORE INTO " + TABLE_NAME + " VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        database.update(sql, stmt -> {
-            stmt.setInt(1, CONSOLE_USER_ID);
-            stmt.setString(2, new UUID(0, 0).toString());
-            stmt.setString(3, "Console");
-            stmt.setNull(4, Types.TIMESTAMP);
-            stmt.setBoolean(5, true);
-            stmt.setBoolean(6, true);
-            stmt.setBoolean(7, true);
-            stmt.setInt(8, 1);
-        });
-    }
-    */
 
     @Override
     public void refreshCache() {
@@ -84,9 +51,7 @@ public final class UserProviderImpl implements UserProvider {
 
     @Override
     public List<User> findAll() {
-        return cache.getCachedUsers().stream()
-                .filter(user -> user.id() != CONSOLE_USER_ID && !user.systemUser())
-                .toList();
+        return cache.getCachedUsers();
     }
 
     @Override

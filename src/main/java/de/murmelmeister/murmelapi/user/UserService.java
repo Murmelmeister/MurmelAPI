@@ -125,6 +125,7 @@ public final class UserService {
                 throw new UserPlayTimeException("Failed to update last seen date for user with ID: " + user.id());
         }
 
+        // TODO: Add refresh users
         return user;
     }
 

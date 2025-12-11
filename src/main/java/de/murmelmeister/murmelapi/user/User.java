@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
+ * @param mojangId Nullable
  * @param firstLogin Nullable
  */
 public record User(int id, UUID mojangId, String username, LocalDateTime firstLogin, boolean systemUser,
