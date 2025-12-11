@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS messages (
 -- Users and session/login data
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    mojang_id VARCHAR(36) NOT NULL,
+    mojang_id UUID NULL,
     username VARCHAR(16) NOT NULL,
     first_login DATETIME NULL,
     system_user BOOLEAN NOT NULL DEFAULT FALSE,
@@ -43,11 +43,11 @@ CREATE TABLE IF NOT EXISTS user_playtime (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_login (
-    id VARCHAR(36) PRIMARY KEY,
+    id UUID PRIMARY KEY,
     user_id INT NOT NULL,
     login_time DATETIME NOT NULL,
     logout_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    ip_address VARCHAR(45) NOT NULL,
+    ip_address INET6 NOT NULL,
     client_brand VARCHAR(50) NULL,
     protocol_version INT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -56,10 +56,10 @@ CREATE INDEX IF NOT EXISTS idx_user_id ON user_login (user_id);
 CREATE INDEX IF NOT EXISTS idx_ip_address ON user_login (ip_address);
 
 CREATE TABLE IF NOT EXISTS user_session (
-    id VARCHAR(36) PRIMARY KEY,
+    id UUID PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
     login_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    ip_address VARCHAR(45) NOT NULL,
+    ip_address INET6 NOT NULL,
     client_brand VARCHAR(50) NULL,
     protocol_version INT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -187,10 +187,10 @@ CREATE TABLE IF NOT EXISTS punishment_reasons (
 CREATE INDEX IF NOT EXISTS idx_reason_type ON punishment_reasons (type_id);
 
 CREATE TABLE IF NOT EXISTS punishment_logs (
-    id VARCHAR(36) PRIMARY KEY,
+    id UUID PRIMARY KEY,
     action ENUM('CREATED', 'MODIFIED', 'REVOKED') NOT NULL,
     user_id INT NULL,
-    ip_address VARCHAR(45) NULL,
+    ip_address INET6 NULL,
     CONSTRAINT chk_user_or_ip_not_both_null CHECK (user_id IS NOT NULL OR ip_address IS NOT NULL),
     reason_id INT NULL,
     reason_type_id INT NOT NULL,
@@ -209,9 +209,9 @@ CREATE INDEX IF NOT EXISTS idx_audit_ip ON punishment_logs (ip_address);
 CREATE INDEX IF NOT EXISTS idx_audit_reason ON punishment_logs (reason_id);
 
 CREATE TABLE IF NOT EXISTS punishment_current_ip (
-    ip_address VARCHAR(45) NOT NULL,
+    ip_address INET6 NOT NULL,
     type_id INT NOT NULL,
-    log_id VARCHAR(36) NOT NULL UNIQUE,
+    log_id UUID NOT NULL UNIQUE,
     PRIMARY KEY (ip_address, type_id),
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),
     FOREIGN KEY (log_id) REFERENCES punishment_logs(id)
@@ -220,7 +220,7 @@ CREATE TABLE IF NOT EXISTS punishment_current_ip (
 CREATE TABLE IF NOT EXISTS punishment_current_user (
     user_id INT NOT NULL,
     type_id INT NOT NULL,
-    log_id VARCHAR(36) NOT NULL UNIQUE,
+    log_id UUID NOT NULL UNIQUE,
     PRIMARY KEY (user_id, type_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),

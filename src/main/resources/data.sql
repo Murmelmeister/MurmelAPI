@@ -6,7 +6,7 @@ ON DUPLICATE KEY UPDATE code = VALUES(code);
 
 -- Console user (system)
 INSERT IGNORE INTO users (id, mojang_id, username, first_login, system_user, debug_user, debug_enabled, language_id) VALUES
-    (-1, '00000000-0000-0000-0000-000000000000', 'Console', NULL, TRUE, TRUE, TRUE, 1);
+    (-1, NULL, 'Console', NULL, TRUE, TRUE, TRUE, 1);
 
 -- Default group
 INSERT IGNORE INTO groups (id, group_name, priority, is_default, created_by) VALUES
