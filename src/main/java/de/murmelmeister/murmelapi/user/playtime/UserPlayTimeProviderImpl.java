@@ -21,14 +21,6 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         this.cache = new UserPlayTimeCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY, " +
-                                         "play_time INT NOT NULL DEFAULT 0, " +
-                                         "login_count INT NOT NULL DEFAULT 0, " +
-                                         "FOREIGN KEY (id) REFERENCES users(id)"
-        );
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);

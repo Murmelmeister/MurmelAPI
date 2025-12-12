@@ -9,6 +9,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -48,8 +50,15 @@ public class PunishmentCurrentIpCache implements MurmelCache {
                 Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     String ipAddress = matcher.group(1);
+                    InetAddress inetAddress;
+                    try {
+                        inetAddress = InetAddress.getByName(ipAddress);
+                    } catch (UnknownHostException e) {
+                        throw new RuntimeException(e);
+                    }
+
                     int typeId = Integer.parseInt(matcher.group(2));
-                    refreshSingle(new IpTypeKey(ipAddress, typeId));
+                    refreshSingle(new IpTypeKey(inetAddress, typeId));
                 } else {
                     throw new IllegalArgumentException("Invalid key format: " + key);
                 }
@@ -69,12 +78,12 @@ public class PunishmentCurrentIpCache implements MurmelCache {
         if (punishments.isEmpty())
             return;
 
-        punishments.forEach(punish -> cache.put(new IpTypeKey(punish.ipAddress(), punish.typeId()), punish));
+        punishments.forEach(punish -> cache.put(new IpTypeKey(punish.inetAddress(), punish.typeId()), punish));
         listCache.put(ALL_KEY, List.copyOf(punishments));
     }
 
     private void refreshSingle(IpTypeKey key) {
-        remove(key.ipAddress(), key.typeId());
+        remove(key.inetAddress(), key.typeId());
         PunishmentCurrentIp punishment = loadFromDatabase(key);
         if (punishment != null)
             put(punishment);
@@ -89,27 +98,27 @@ public class PunishmentCurrentIpCache implements MurmelCache {
         String sql = "SELECT * FROM " + tableName + " WHERE ip_address = ? AND type_id = ?";
         return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentCurrentIp(),
                 stmt -> {
-                    stmt.setString(1, key.ipAddress());
+                    stmt.setString(1, key.inetAddress().getHostAddress());
                     stmt.setInt(2, key.typeId());
                 });
     }
 
-    public PunishmentCurrentIp get(String ipAddress, int typeId) {
-        return cache.get(new IpTypeKey(ipAddress, typeId));
+    public PunishmentCurrentIp get(InetAddress inetAddress, int typeId) {
+        return cache.get(new IpTypeKey(inetAddress, typeId));
     }
 
     public void put(PunishmentCurrentIp punish) {
-        IpTypeKey key = new IpTypeKey(punish.ipAddress(), punish.typeId());
+        IpTypeKey key = new IpTypeKey(punish.inetAddress(), punish.typeId());
         cache.put(key, punish);
         CacheUtil.put(listCache, ALL_KEY, punish,
-                v -> v.ipAddress().equals(key.ipAddress()) && v.typeId() == key.typeId());
+                v -> v.inetAddress().equals(key.inetAddress()) && v.typeId() == key.typeId());
     }
 
-    public void remove(String ipAddress, int typeId) {
-        IpTypeKey key = new IpTypeKey(ipAddress, typeId);
+    public void remove(InetAddress inetAddress, int typeId) {
+        IpTypeKey key = new IpTypeKey(inetAddress, typeId);
         cache.invalidate(key);
         CacheUtil.remove(listCache, ALL_KEY,
-                v -> v.ipAddress().equals(ipAddress) && v.typeId() == typeId);
+                v -> v.inetAddress().equals(inetAddress) && v.typeId() == typeId);
     }
 
     public void clear() {
@@ -124,6 +133,6 @@ public class PunishmentCurrentIpCache implements MurmelCache {
         return List.copyOf(ips);
     }
 
-    protected record IpTypeKey(String ipAddress, int typeId) {
+    protected record IpTypeKey(InetAddress inetAddress, int typeId) {
     }
 }

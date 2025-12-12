@@ -201,6 +201,12 @@ public final class ResultSetUtil {
             PunishmentLog.Action action = PunishmentLog.Action.valueOf(resultSet.getString("action"));
             Integer userId = resultSet.getObject("user_id") == null ? null : resultSet.getInt("user_id");
             String ipAddress = resultSet.getString("ip_address");
+            InetAddress inetAddress;
+            try {
+                inetAddress = InetAddress.getByName(ipAddress);
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
             Integer reasonId = resultSet.getObject("reason_id") == null ? null : resultSet.getInt("reason_id");
             int reasonTypeId = resultSet.getInt("reason_type_id");
             String reasonText = resultSet.getString("reason_text");
@@ -209,7 +215,7 @@ public final class ResultSetUtil {
             boolean reasonAutoPunish = resultSet.getBoolean("reason_auto_punish");
             int createdBy = resultSet.getInt("created_by");
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            return new PunishmentLog(id, action, userId, ipAddress, reasonId, reasonTypeId, reasonText,
+            return new PunishmentLog(id, action, userId, inetAddress, reasonId, reasonTypeId, reasonText,
                     reasonDuration, reasonAutoFlagIp, reasonAutoPunish, createdBy, createdAt);
         };
     }
@@ -237,9 +243,15 @@ public final class ResultSetUtil {
     public static ResultSetProcessor<PunishmentCurrentIp> punishmentCurrentIp() {
         return result -> {
             String ipAddress = result.getString("ip_address");
+            InetAddress inetAddress;
+            try {
+                inetAddress = InetAddress.getByName(ipAddress);
+            } catch (UnknownHostException e) {
+                throw new RuntimeException(e);
+            }
             int typeId = result.getInt("type_id");
             UUID logId = UUID.fromString(result.getString("log_id"));
-            return new PunishmentCurrentIp(ipAddress, typeId, logId);
+            return new PunishmentCurrentIp(inetAddress, typeId, logId);
         };
     }
 

@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.punishment.audit;
 
+import java.net.InetAddress;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -11,7 +12,7 @@ import java.util.UUID;
  * @param reasonDuration Duration in seconds, null for permanent punishments
  */
 public record PunishmentLog(UUID id, Action action,
-                            Integer userId, String ipAddress, Integer reasonId, int reasonTypeId, String reasonText,
+                            Integer userId, InetAddress inetAddress, Integer reasonId, int reasonTypeId, String reasonText,
                             Long reasonDuration, boolean reasonAutoFlagIp, boolean reasonAutoPunish, int createdBy,
                             LocalDateTime createdAt) {
 

@@ -22,17 +22,6 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
         this.cache = new PunishmentCurrentUserCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "user_id INT NOT NULL, " +
-                "type_id INT NOT NULL, " +
-                "log_id VARCHAR(36) NOT NULL UNIQUE, " +
-                "PRIMARY KEY (user_id, type_id), " +
-                "FOREIGN KEY (user_id) REFERENCES users(id), " +
-                "FOREIGN KEY (type_id) REFERENCES punishment_types(id), " +
-                "FOREIGN KEY (log_id) REFERENCES punishment_logs(id)"
-        );
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);

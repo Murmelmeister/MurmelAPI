@@ -29,21 +29,6 @@ public final class UserParentProviderImpl implements UserParentProvider {
         this.cache = new UserParentCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "user_id INT, parent_id INT, " +
-                "PRIMARY KEY (user_id, parent_id), " +
-                "expires_at DATETIME NULL, " +
-                "created_by INT NOT NULL, " +
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "changed_by INT NULL, " +
-                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                "FOREIGN KEY (user_id) REFERENCES users(id), " +
-                "FOREIGN KEY (parent_id) REFERENCES groups(id)," +
-                "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                "FOREIGN KEY (changed_by) REFERENCES users(id)");
-        database.update("CREATE INDEX IF NOT EXISTS idx_user_parent_userId_exp ON " + TABLE_NAME + " (user_id, expires_at)");
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);

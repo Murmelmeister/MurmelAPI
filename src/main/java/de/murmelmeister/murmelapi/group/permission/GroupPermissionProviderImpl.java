@@ -30,21 +30,6 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
         this.cache = new GroupPermissionCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "group_id INT, permission VARCHAR(200), " +
-                "PRIMARY KEY (group_id, permission), " +
-                "expires_at DATETIME NULL, " +
-                "created_by INT NOT NULL, " +
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "changed_by INT NULL, " +
-                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP()," +
-                "FOREIGN KEY (group_id) REFERENCES groups(id), " +
-                "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                "FOREIGN KEY (changed_by) REFERENCES users(id)");
-        database.update("CREATE INDEX IF NOT EXISTS idx_group_perm_groupId_exp ON " + TABLE_NAME + " (group_id, expires_at)");
-        // TODO: Get all group permissions + parent permissions of the group form db -> cache
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);

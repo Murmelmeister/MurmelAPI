@@ -29,21 +29,6 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         this.cache = new GroupParentCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "group_id INT, parent_id INT, " +
-                "PRIMARY KEY (group_id, parent_id), " +
-                "expires_at DATETIME NULL, " +
-                "created_by INT NOT NULL, " +
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "changed_by INT NULL, " +
-                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                "FOREIGN KEY (group_id) REFERENCES groups(id), " +
-                "FOREIGN KEY (parent_id) REFERENCES groups(id), " +
-                "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                "FOREIGN KEY (changed_by) REFERENCES users(id)");
-        database.update("CREATE INDEX IF NOT EXISTS idx_group_parent_groupId_exp ON " + TABLE_NAME + " (group_id, expires_at)");
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);

@@ -12,7 +12,6 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
-import static de.murmelmeister.murmelapi.MurmelAPI.DEFAULT_GROUP_ID;
 
 /**
  * GroupProvider is a class that provides methods to manage groups in the database.
@@ -29,30 +28,6 @@ public final class GroupProviderImpl implements GroupProvider {
     public GroupProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
         this.cache = new GroupCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
-    }
-
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, " +
-                "group_name VARCHAR(100) NOT NULL UNIQUE, " +
-                "priority INT NOT NULL DEFAULT 0, " +
-                "is_default BOOLEAN NOT NULL DEFAULT FALSE, " +
-                "created_by INT NOT NULL, " +
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "changed_by INT NULL, " +
-                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                "FOREIGN KEY (changed_by) REFERENCES users(id)");
-    }
-
-    public static void createDefaultGroup(Database database) {
-        String sql = "INSERT IGNORE INTO " + TABLE_NAME + " (id, group_name, priority, is_default, created_by) VALUES (?, ?, ?, ?, ?)";
-        database.update(sql, stmt -> {
-            stmt.setInt(1, DEFAULT_GROUP_ID);
-            stmt.setString(2, "default");
-            stmt.setInt(3, 1);
-            stmt.setBoolean(4, true);
-            stmt.setInt(5, CONSOLE_USER_ID);
-        });
     }
 
     @Override

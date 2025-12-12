@@ -1,7 +1,5 @@
 package de.murmelmeister.murmelapi.group.color;
 
-import de.murmelmeister.library.database.Database;
-
 /**
  * The GroupColorType enum represents the types of group color customization
  * categories. Each type corresponds to a specific category of group color settings,
@@ -25,7 +23,6 @@ public enum GroupColorType {
     TEAM_PREFIX(8, "team_prefix"),
     TEAM_SUFFIX(9, "team_suffix"),
     TEAM_COLOR(10, "team_color");
-    private static final String TABLE_NAME = "group_color_type";
     private static final GroupColorType[] VALUES = values();
 
     private final int id;
@@ -56,18 +53,5 @@ public enum GroupColorType {
             if (type.getName().equalsIgnoreCase(name))
                 return type;
         return null;
-    }
-
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY, name VARCHAR(200) NOT NULL UNIQUE");
-    }
-
-    public static void createDefaultTypes(Database database) {
-        String sql = "INSERT IGNORE INTO " + TABLE_NAME + " (id, name) VALUES (?, ?)";
-        for (GroupColorType type : VALUES)
-            database.update(sql, stmt -> {
-                stmt.setInt(1, type.getId());
-                stmt.setString(2, type.getName());
-            });
     }
 }

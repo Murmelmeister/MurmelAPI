@@ -5,6 +5,7 @@ import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
+import java.net.InetAddress;
 import java.sql.Types;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -26,29 +27,6 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
         this.cache = new PunishmentLogCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id VARCHAR(36) PRIMARY KEY, " +
-                "action ENUM('CREATED', 'MODIFIED', 'REVOKED') NOT NULL, " +
-                "user_id INT NULL, " +
-                "ip_address VARCHAR(45) NULL, " +
-                "CONSTRAINT chk_user_or_ip_not_both_null CHECK (user_id IS NOT NULL OR ip_address IS NOT NULL), " +
-                "reason_id INT NULL, " +
-                "reason_type_id INT NOT NULL, " +
-                "reason_text TEXT NOT NULL, " +
-                "reason_duration BIGINT NULL, " +
-                "reason_auto_flag_ip BOOLEAN NOT NULL, " +
-                "reason_auto_punish BOOLEAN NOT NULL, " +
-                "created_by INT NOT NULL, " +
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "FOREIGN KEY (user_id) REFERENCES users(id), " +
-                "FOREIGN KEY (reason_id) REFERENCES punishment_reasons(id) ON DELETE SET NULL ON UPDATE CASCADE, " +
-                "FOREIGN KEY (created_by) REFERENCES users(id)"
-        );
-        database.update("CREATE INDEX IF NOT EXISTS idx_audit_user ON " + TABLE_NAME + " (user_id)");
-        database.update("CREATE INDEX IF NOT EXISTS idx_audit_ip ON " + TABLE_NAME + " (ip_address)");
-        database.update("CREATE INDEX IF NOT EXISTS idx_audit_reason ON " + TABLE_NAME + " (reason_id)");
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
@@ -65,8 +43,8 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
     }
 
     @Override
-    public List<PunishmentLog> getLogsByIpAddress(String ipAddress) {
-        return cache.getByIp(ipAddress);
+    public List<PunishmentLog> getLogsByIpAddress(InetAddress inetAddress) {
+        return cache.getByIp(inetAddress);
     }
 
     @Override
@@ -74,7 +52,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
         return cache.getCachedPunishLogs();
     }
 
-    private PunishmentLog insertAndLoadLog(PunishmentLog.Action action, Integer userId, String ipAddress, PunishmentReason reason, int createdBy) {
+    private PunishmentLog insertAndLoadLog(PunishmentLog.Action action, Integer userId, InetAddress inetAddress, PunishmentReason reason, int createdBy) {
         if (action == null || (userId != null && userId < 1) || reason == null || createdBy < CONSOLE_USER_ID)
             return null;
 
@@ -86,7 +64,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
             stmt.setString(1, logId.toString());
             stmt.setString(2, action.name());
             stmt.setInt(3, userId == null ? Types.NULL : userId);
-            stmt.setString(4, ipAddress);
+            stmt.setString(4, inetAddress.getHostAddress());
             stmt.setInt(5, reason.id());
             stmt.setInt(6, reason.typeId());
             stmt.setString(7, reason.reasonText());
@@ -105,18 +83,18 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
                 stmt -> stmt.setString(1, logId.toString()));
         if (createdAt == null) return null;
 
-        return new PunishmentLog(logId, action, userId, ipAddress, reason.id(),
+        return new PunishmentLog(logId, action, userId, inetAddress, reason.id(),
                 reason.typeId(), reason.reasonText(), reason.durationSecs(),
                 reason.autoFlagIp(), reason.autoPunish(), createdBy, createdAt);
     }
 
     @Override
-    public PunishmentLog create(Integer userId, String ipAddress, PunishmentReason reason, int createdBy) {
+    public PunishmentLog create(Integer userId, InetAddress inetAddress, PunishmentReason reason, int createdBy) {
         if ((userId != null && userId < 1) || reason == null || createdBy < CONSOLE_USER_ID)
             return null;
 
         PunishmentLog.Action action = PunishmentLog.Action.CREATED;
-        PunishmentLog log = insertAndLoadLog(action, userId, ipAddress, reason, createdBy);
+        PunishmentLog log = insertAndLoadLog(action, userId, inetAddress, reason, createdBy);
         if (log == null) return null;
 
         RefreshUtil.fireSingle(single, log.id());
@@ -124,12 +102,12 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
     }
 
     @Override
-    public PunishmentLog modify(Integer userId, String ipAddress, PunishmentReason reason, int createdBy) {
+    public PunishmentLog modify(Integer userId, InetAddress inetAddress, PunishmentReason reason, int createdBy) {
         if ((userId != null && userId < 1) || reason == null || createdBy < CONSOLE_USER_ID)
             return null;
 
         PunishmentLog.Action action = PunishmentLog.Action.MODIFIED;
-        PunishmentLog log = insertAndLoadLog(action, userId, ipAddress, reason, createdBy);
+        PunishmentLog log = insertAndLoadLog(action, userId, inetAddress, reason, createdBy);
         if (log == null) return null;
 
         RefreshUtil.fireSingle(single, log.id());
@@ -137,7 +115,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
     }
 
     @Override
-    public PunishmentLog revoke(Integer userId, String ipAddress, PunishmentLog log, int createdBy) {
+    public PunishmentLog revoke(Integer userId, InetAddress inetAddress, PunishmentLog log, int createdBy) {
         if ((userId != null && userId < 1) || log == null || createdBy < CONSOLE_USER_ID)
             return null;
 
@@ -150,7 +128,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
             stmt.setString(1, logId.toString());
             stmt.setString(2, action.name());
             stmt.setInt(3, userId == null ? Types.NULL : userId);
-            stmt.setString(4, ipAddress);
+            stmt.setString(4, inetAddress.getHostAddress());
             stmt.setInt(5, log.reasonId());
             stmt.setInt(6, log.reasonTypeId());
             stmt.setString(7, log.reasonText());
@@ -169,7 +147,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
                 stmt -> stmt.setString(1, logId.toString()));
         if (createdAt == null) return null;
 
-        PunishmentLog newLog = new PunishmentLog(logId, action, userId, ipAddress, log.reasonId(),
+        PunishmentLog newLog = new PunishmentLog(logId, action, userId, inetAddress, log.reasonId(),
                 log.reasonTypeId(), log.reasonText(), log.reasonDuration(),
                 log.reasonAutoFlagIp(), log.reasonAutoPunish(), createdBy, createdAt);
         RefreshUtil.fireSingle(single, newLog.id());

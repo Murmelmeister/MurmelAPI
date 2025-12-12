@@ -28,20 +28,6 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         this.cache = new GroupColorCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "group_id INT, type_id INT, " +
-                "PRIMARY KEY (group_id, type_id), " +
-                "value TEXT NOT NULL, " +
-                "created_by INT NOT NULL, " +
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "changed_by INT NULL, " +
-                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                "FOREIGN KEY (group_id) REFERENCES groups(id), " +
-                "FOREIGN KEY (type_id) REFERENCES group_color_type(id), " +
-                "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                "FOREIGN KEY (changed_by) REFERENCES users(id)");
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);

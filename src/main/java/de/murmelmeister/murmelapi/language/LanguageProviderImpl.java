@@ -34,28 +34,6 @@ public final class LanguageProviderImpl implements LanguageProvider {
         this.cache = new LanguageCache(database, TABLE_NAME, cacheCapacity);
     }
 
-    /*
-    TODO: Remove this
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY AUTO_INCREMENT, code VARCHAR(32) UNIQUE");
-    }
-
-    public static void createDefaultLanguages(Database database) {
-        // Use an upsert that does not delete the row, otherwise ON DELETE CASCADE wipes messages.
-        String upsertDefaults = "INSERT INTO " + TABLE_NAME + " (id, code) VALUES (?, ?) " +
-                "ON DUPLICATE KEY UPDATE code = VALUES(code)";
-        database.updateBatch(upsertDefaults, stmt -> {
-            stmt.setInt(1, 1);
-            stmt.setString(2, ENGLISH_CODE);
-            stmt.addBatch();
-
-            stmt.setInt(1, 2);
-            stmt.setString(2, GERMAN_CODE);
-            stmt.addBatch();
-        });
-    }
-    */
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);

@@ -24,24 +24,6 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
         this.cache = new PunishmentReasonCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT PRIMARY KEY, " +
-                "type_id INT NOT NULL, " +
-                "reason_text TEXT NOT NULL, " +
-                "duration_secs BIGINT NULL, " + // NULL = permanent, >0 = seconds
-                "auto_flag_ip BOOLEAN NOT NULL DEFAULT FALSE, " +
-                "auto_punish BOOLEAN NOT NULL DEFAULT FALSE, " +
-                "created_by INT NOT NULL, " +
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(), " +
-                "changed_by INT NULL, " +
-                "changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(), " +
-                "FOREIGN KEY (type_id) REFERENCES punishment_types(id), " +
-                "FOREIGN KEY (created_by) REFERENCES users(id), " +
-                "FOREIGN KEY (changed_by) REFERENCES users(id)"
-        );
-        database.update("CREATE INDEX IF NOT EXISTS idx_reason_type ON " + TABLE_NAME + " (type_id)");
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);

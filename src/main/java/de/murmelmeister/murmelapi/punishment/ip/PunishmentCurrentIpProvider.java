@@ -1,18 +1,19 @@
 package de.murmelmeister.murmelapi.punishment.ip;
 
+import java.net.InetAddress;
 import java.util.List;
 import java.util.UUID;
 
 public interface PunishmentCurrentIpProvider {
     void refreshCache();
 
-    List<String> getAllPunishedIps(int typeId);
+    List<InetAddress> getAllPunishedIps(int typeId);
 
-    PunishmentCurrentIp getPunishedIp(String ipAddress, int typeId);
+    PunishmentCurrentIp getPunishedIp(InetAddress inetAddress, int typeId);
 
-    PunishmentCurrentIp create(String ipAddress, int typeId, UUID logId);
+    PunishmentCurrentIp create(InetAddress inetAddress, int typeId, UUID logId);
 
-    int delete(String ipAddress, int typeId);
+    int delete(InetAddress inetAddress, int typeId);
 
-    PunishmentCurrentIp update(String ipAddress, int typeId, UUID logId);
+    PunishmentCurrentIp update(InetAddress inetAddress, int typeId, UUID logId);
 }

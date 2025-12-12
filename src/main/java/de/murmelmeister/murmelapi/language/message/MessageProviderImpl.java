@@ -21,15 +21,6 @@ public final class MessageProviderImpl implements MessageProvider {
         this.cache = new MessageCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
-    public static void setup(Database database) {
-        database.createTable(TABLE_NAME, "id INT NOT NULL PRIMARY KEY AUTO_INCREMENT, " +
-                "tag_id VARCHAR(255) NOT NULL, " +
-                "language_id INT NOT NULL, " +
-                "UNIQUE (tag_id, language_id), " +
-                "message TEXT NOT NULL, " +
-                "FOREIGN KEY (language_id) REFERENCES languages(id) ON DELETE CASCADE");
-    }
-
     @Override
     public void refreshCache() {
         RefreshUtil.fireCache(all);
