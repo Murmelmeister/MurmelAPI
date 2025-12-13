@@ -226,3 +226,29 @@ CREATE TABLE IF NOT EXISTS punishment_current_user (
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),
     FOREIGN KEY (log_id) REFERENCES punishment_logs(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Clan data
+CREATE TABLE IF NOT EXISTS clans (
+    id UUID NOT NULL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    tag VARCHAR(25) NULL UNIQUE,
+    sign VARCHAR(25) NULL UNIQUE,
+    description TEXT NULL,
+    owner_id INT NOT NULL UNIQUE,
+    created_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+    FOREIGN KEY (owner_id) REFERENCES users(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS clan_member (
+    clan_id UUID NOT NULL,
+    user_id INT NOT NULL,
+    PRIMARY KEY (clan_id, user_id),
+    joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    FOREIGN KEY (clan_id) REFERENCES clans(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)

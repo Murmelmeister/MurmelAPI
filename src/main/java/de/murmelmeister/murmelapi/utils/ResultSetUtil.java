@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.utils;
 
 import de.murmelmeister.library.database.ResultSetProcessor;
+import de.murmelmeister.murmelapi.clan.Clan;
+import de.murmelmeister.murmelapi.clan.member.ClanMember;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.color.GroupColor;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
@@ -261,6 +263,33 @@ public final class ResultSetUtil {
             int typeId = result.getInt("type_id");
             UUID logId = UUID.fromString(result.getString("log_id"));
             return new PunishmentCurrentUser(userId, typeId, logId);
+        };
+    }
+
+    public static ResultSetProcessor<Clan> clan() {
+        return result -> {
+            UUID id = UUID.fromString(result.getString("id"));
+            String clanName = result.getString("name");
+            String tag = result.getString("tag");
+            String sign = result.getString("sign");
+            String description = result.getString("description");
+            int ownerId = result.getInt("owner_id");
+            int createdBy = result.getInt("created_by");
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            Integer changedBy = result.getObject("changed_by") == null ?
+                    null : result.getInt("changed_by");
+            LocalDateTime changedAt = result.getObject("changed_at") == null ?
+                    null : result.getTimestamp("changed_at").toLocalDateTime();
+            return new Clan(id, clanName, tag, sign, description, ownerId, createdBy, createdAt, changedBy, changedAt);
+        };
+    }
+
+    public static ResultSetProcessor<ClanMember> clanMember() {
+        return result -> {
+            UUID clanId = UUID.fromString(result.getString("clan_id"));
+            int userId = result.getInt("user_id");
+            LocalDateTime joinedAt = result.getTimestamp("joined_at").toLocalDateTime();
+            return new ClanMember(clanId, userId, joinedAt);
         };
     }
 }

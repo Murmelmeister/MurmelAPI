@@ -25,6 +25,8 @@ public enum RefreshType {
     GROUP_COLORS("group_colors"),
     GROUP_PERMISSIONS("group_permissions"),
     GROUP_PARENTS("group_parents"),
+    CLANS("clans"),
+    CLAN_MEMBERS("clan_members"),
     SINGLE_USER("single_user"),
     SINGLE_USER_LOGIN("single_user_login"),
     SINGLE_USER_SESSION("single_user_session"),
@@ -42,6 +44,8 @@ public enum RefreshType {
     SINGLE_GROUP("single_group"),
     SINGLE_GROUP_COLOR("single_group_color"),
     SINGLE_SETTING("single_setting"),
+    SINGLE_CLAN("single_clan"),
+    SINGLE_CLAN_MEMBER("single_clan_member"),
     ;
     private static final RefreshType[] VALUES = values();
 
