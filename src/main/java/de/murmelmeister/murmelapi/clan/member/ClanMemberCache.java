@@ -31,7 +31,7 @@ public class ClanMemberCache implements MurmelCache {
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cache = CacheUtil.buildCacheRefresh(this::loadFromDatabase, cacheCapacity, refreshInterval);
-        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapacity, refreshInterval);
+        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         RefreshUtil.register(this);
     }
 
