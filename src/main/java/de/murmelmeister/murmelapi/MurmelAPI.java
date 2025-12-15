@@ -6,6 +6,8 @@ import com.zaxxer.hikari.HikariConfig;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.clan.ClanProvider;
 import de.murmelmeister.murmelapi.clan.ClanProviderImpl;
+import de.murmelmeister.murmelapi.clan.member.ClanMemberProvider;
+import de.murmelmeister.murmelapi.clan.member.ClanMemberProviderImpl;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
@@ -108,6 +110,7 @@ public final class MurmelAPI {
     private static PunishmentService punishmentService;
 
     private static ClanProvider clanProvider;
+    private static ClanMemberProvider clanMemberProvider;
 
     static {
         DATABASE = new Database();
@@ -194,6 +197,9 @@ public final class MurmelAPI {
         punishIpProvider = getPunishmentCurrentIpProvider();
         punishUserProvider = getPunishmentCurrentUserProvider();
         punishmentService = getPunishmentService(punishReasonProvider, punishLogProvider, punishIpProvider, punishUserProvider);
+
+        clanProvider = getClanProvider();
+        clanMemberProvider = getClanMemberProvider();
     }
 
     public static void closeCaches() {
@@ -430,5 +436,11 @@ public final class MurmelAPI {
         if (clanProvider == null)
             clanProvider = new ClanProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
         return clanProvider;
+    }
+
+    public static ClanMemberProvider getClanMemberProvider() {
+        if (clanMemberProvider == null)
+            clanMemberProvider = new ClanMemberProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return clanMemberProvider;
     }
 }
