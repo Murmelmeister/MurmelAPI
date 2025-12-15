@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.zaxxer.hikari.HikariConfig;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.clan.ClanProvider;
+import de.murmelmeister.murmelapi.clan.ClanProviderImpl;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
@@ -50,7 +52,10 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
@@ -73,7 +78,6 @@ public final class MurmelAPI {
     private static Long fetchLimit = null;
     private static long cacheCapacity = 10_000; // Default cache size
     private static Duration refreshInterval = Duration.ofMinutes(30);
-    private static boolean bootstrapMessages = true;
 
     private static SettingsProvider settingsProvider;
     private static SettingsService settingsService;
@@ -102,6 +106,8 @@ public final class MurmelAPI {
     private static PunishmentCurrentIpProvider punishIpProvider;
     private static PunishmentCurrentUserProvider punishUserProvider;
     private static PunishmentService punishmentService;
+
+    private static ClanProvider clanProvider;
 
     static {
         DATABASE = new Database();
@@ -143,36 +149,6 @@ public final class MurmelAPI {
     }
 
     public static void createAllTables() {
-        /*SettingsProviderImpl.setup(DATABASE);
-        LanguageProviderImpl.setup(DATABASE);
-        LanguageProviderImpl.createDefaultLanguages(DATABASE);
-        MessageProviderImpl.setup(DATABASE);
-
-        UserProviderImpl.setup(DATABASE);
-        UserProviderImpl.createConsoleUser(DATABASE);
-        UserPlayTimeProviderImpl.setup(DATABASE);
-        UserLoginProviderImpl.setup(DATABASE);
-        UserSessionProviderImpl.setup(DATABASE);
-
-        GroupProviderImpl.setup(DATABASE);
-        GroupProviderImpl.createDefaultGroup(DATABASE);
-        GroupColorType.setup(DATABASE);
-        GroupColorType.createDefaultTypes(DATABASE);
-        GroupColorProviderImpl.setup(DATABASE);
-
-        UserPermissionProviderImpl.setup(DATABASE);
-        UserParentProviderImpl.setup(DATABASE);
-        GroupPermissionProviderImpl.setup(DATABASE);
-        GroupParentProviderImpl.setup(DATABASE);
-        PermissionProvider.setup(DATABASE);
-
-        PunishmentType.setup(DATABASE);
-        PunishmentType.createDefaultTypes(DATABASE);
-        PunishmentReasonProviderImpl.setup(DATABASE);
-        PunishmentLogProviderImpl.setup(DATABASE);
-        PunishmentCurrentIpProviderImpl.setup(DATABASE);
-        PunishmentCurrentUserProviderImpl.setup(DATABASE);*/
-
         runSqlScript("schema.sql");
         runSqlScript("data.sql");
         PermissionProvider.setup(DATABASE);
@@ -196,8 +172,7 @@ public final class MurmelAPI {
         languageProvider = getLanguageProvider();
         messageProvider = getMessageProvider();
         messageService = getMessageService(languageProvider, messageProvider);
-        if (bootstrapMessages)
-            MurmelMessage.loadMessages(messageProvider);
+        MurmelMessage.loadMessages(messageProvider);
 
         userProvider = getUserProvider();
         userPlayTimeProvider = getUserPlayTimeProvider();
@@ -288,14 +263,6 @@ public final class MurmelAPI {
 
     public static void setRefreshInterval(Duration refreshInterval) {
         MurmelAPI.refreshInterval = refreshInterval;
-    }
-
-    public static boolean isBootstrapMessages() {
-        return bootstrapMessages;
-    }
-
-    public static void setBootstrapMessages(boolean bootstrapMessages) {
-        MurmelAPI.bootstrapMessages = bootstrapMessages;
     }
 
     public static SettingsProvider getSettingsProvider() {
@@ -459,25 +426,9 @@ public final class MurmelAPI {
         return getPunishmentService(getPunishmentReasonProvider(), getPunishmentLogProvider(), getPunishmentCurrentIpProvider(), getPunishmentCurrentUserProvider());
     }
 
-    private static void readBootstrapFlag(Properties properties) {
-        if (properties == null)
-            return;
-
-        String flag = properties.getProperty("murmelapi.bootstrap.messages");
-        if (flag != null)
-            setBootstrapMessages(Boolean.parseBoolean(flag.trim()));
-    }
-
-    private static Properties loadProperties(String propertyFileName) {
-        if (propertyFileName == null)
-            return null;
-
-        Properties properties = new Properties();
-        try (FileInputStream stream = new FileInputStream(propertyFileName)) {
-            properties.load(stream);
-            return properties;
-        } catch (IOException ignored) {
-            return null;
-        }
+    public static ClanProvider getClanProvider() {
+        if (clanProvider == null)
+            clanProvider = new ClanProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return clanProvider;
     }
 }
