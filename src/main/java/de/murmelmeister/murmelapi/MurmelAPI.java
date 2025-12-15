@@ -175,7 +175,6 @@ public final class MurmelAPI {
         languageProvider = getLanguageProvider();
         messageProvider = getMessageProvider();
         messageService = getMessageService(languageProvider, messageProvider);
-        MurmelMessage.loadMessages(messageProvider);
 
         userProvider = getUserProvider();
         userPlayTimeProvider = getUserPlayTimeProvider();
@@ -200,6 +199,11 @@ public final class MurmelAPI {
 
         clanProvider = getClanProvider();
         clanMemberProvider = getClanMemberProvider();
+    }
+
+    public static void loadMessages() {
+        messageProvider = getMessageProvider(); // If messageProvider are null
+        MurmelMessage.loadMessages(messageProvider);
     }
 
     public static void closeCaches() {
