@@ -6,8 +6,12 @@ import com.zaxxer.hikari.HikariConfig;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.clan.ClanProvider;
 import de.murmelmeister.murmelapi.clan.ClanProviderImpl;
+import de.murmelmeister.murmelapi.clan.group.ClanGroupProvider;
+import de.murmelmeister.murmelapi.clan.group.ClanGroupProviderImpl;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProvider;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProviderImpl;
+import de.murmelmeister.murmelapi.color.PrefixColorProvider;
+import de.murmelmeister.murmelapi.color.PrefixColorProviderImpl;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
@@ -16,6 +20,8 @@ import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
 import de.murmelmeister.murmelapi.group.parent.GroupParentProviderImpl;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProviderImpl;
+import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
+import de.murmelmeister.murmelapi.inventory.InventoryTypeProviderImpl;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
 import de.murmelmeister.murmelapi.language.LanguageProviderImpl;
 import de.murmelmeister.murmelapi.language.message.MessageProvider;
@@ -39,6 +45,10 @@ import de.murmelmeister.murmelapi.settings.SettingsService;
 import de.murmelmeister.murmelapi.user.UserProvider;
 import de.murmelmeister.murmelapi.user.UserProviderImpl;
 import de.murmelmeister.murmelapi.user.UserService;
+import de.murmelmeister.murmelapi.user.color.UserPrefixColorProvider;
+import de.murmelmeister.murmelapi.user.color.UserPrefixColorProviderImpl;
+import de.murmelmeister.murmelapi.user.inventory.UserInventoryProvider;
+import de.murmelmeister.murmelapi.user.inventory.UserInventoryProviderImpl;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
 import de.murmelmeister.murmelapi.user.login.UserLoginProviderImpl;
 import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
@@ -111,6 +121,13 @@ public final class MurmelAPI {
 
     private static ClanProvider clanProvider;
     private static ClanMemberProvider clanMemberProvider;
+    private static ClanGroupProvider clanGroupProvider;
+
+    private static PrefixColorProvider prefixColorProvider;
+    private static UserPrefixColorProvider userPrefixColorProvider;
+
+    private static InventoryTypeProvider inventoryTypeProvider;
+    private static UserInventoryProvider userInventoryProvider;
 
     static {
         DATABASE = new Database();
@@ -199,6 +216,13 @@ public final class MurmelAPI {
 
         clanProvider = getClanProvider();
         clanMemberProvider = getClanMemberProvider();
+        clanGroupProvider = getClanGroupProvider();
+
+        prefixColorProvider = getPrefixColorProvider();
+        userPrefixColorProvider = getUserPrefixColorProvider();
+
+        inventoryTypeProvider = getInventoryTypeProvider();
+        userInventoryProvider = getUserInventoryProvider();
     }
 
     public static void loadMessages() {
@@ -208,7 +232,7 @@ public final class MurmelAPI {
 
     public static void closeCaches() {
         List<RefreshListener> listeners = List.copyOf(RefreshUtil.getListeners());
-         listeners.forEach(listener -> {
+        listeners.forEach(listener -> {
             if (RefreshUtil.isRegistered(listener) && listener instanceof AutoCloseable closeable) {
                 try {
                     closeable.close();
@@ -446,5 +470,35 @@ public final class MurmelAPI {
         if (clanMemberProvider == null)
             clanMemberProvider = new ClanMemberProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
         return clanMemberProvider;
+    }
+
+    public static ClanGroupProvider getClanGroupProvider() {
+        if (clanGroupProvider == null)
+            clanGroupProvider = new ClanGroupProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return clanGroupProvider;
+    }
+
+    public static PrefixColorProvider getPrefixColorProvider() {
+        if (prefixColorProvider == null)
+            prefixColorProvider = new PrefixColorProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return prefixColorProvider;
+    }
+
+    public static UserPrefixColorProvider getUserPrefixColorProvider() {
+        if (userPrefixColorProvider == null)
+            userPrefixColorProvider = new UserPrefixColorProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return userPrefixColorProvider;
+    }
+
+    public static InventoryTypeProvider getInventoryTypeProvider() {
+        if (inventoryTypeProvider == null)
+            inventoryTypeProvider = new InventoryTypeProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return inventoryTypeProvider;
+    }
+
+    public static UserInventoryProvider getUserInventoryProvider() {
+        if (userInventoryProvider == null)
+            userInventoryProvider = new UserInventoryProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return userInventoryProvider;
     }
 }
