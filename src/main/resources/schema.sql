@@ -249,6 +249,93 @@ CREATE TABLE IF NOT EXISTS clan_member (
     user_id INT NOT NULL,
     PRIMARY KEY (clan_id, user_id),
     joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    group_id INT NOT NULL,
     FOREIGN KEY (clan_id) REFERENCES clans(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-)
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (group_id) REFERENCES clan_groups(group_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS clan_groups (
+    clan_id UUID NOT NULL,
+    group_id INT NOT NULL AUTO_INCREMENT,
+    PRIMARY KEY (clan_id, group_id),
+    group_name VARCHAR(100) NOT NULL UNIQUE,
+    priority INT NOT NULL DEFAULT 0,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    created_by INT NOT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
+    FOREIGN KEY (clan_id) REFERENCES clans(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS clan_parent (
+    clan_id UUID NOT NULL,
+    group_id INT NOT NULL,
+    parent_id INT NOT NULL,
+    PRIMARY KEY (clan_id, group_id, parent_id),
+    expires_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    created_by INT NOT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
+    FOREIGN KEY (clan_id) REFERENCES clans(id),
+    FOREIGN KEY (group_id) REFERENCES clan_groups(group_id),
+    FOREIGN KEY (parent_id) REFERENCES clan_groups(group_id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS clan_permission (
+    clan_id UUID NOT NULL,
+    group_id INT NOT NULL,
+    permission VARCHAR(200) NOT NULL,
+    PRIMARY KEY (clan_id, group_id, permission),
+    expires_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    created_by INT NOT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
+    FOREIGN KEY (clan_id) REFERENCES clans(id),
+    FOREIGN KEY (group_id) REFERENCES clan_groups(group_id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS prefix_colors (
+    id VARCHAR(100) NOT NULL PRIMARY KEY,
+    color VARCHAR(255) NOT NULL,
+    animated BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    created_by INT NOT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_prefix_colors (
+    user_id INT NOT NULL,
+    color_id VARCHAR(100) NOT NULL,
+    PRIMARY KEY (user_id, color_id),
+    active BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (color_id) REFERENCES prefix_colors(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS inventory_type (
+    id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    inventory_name VARCHAR(100) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_inventory (
+    user_id INT NOT NULL,
+    inventory_id INT NOT NULL,
+    PRIMARY KEY (user_id, inventory_id),
+    inventory_value LONGTEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (inventory_id) REFERENCES inventory_type(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

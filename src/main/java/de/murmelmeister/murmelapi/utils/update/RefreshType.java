@@ -27,6 +27,13 @@ public enum RefreshType {
     GROUP_PARENTS("group_parents"),
     CLANS("clans"),
     CLAN_MEMBERS("clan_members"),
+    CLAN_GROUPS("clan_groups"),
+    CLAN_PARENTS("clan_parents"),
+    CLAN_PERMISSIONS("clan_permissions"),
+    PREFIX_COLORS("prefix_colors"),
+    USER_PREFIX_COLORS("user_prefix_colors"),
+    INVENTORY_TYPES("inventory_types"),
+    USER_INVENTORIES("user_inventories"),
     SINGLE_USER("single_user"),
     SINGLE_USER_LOGIN("single_user_login"),
     SINGLE_USER_SESSION("single_user_session"),
@@ -46,6 +53,13 @@ public enum RefreshType {
     SINGLE_SETTING("single_setting"),
     SINGLE_CLAN("single_clan"),
     SINGLE_CLAN_MEMBER("single_clan_member"),
+    SINGLE_CLAN_GROUP("single_clan_group"),
+    SINGLE_CLAN_PARENT("single_clan_parent"),
+    SINGLE_CLAN_PERMISSION("single_clan_permission"),
+    SINGLE_PREFIX_COLOR("single_prefix_color"),
+    SINGLE_USER_PREFIX_COLOR("single_user_prefix_color"),
+    SINGLE_INVENTORY_TYPE("single_inventory_type"),
+    SINGLE_USER_INVENTORY("single_user_inventory"),
     ;
     private static final RefreshType[] VALUES = values();
 

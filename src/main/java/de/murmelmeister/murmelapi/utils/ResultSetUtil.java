@@ -2,11 +2,16 @@ package de.murmelmeister.murmelapi.utils;
 
 import de.murmelmeister.library.database.ResultSetProcessor;
 import de.murmelmeister.murmelapi.clan.Clan;
+import de.murmelmeister.murmelapi.clan.group.ClanGroup;
 import de.murmelmeister.murmelapi.clan.member.ClanMember;
+import de.murmelmeister.murmelapi.clan.parent.ClanParent;
+import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
+import de.murmelmeister.murmelapi.color.PrefixColor;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.color.GroupColor;
 import de.murmelmeister.murmelapi.group.parent.GroupParent;
 import de.murmelmeister.murmelapi.group.permission.GroupPermission;
+import de.murmelmeister.murmelapi.inventory.InventoryType;
 import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.message.Message;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
@@ -15,6 +20,8 @@ import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUser;
 import de.murmelmeister.murmelapi.settings.Settings;
 import de.murmelmeister.murmelapi.user.User;
+import de.murmelmeister.murmelapi.user.color.UserPrefixColor;
+import de.murmelmeister.murmelapi.user.inventory.UserInventory;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
@@ -289,7 +296,91 @@ public final class ResultSetUtil {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
             int userId = result.getInt("user_id");
             LocalDateTime joinedAt = result.getTimestamp("joined_at").toLocalDateTime();
-            return new ClanMember(clanId, userId, joinedAt);
+            int clan_group_id = result.getInt("group_id");
+            return new ClanMember(clanId, userId, joinedAt, clan_group_id);
+        };
+    }
+
+    public static ResultSetProcessor<ClanGroup> clanGroup() {
+        return result -> {
+            UUID clanId = UUID.fromString(result.getString("clan_id"));
+            int groupId = result.getInt("group_id");
+            String groupName = result.getString("group_name");
+            int priority = result.getInt("priority");
+            boolean isDefault = result.getBoolean("is_default");
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            int createdBy = result.getInt("created_by");
+            LocalDateTime changedAt = result.getObject("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
+            Integer changedBy = result.getObject("changed_by") != null ? result.getInt("changed_by") : null;
+            return new ClanGroup(clanId, groupId, groupName, priority, isDefault, createdAt, createdBy, changedAt, changedBy);
+        };
+    }
+
+    public static ResultSetProcessor<ClanParent> clanParent() {
+        return result -> {
+            UUID clanId = UUID.fromString(result.getString("clan_id"));
+            int groupId = result.getInt("group_id");
+            int parentId = result.getInt("parent_id");
+            LocalDateTime expiresAt = result.getObject("expires_at") != null ? result.getTimestamp("expires_at").toLocalDateTime() : null;
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            int createdBy = result.getInt("created_by");
+            LocalDateTime changedAt = result.getObject("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
+            Integer changedBy = result.getObject("changed_by") != null ? result.getInt("changed_by") : null;
+            return new ClanParent(clanId, groupId, parentId, expiresAt, createdAt, createdBy, changedAt, changedBy);
+        };
+    }
+
+    public static ResultSetProcessor<ClanPermission> clanPermission() {
+        return result -> {
+            UUID clanId = UUID.fromString(result.getString("clan_id"));
+            int groupId = result.getInt("group_id");
+            String permission = result.getString("permission");
+            LocalDateTime expiresAt = result.getObject("expires_at") != null ? result.getTimestamp("expires_at").toLocalDateTime() : null;
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            int createdBy = result.getInt("created_by");
+            LocalDateTime changedAt = result.getObject("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
+            Integer changedBy = result.getObject("changed_by") != null ? result.getInt("changed_by") : null;
+            return new ClanPermission(clanId, groupId, permission, expiresAt, createdAt, createdBy, changedAt, changedBy);
+        };
+    }
+
+    public static ResultSetProcessor<PrefixColor> prefixColor() {
+        return result -> {
+            String id = result.getString("id");
+            String color = result.getString("color");
+            boolean animated = result.getBoolean("animated");
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            int createdBy = result.getInt("created_by");
+            LocalDateTime changedAt = result.getObject("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
+            Integer changedBy = result.getObject("changed_by") != null ? result.getInt("changed_by") : null;
+            return new PrefixColor(id, color, animated, createdAt, createdBy, changedAt, changedBy);
+        };
+    }
+
+    public static ResultSetProcessor<UserPrefixColor> userPrefixColor() {
+        return result -> {
+            int userId = result.getInt("user_id");
+            String colorId = result.getString("color_id");
+            boolean active = result.getBoolean("active");
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            return new UserPrefixColor(userId, colorId, active, createdAt);
+        };
+    }
+
+    public static ResultSetProcessor<InventoryType> inventoryType() {
+        return result -> {
+            int id = result.getInt("id");
+            String name = result.getString("inventory_name");
+            return new InventoryType(id, name);
+        };
+    }
+
+    public static ResultSetProcessor<UserInventory> userInventory() {
+        return result -> {
+            int userId = result.getInt("user_id");
+            int inventoryId = result.getInt("inventory_id");
+            String value = result.getString("inventory_value");
+            return new UserInventory(userId, inventoryId, value);
         };
     }
 }
