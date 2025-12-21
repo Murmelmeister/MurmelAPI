@@ -10,6 +10,10 @@ import de.murmelmeister.murmelapi.clan.group.ClanGroupProvider;
 import de.murmelmeister.murmelapi.clan.group.ClanGroupProviderImpl;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProvider;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProviderImpl;
+import de.murmelmeister.murmelapi.clan.parent.ClanParentProvider;
+import de.murmelmeister.murmelapi.clan.parent.ClanParentProviderImpl;
+import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProvider;
+import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProviderImpl;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
 import de.murmelmeister.murmelapi.color.PrefixColorProviderImpl;
 import de.murmelmeister.murmelapi.group.GroupProvider;
@@ -122,6 +126,8 @@ public final class MurmelAPI {
     private static ClanProvider clanProvider;
     private static ClanMemberProvider clanMemberProvider;
     private static ClanGroupProvider clanGroupProvider;
+    private static ClanParentProvider clanParentProvider;
+    private static ClanPermissionProvider clanPermissionProvider;
 
     private static PrefixColorProvider prefixColorProvider;
     private static UserPrefixColorProvider userPrefixColorProvider;
@@ -217,6 +223,8 @@ public final class MurmelAPI {
         clanProvider = getClanProvider();
         clanMemberProvider = getClanMemberProvider();
         clanGroupProvider = getClanGroupProvider();
+        clanParentProvider = getClanParentProvider();
+        clanPermissionProvider = getClanPermissionProvider();
 
         prefixColorProvider = getPrefixColorProvider();
         userPrefixColorProvider = getUserPrefixColorProvider();
@@ -476,6 +484,18 @@ public final class MurmelAPI {
         if (clanGroupProvider == null)
             clanGroupProvider = new ClanGroupProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
         return clanGroupProvider;
+    }
+
+    public static ClanParentProvider getClanParentProvider() {
+        if (clanParentProvider == null)
+            clanParentProvider = new ClanParentProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return clanParentProvider;
+    }
+
+    public static ClanPermissionProvider getClanPermissionProvider() {
+        if (clanPermissionProvider == null)
+            clanPermissionProvider = new ClanPermissionProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+        return clanPermissionProvider;
     }
 
     public static PrefixColorProvider getPrefixColorProvider() {
