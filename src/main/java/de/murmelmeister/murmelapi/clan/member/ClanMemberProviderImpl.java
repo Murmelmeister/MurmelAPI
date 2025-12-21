@@ -45,14 +45,15 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
     }
 
     @Override
-    public ClanMember create(UUID clanId, int userId) {
+    public ClanMember create(UUID clanId, int userId, int groupId) {
         if (clanId == null || userId < 1)
             return null;
 
-        String sql = "INSERT INTO " + TABLE_NAME + " (clan_id, user_id) VALUES (?, ?)";
+        String sql = "INSERT INTO " + TABLE_NAME + " (clan_id, user_id, group_id) VALUES (?, ?, ?)";
         int row = database.update(sql, stmt -> {
             stmt.setString(1, clanId.toString());
             stmt.setInt(2, userId);
+            stmt.setInt(3, groupId);
         });
         if (row < 1) return null;
 
@@ -65,7 +66,7 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
                 });
         if (joinedAt == null) return null;
 
-        ClanMember member = new ClanMember(clanId, userId, joinedAt);
+        ClanMember member = new ClanMember(clanId, userId, joinedAt, groupId);
         RefreshUtil.fireSingle(single, new ClanMemberCache.Member(clanId, userId));
         return member;
     }
@@ -83,5 +84,28 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
 
         RefreshUtil.fireSingle(single, new ClanMemberCache.Member(clanId, userId));
         return row;
+    }
+
+    @Override
+    public ClanMember update(UUID clanId, int userId, int groupId) {
+        if (clanId == null || userId < 1)
+            return null;
+
+        ClanMember existing = cache.get(clanId, userId);
+        if (existing == null) return null;
+
+        if (groupId == existing.groupId()) return existing;
+
+        String sql = "UPDATE " + TABLE_NAME + " SET group_id = ? WHERE clan_id = ? AND user_id = ?";
+        int row = database.update(sql, stmt -> {
+            stmt.setInt(1, groupId);
+            stmt.setString(2, clanId.toString());
+            stmt.setInt(3, userId);
+        });
+        if (row < 1) return null;
+
+        ClanMember member = existing.withGroup(groupId);
+        RefreshUtil.fireSingle(single, new ClanMemberCache.Member(clanId, userId));
+        return member;
     }
 }

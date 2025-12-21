@@ -12,7 +12,9 @@ public interface ClanMemberProvider {
 
     List<ClanMember> findAll();
 
-    ClanMember create(UUID clanId, int userId);
+    ClanMember create(UUID clanId, int userId, int groupId);
 
     int delete(UUID clanId, int userId);
+
+    ClanMember update(UUID clanId, int userId, int groupId);
 }
