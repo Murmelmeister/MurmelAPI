@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record ClanGroup(@NotNull UUID clanId, int groupId, @NotNull String groupName,
+public record ClanGroup(@NotNull UUID clanId, UUID groupId, @NotNull String groupName,
                         int priority, boolean defaultGroup,
                         @NotNull LocalDateTime createdAt, int createdBy,
                         @Nullable LocalDateTime changedAt, @Nullable Integer changedBy) {

@@ -32,7 +32,7 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
     }
 
     @Override
-    public ClanGroup findById(UUID clanId, int groupId) {
+    public ClanGroup findById(UUID clanId, UUID groupId) {
         return cache.getByKey(clanId, groupId);
     }
 
@@ -52,37 +52,39 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
         if (clanId == null || normalizedGroupName == null || priority < 0 || createdBy < CONSOLE_USER_ID)
             return null;
 
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (clan_id, group_name, priority, created_by) VALUES (?, ?, ?, ?)";
-        int id = (int) database.updateAndGetGeneratedKeys(insertSql, stmt -> {
-            stmt.setString(1, clanId.toString());
-            stmt.setString(2, normalizedGroupName);
-            stmt.setInt(3, priority);
-            stmt.setInt(4, createdBy);
+        UUID groupId = UUID.randomUUID();
+        String insertSql = "INSERT INTO " + TABLE_NAME + " (group_id, clan_id, group_name, priority, created_by) VALUES (?, ?, ?, ?, ?)";
+        int row = database.update(insertSql, stmt -> {
+            stmt.setString(1, groupId.toString());
+            stmt.setString(2, clanId.toString());
+            stmt.setString(3, normalizedGroupName);
+            stmt.setInt(4, priority);
+            stmt.setInt(5, createdBy);
         });
-        if (id < 1) return null;
+        if (row < 1) return null;
 
-        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE clan_id = ? AND group_name = ?";
+        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE clan_id = ? AND group_id = ?";
         LocalDateTime createdAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> {
                     stmt.setString(1, clanId.toString());
-                    stmt.setString(2, normalizedGroupName);
+                    stmt.setString(2, groupId.toString());
                 });
         if (createdAt == null) return null;
 
-        ClanGroup clanGroup = new ClanGroup(clanId, id, normalizedGroupName, priority, defaultGroup, createdAt, createdBy, null, null);
-        RefreshUtil.fireSingle(single, new ClanGroupCache.GroupKey(clanId, id));
+        ClanGroup clanGroup = new ClanGroup(clanId, groupId, normalizedGroupName, priority, defaultGroup, createdAt, createdBy, null, null);
+        RefreshUtil.fireSingle(single, new ClanGroupCache.GroupKey(clanId, groupId));
         return clanGroup;
     }
 
     @Override
-    public int delete(UUID clanId, int groupId) {
-        if (clanId == null || groupId < 1) return 0;
+    public int delete(UUID clanId, UUID groupId) {
+        if (clanId == null || groupId == null) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE clan_id = ? AND group_id = ?";
         int row = database.update(sql, stmt -> {
             stmt.setString(1, clanId.toString());
-            stmt.setInt(2, groupId);
+            stmt.setString(2, groupId.toString());
         });
         if (row < 1) return 0;
 
@@ -91,8 +93,8 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
     }
 
     @Override
-    public ClanGroup update(UUID clanId, int groupId, String groupName, int priority, boolean defaultGroup, int changedBy) {
-        if (clanId == null || groupId < 1 || groupName == null || priority < 0 || changedBy < CONSOLE_USER_ID)
+    public ClanGroup update(UUID clanId, UUID groupId, String groupName, int priority, boolean defaultGroup, int changedBy) {
+        if (clanId == null || groupId == null || groupName == null || priority < 0 || changedBy < CONSOLE_USER_ID)
             return null;
 
         ClanGroup existing = cache.getByKey(clanId, groupId);
@@ -111,7 +113,7 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
             stmt.setBoolean(3, defaultGroup);
             stmt.setInt(4, changedBy);
             stmt.setString(5, clanId.toString());
-            stmt.setInt(6, groupId);
+            stmt.setString(6, groupId.toString());
         });
         if (row < 1) return null;
 
@@ -120,7 +122,7 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
                     stmt.setString(1, clanId.toString());
-                    stmt.setInt(2, groupId);
+                    stmt.setString(2, groupId.toString());
                 });
         if (changedAt == null) return null;
 

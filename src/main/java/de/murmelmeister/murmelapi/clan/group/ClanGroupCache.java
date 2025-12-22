@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 
 public class ClanGroupCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=(\\d+).*");
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=([^,]+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<@NotNull GroupKey, ClanGroup> cacheByKey;
@@ -52,7 +52,7 @@ public class ClanGroupCache implements MurmelCache {
                 Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     UUID clanId = UUID.fromString(matcher.group(1));
-                    int groupId = Integer.parseInt(matcher.group(2));
+                    UUID groupId = UUID.fromString(matcher.group(2));
                     refreshSingle(new GroupKey(clanId, groupId));
                 } else {
                     throw new IllegalArgumentException("Invalid key format: " + key);
@@ -95,11 +95,11 @@ public class ClanGroupCache implements MurmelCache {
         String sql = "SELECT * FROM " + tableName + " WHERE clan_id = ? AND group_id = ?";
         return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanGroup(), stmt -> {
             stmt.setString(1, key.clanId().toString());
-            stmt.setInt(2, key.groupId());
+            stmt.setString(2, key.groupId().toString());
         });
     }
 
-    public ClanGroup getByKey(UUID clanId, int groupId) {
+    public ClanGroup getByKey(UUID clanId, UUID groupId) {
         return cacheByKey.get(new GroupKey(clanId, groupId));
     }
 
@@ -118,14 +118,14 @@ public class ClanGroupCache implements MurmelCache {
         GroupKey key = new GroupKey(group.clanId(), group.groupId());
         cacheByKey.put(key, group);
         CacheUtil.put(cacheByClanId, group.clanId(), group, v -> v.clanId().equals(group.clanId()));
-        CacheUtil.put(listCache, ALL_KEY, group, v -> v.clanId().equals(group.clanId()) && v.groupId() == group.groupId());
+        CacheUtil.put(listCache, ALL_KEY, group, v -> v.clanId().equals(group.clanId()) && v.groupId().equals(group.groupId()));
     }
 
-    public void remove(UUID clanId, int groupId) {
+    public void remove(UUID clanId, UUID groupId) {
         GroupKey key = new GroupKey(clanId, groupId);
         cacheByKey.invalidate(key);
         CacheUtil.remove(cacheByClanId, clanId, v -> v.clanId().equals(clanId));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(clanId) && v.groupId() == groupId);
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(clanId) && v.groupId().equals(groupId));
     }
 
     public void clear() {
@@ -134,6 +134,6 @@ public class ClanGroupCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    protected record GroupKey(UUID clanId, int groupId) {
+    protected record GroupKey(UUID clanId, UUID groupId) {
     }
 }

@@ -7,6 +7,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 public final class ClanMemberProviderImpl implements ClanMemberProvider {
@@ -45,7 +46,7 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
     }
 
     @Override
-    public ClanMember create(UUID clanId, int userId, int groupId) {
+    public ClanMember create(UUID clanId, int userId, UUID groupId) {
         if (clanId == null || userId < 1)
             return null;
 
@@ -53,7 +54,7 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
         int row = database.update(sql, stmt -> {
             stmt.setString(1, clanId.toString());
             stmt.setInt(2, userId);
-            stmt.setInt(3, groupId);
+            stmt.setString(3, groupId.toString());
         });
         if (row < 1) return null;
 
@@ -87,18 +88,18 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
     }
 
     @Override
-    public ClanMember update(UUID clanId, int userId, int groupId) {
+    public ClanMember update(UUID clanId, int userId, UUID groupId) {
         if (clanId == null || userId < 1)
             return null;
 
         ClanMember existing = cache.get(clanId, userId);
         if (existing == null) return null;
 
-        if (groupId == existing.groupId()) return existing;
+        if (Objects.equals(groupId, existing.groupId())) return existing;
 
         String sql = "UPDATE " + TABLE_NAME + " SET group_id = ? WHERE clan_id = ? AND user_id = ?";
         int row = database.update(sql, stmt -> {
-            stmt.setInt(1, groupId);
+            stmt.setString(1, groupId.toString());
             stmt.setString(2, clanId.toString());
             stmt.setInt(3, userId);
         });

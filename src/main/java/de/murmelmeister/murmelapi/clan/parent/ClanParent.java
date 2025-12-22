@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record ClanParent(@NotNull UUID clanId, int groupId, int parentId, @Nullable LocalDateTime expiresAt,
+public record ClanParent(@NotNull UUID clanId, UUID groupId, int parentId, @Nullable LocalDateTime expiresAt,
                          @NotNull LocalDateTime createdAt, int createdBy,
                          @Nullable LocalDateTime changedAt, @Nullable Integer changedBy) {
 

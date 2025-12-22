@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 
 public class ClanPermissionCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=(\\d+), permission=([^,\\]]+).*");
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=([^,]+), permission=([^,\\]]+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<@NotNull PermissionKey, ClanPermission> cacheByKey;
@@ -52,7 +52,7 @@ public class ClanPermissionCache implements MurmelCache {
                 Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     UUID clanId = UUID.fromString(matcher.group(1));
-                    int groupId = Integer.parseInt(matcher.group(2));
+                    UUID groupId = UUID.fromString(matcher.group(2));
                     String permission = matcher.group(3);
                     refreshSingle(new PermissionKey(clanId, groupId, permission));
                 } else {
@@ -91,7 +91,7 @@ public class ClanPermissionCache implements MurmelCache {
         String sql = "SELECT * FROM " + tableName + " WHERE clan_id = ? AND group_id = ?";
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanPermission(), stmt -> {
             stmt.setString(1, key.clanId().toString());
-            stmt.setInt(2, key.groupId());
+            stmt.setString(2, key.groupId().toString());
         });
     }
 
@@ -99,16 +99,16 @@ public class ClanPermissionCache implements MurmelCache {
         String sql = "SELECT * FROM " + tableName + " WHERE clan_id = ? AND group_id = ? AND permission = ?";
         return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanPermission(), stmt -> {
             stmt.setString(1, key.clanId().toString());
-            stmt.setInt(2, key.groupId());
+            stmt.setString(2, key.groupId().toString());
             stmt.setString(3, key.permission());
         });
     }
 
-    public ClanPermission get(UUID clanId, int groupId, String permission) {
+    public ClanPermission get(UUID clanId, UUID groupId, String permission) {
         return cacheByKey.get(new PermissionKey(clanId, groupId, permission));
     }
 
-    public List<ClanPermission> getByPermissions(UUID clanId, int groupId) {
+    public List<ClanPermission> getByPermissions(UUID clanId, UUID groupId) {
         return cacheByGroup.get(new GroupKey(clanId, groupId));
     }
 
@@ -122,15 +122,15 @@ public class ClanPermissionCache implements MurmelCache {
     public void put(ClanPermission clanPermission) {
         cacheByKey.put(new PermissionKey(clanPermission.clanId(), clanPermission.groupId(), clanPermission.permission()), clanPermission);
         CacheUtil.put(cacheByGroup, new GroupKey(clanPermission.clanId(), clanPermission.groupId()), clanPermission,
-                v -> v.groupId() == clanPermission.groupId());
-        CacheUtil.put(listCache, ALL_KEY, clanPermission, v -> v.groupId() == clanPermission.groupId());
+                v -> v.groupId().equals(clanPermission.groupId()));
+        CacheUtil.put(listCache, ALL_KEY, clanPermission, v -> v.groupId().equals(clanPermission.groupId()));
     }
 
-    public void remove(UUID clanId, int groupId, String permission) {
+    public void remove(UUID clanId, UUID groupId, String permission) {
         PermissionKey key = new PermissionKey(clanId, groupId, permission);
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByGroup, new GroupKey(clanId, groupId), v -> v.groupId() == groupId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == groupId);
+        CacheUtil.remove(cacheByGroup, new GroupKey(clanId, groupId), v -> v.groupId().equals(groupId));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId().equals(groupId));
     }
 
     public void clear() {
@@ -139,9 +139,9 @@ public class ClanPermissionCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    protected record PermissionKey(UUID clanId, int groupId, String permission) {
+    protected record PermissionKey(UUID clanId, UUID groupId, String permission) {
     }
 
-    protected record GroupKey(UUID clanId, int groupId) {
+    protected record GroupKey(UUID clanId, UUID groupId) {
     }
 }

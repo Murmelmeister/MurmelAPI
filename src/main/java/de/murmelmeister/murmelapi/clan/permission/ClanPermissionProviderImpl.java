@@ -33,26 +33,26 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
     }
 
     @Override
-    public ClanPermission findPermission(UUID clanId, int groupId, String permission) {
+    public ClanPermission findPermission(UUID clanId, UUID groupId, String permission) {
         return cache.get(clanId, groupId, permission);
     }
 
     @Override
-    public List<ClanPermission> findPermissions(UUID clanId, int groupId) {
+    public List<ClanPermission> findPermissions(UUID clanId, UUID groupId) {
         return cache.getByPermissions(clanId, groupId);
     }
 
     @Override
-    public ClanPermission add(UUID clanId, int groupId, String permission, long duration, int createdBy) {
+    public ClanPermission add(UUID clanId, UUID groupId, String permission, long duration, int createdBy) {
         String normalizedPermission = StringUtil.normalize(permission);
-        if (clanId == null || groupId < 1 || normalizedPermission == null || duration < -1 || createdBy < CONSOLE_USER_ID)
+        if (clanId == null || groupId == null || normalizedPermission == null || duration < -1 || createdBy < CONSOLE_USER_ID)
             return null;
 
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
         String insertSql = "INSERT INTO " + TABLE_NAME + " (clan_id, group_id, permission, expires_at, created_by) VALUES (?, ?, ?, ?, ?)";
         int row = database.update(insertSql, stmt -> {
             stmt.setString(1, clanId.toString());
-            stmt.setInt(2, groupId);
+            stmt.setString(2, groupId.toString());
             stmt.setString(3, normalizedPermission);
             stmt.setTimestamp(4, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
             stmt.setInt(5, createdBy);
@@ -64,7 +64,7 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> {
                     stmt.setString(1, clanId.toString());
-                    stmt.setInt(2, groupId);
+                    stmt.setString(2, groupId.toString());
                     stmt.setString(3, normalizedPermission);
                 });
         if (createdAt == null) return null;
@@ -75,14 +75,14 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
     }
 
     @Override
-    public int remove(UUID clanId, int groupId, String permission) {
+    public int remove(UUID clanId, UUID groupId, String permission) {
         String normalizedPermission = StringUtil.normalize(permission);
-        if (clanId == null || groupId < 1 || normalizedPermission == null) return 0;
+        if (clanId == null || groupId == null || normalizedPermission == null) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE clan_id = ? AND group_id = ? AND permission = ?";
         int row = database.update(sql, stmt -> {
             stmt.setString(1, clanId.toString());
-            stmt.setInt(2, groupId);
+            stmt.setString(2, groupId.toString());
             stmt.setString(3, normalizedPermission);
         });
         if (row < 1) return 0;
@@ -92,13 +92,13 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
     }
 
     @Override
-    public int clear(UUID clanId, int groupId) {
-        if (clanId == null || groupId < 1) return 0;
+    public int clear(UUID clanId, UUID groupId) {
+        if (clanId == null || groupId == null) return 0;
 
         String sql = "DELETE FROM " + TABLE_NAME + " WHERE clan_id = ? AND group_id = ?";
         int row = database.update(sql, stmt -> {
             stmt.setString(1, clanId.toString());
-            stmt.setInt(2, groupId);
+            stmt.setString(2, groupId.toString());
         });
         if (row < 1) return 0;
 
@@ -107,9 +107,9 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
     }
 
     @Override
-    public ClanPermission update(UUID clanId, int groupId, String permission, long duration, int changedBy) {
+    public ClanPermission update(UUID clanId, UUID groupId, String permission, long duration, int changedBy) {
         String normalizedPermission = StringUtil.normalize(permission);
-        if (clanId == null || groupId < 1 || normalizedPermission == null || duration < -1 || changedBy < CONSOLE_USER_ID)
+        if (clanId == null || groupId == null || normalizedPermission == null || duration < -1 || changedBy < CONSOLE_USER_ID)
             return null;
 
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
@@ -124,7 +124,7 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
             stmt.setString(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt).toString());
             stmt.setInt(2, changedBy);
             stmt.setString(3, clanId.toString());
-            stmt.setInt(4, groupId);
+            stmt.setString(4, groupId.toString());
             stmt.setString(5, normalizedPermission);
         });
         if (row < 1) return null;
@@ -134,7 +134,7 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
                     stmt.setString(1, clanId.toString());
-                    stmt.setInt(2, groupId);
+                    stmt.setString(2, groupId.toString());
                     stmt.setString(3, normalizedPermission);
                 });
         if (changedAt == null) return null;

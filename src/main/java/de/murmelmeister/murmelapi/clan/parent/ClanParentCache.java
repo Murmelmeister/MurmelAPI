@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
 
 public class ClanParentCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=(\\d+), parentId=(\\d+).*");
+    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=([^,]+), parentId=(\\d+).*");
     private final Database database;
     private final String tableName;
     private final LoadingCache<@NotNull ParentKey, ClanParent> cacheByKey;
@@ -52,7 +52,7 @@ public class ClanParentCache implements MurmelCache {
                 Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     UUID clanId = UUID.fromString(matcher.group(1));
-                    int groupId = Integer.parseInt(matcher.group(2));
+                    UUID groupId = UUID.fromString(matcher.group(2));
                     int parentId = Integer.parseInt(matcher.group(3));
                     refreshSingle(new ParentKey(clanId, groupId, parentId));
                 } else {
@@ -91,7 +91,7 @@ public class ClanParentCache implements MurmelCache {
         String sql = "SELECT * FROM " + tableName + " WHERE clan_id = ? AND group_id = ?";
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanParent(), stmt -> {
             stmt.setString(1, key.clanId().toString());
-            stmt.setInt(2, key.groupId());
+            stmt.setString(2, key.groupId().toString());
         });
     }
 
@@ -99,16 +99,16 @@ public class ClanParentCache implements MurmelCache {
         String sql = "SELECT * FROM " + tableName + " WHERE clan_id = ? AND group_id = ? AND parent_id = ?";
         return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanParent(), stmt -> {
             stmt.setString(1, key.clanId().toString());
-            stmt.setInt(2, key.groupId());
+            stmt.setString(2, key.groupId().toString());
             stmt.setInt(3, key.parentId());
         });
     }
 
-    public ClanParent get(UUID clanId, int groupId, int parentId) {
+    public ClanParent get(UUID clanId, UUID groupId, int parentId) {
         return cacheByKey.get(new ParentKey(clanId, groupId, parentId));
     }
 
-    public List<ClanParent> getByGroup(UUID clanId, int groupId) {
+    public List<ClanParent> getByGroup(UUID clanId, UUID groupId) {
         return cacheByGroup.get(new GroupKey(clanId, groupId));
     }
 
@@ -122,15 +122,15 @@ public class ClanParentCache implements MurmelCache {
     public void put(ClanParent clanParent) {
         cacheByKey.put(new ParentKey(clanParent.clanId(), clanParent.groupId(), clanParent.parentId()), clanParent);
         CacheUtil.put(cacheByGroup, new GroupKey(clanParent.clanId(), clanParent.groupId()), clanParent,
-                v -> v.clanId().equals(clanParent.clanId()) && v.groupId() == clanParent.groupId());
-        CacheUtil.put(listCache, ALL_KEY, clanParent, v -> v.clanId().equals(clanParent.clanId()) && v.groupId() == clanParent.groupId());
+                v -> v.clanId().equals(clanParent.clanId()) && v.groupId().equals(clanParent.groupId()));
+        CacheUtil.put(listCache, ALL_KEY, clanParent, v -> v.clanId().equals(clanParent.clanId()) && v.groupId().equals(clanParent.groupId()));
     }
 
-    public void remove(UUID clanId, int groupId, int parentId) {
+    public void remove(UUID clanId, UUID groupId, int parentId) {
         ParentKey key = new ParentKey(clanId, groupId, parentId);
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByGroup, new GroupKey(clanId, groupId), v -> v.clanId().equals(clanId) && v.groupId() == groupId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(clanId) && v.groupId() == groupId);
+        CacheUtil.remove(cacheByGroup, new GroupKey(clanId, groupId), v -> v.clanId().equals(clanId) && v.groupId().equals(groupId));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(clanId) && v.groupId().equals(groupId));
     }
 
     public void clear() {
@@ -139,9 +139,9 @@ public class ClanParentCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    protected record ParentKey(UUID clanId, int groupId, int parentId) {
+    protected record ParentKey(UUID clanId, UUID groupId, int parentId) {
     }
 
-    protected record GroupKey(UUID clanId, int groupId) {
+    protected record GroupKey(UUID clanId, UUID groupId) {
     }
 }

@@ -296,7 +296,7 @@ public final class ResultSetUtil {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
             int userId = result.getInt("user_id");
             LocalDateTime joinedAt = result.getTimestamp("joined_at").toLocalDateTime();
-            int clan_group_id = result.getInt("group_id");
+            UUID clan_group_id = UUID.fromString(result.getString("group_id"));
             return new ClanMember(clanId, userId, joinedAt, clan_group_id);
         };
     }
@@ -304,7 +304,7 @@ public final class ResultSetUtil {
     public static ResultSetProcessor<ClanGroup> clanGroup() {
         return result -> {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
-            int groupId = result.getInt("group_id");
+            UUID groupId = UUID.fromString(result.getString("group_id"));
             String groupName = result.getString("group_name");
             int priority = result.getInt("priority");
             boolean isDefault = result.getBoolean("is_default");
@@ -319,7 +319,7 @@ public final class ResultSetUtil {
     public static ResultSetProcessor<ClanParent> clanParent() {
         return result -> {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
-            int groupId = result.getInt("group_id");
+            UUID groupId = UUID.fromString(result.getString("group_id"));
             int parentId = result.getInt("parent_id");
             LocalDateTime expiresAt = result.getObject("expires_at") != null ? result.getTimestamp("expires_at").toLocalDateTime() : null;
             LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
@@ -333,7 +333,7 @@ public final class ResultSetUtil {
     public static ResultSetProcessor<ClanPermission> clanPermission() {
         return result -> {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
-            int groupId = result.getInt("group_id");
+            UUID groupId = UUID.fromString(result.getString("group_id"));
             String permission = result.getString("permission");
             LocalDateTime expiresAt = result.getObject("expires_at") != null ? result.getTimestamp("expires_at").toLocalDateTime() : null;
             LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();

@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record ClanPermission(@NotNull UUID clanId, int groupId, @NotNull String permission,
+public record ClanPermission(@NotNull UUID clanId, UUID groupId, @NotNull String permission,
                              @Nullable LocalDateTime expiresAt,
                              @NotNull LocalDateTime createdAt, int createdBy,
                              @Nullable LocalDateTime changedAt, @Nullable Integer changedBy) {

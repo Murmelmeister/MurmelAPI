@@ -6,17 +6,17 @@ import java.util.UUID;
 public interface ClanPermissionProvider {
     void refreshCache();
 
-    ClanPermission findPermission(UUID clanId, int groupId, String permission);
+    ClanPermission findPermission(UUID clanId, UUID groupId, String permission);
 
-    List<ClanPermission> findPermissions(UUID clanId, int groupId);
+    List<ClanPermission> findPermissions(UUID clanId, UUID groupId);
 
-    ClanPermission add(UUID clanId, int groupId, String permission, long duration, int createdBy);
+    ClanPermission add(UUID clanId, UUID groupId, String permission, long duration, int createdBy);
 
-    int remove(UUID clanId, int groupId, String permission);
+    int remove(UUID clanId, UUID groupId, String permission);
 
-    int clear(UUID clanId, int groupId);
+    int clear(UUID clanId, UUID groupId);
 
-    ClanPermission update(UUID clanId, int groupId, String permission, long duration, int changedBy);
+    ClanPermission update(UUID clanId, UUID groupId, String permission, long duration, int changedBy);
 
     int loadExpired();
 }

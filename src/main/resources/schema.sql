@@ -244,62 +244,71 @@ CREATE TABLE IF NOT EXISTS clans (
     FOREIGN KEY (changed_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS clan_member (
-    clan_id UUID NOT NULL,
-    user_id INT NOT NULL,
-    PRIMARY KEY (clan_id, user_id),
-    joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    group_id INT NOT NULL,
-    FOREIGN KEY (clan_id) REFERENCES clans(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (group_id) REFERENCES clan_groups(group_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS clan_groups (
+    group_id UUID NOT NULL,
     clan_id UUID NOT NULL,
-    group_id INT NOT NULL AUTO_INCREMENT,
-    PRIMARY KEY (clan_id, group_id),
-    group_name VARCHAR(100) NOT NULL UNIQUE,
+    group_name VARCHAR(100) NOT NULL,
     priority INT NOT NULL DEFAULT 0,
     is_default BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     created_by INT NOT NULL,
     changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
     changed_by INT NULL,
+    PRIMARY KEY (group_id),
+    UNIQUE KEY (clan_id, group_id),
+    UNIQUE KEY (clan_id, group_name),
+    KEY (clan_id),
     FOREIGN KEY (clan_id) REFERENCES clans(id),
     FOREIGN KEY (created_by) REFERENCES users(id),
     FOREIGN KEY (changed_by) REFERENCES users(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS clan_member (
+    clan_id UUID NOT NULL,
+    user_id INT NOT NULL,
+    joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    group_id INT NOT NULL,
+    PRIMARY KEY (clan_id, user_id),
+    KEY (user_id),
+    KEY (clan_id, group_id),
+    FOREIGN KEY (clan_id) REFERENCES clans(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (clan_id, group_id) REFERENCES clan_groups(clan_id, group_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS clan_parent (
     clan_id UUID NOT NULL,
-    group_id INT NOT NULL,
-    parent_id INT NOT NULL,
-    PRIMARY KEY (clan_id, group_id, parent_id),
+    group_id UUID NOT NULL,
+    parent_id UUID NOT NULL,
     expires_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     created_by INT NOT NULL,
     changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
     changed_by INT NULL,
+    PRIMARY KEY (clan_id, group_id, parent_id),
+    KEY (expires_at),
+    KEY (clan_id, group_id),
     FOREIGN KEY (clan_id) REFERENCES clans(id),
-    FOREIGN KEY (group_id) REFERENCES clan_groups(group_id),
-    FOREIGN KEY (parent_id) REFERENCES clan_groups(group_id),
+    FOREIGN KEY (clan_id, group_id) REFERENCES clan_groups(clan_id, group_id),
+    FOREIGN KEY (clan_id, parent_id) REFERENCES clan_groups(clan_id, group_id),
     FOREIGN KEY (created_by) REFERENCES users(id),
     FOREIGN KEY (changed_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS clan_permission (
     clan_id UUID NOT NULL,
-    group_id INT NOT NULL,
+    group_id UUID NOT NULL,
     permission VARCHAR(200) NOT NULL,
-    PRIMARY KEY (clan_id, group_id, permission),
     expires_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     created_by INT NOT NULL,
     changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
     changed_by INT NULL,
+    PRIMARY KEY (clan_id, group_id, permission),
+    KEY (expires_at),
+    KEY (clan_id, group_id),
     FOREIGN KEY (clan_id) REFERENCES clans(id),
-    FOREIGN KEY (group_id) REFERENCES clan_groups(group_id),
+    FOREIGN KEY (clan_id, group_id) REFERENCES clan_groups(clan_id, group_id),
     FOREIGN KEY (created_by) REFERENCES users(id),
     FOREIGN KEY (changed_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
