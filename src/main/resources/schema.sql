@@ -267,7 +267,7 @@ CREATE TABLE IF NOT EXISTS clan_member (
     clan_id UUID NOT NULL,
     user_id INT NOT NULL,
     joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    group_id INT NOT NULL,
+    group_id UUID NOT NULL,
     PRIMARY KEY (clan_id, user_id),
     KEY (user_id),
     KEY (clan_id, group_id),
