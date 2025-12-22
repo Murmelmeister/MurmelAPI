@@ -26,6 +26,7 @@ import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
 import de.murmelmeister.murmelapi.group.permission.GroupPermissionProviderImpl;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProviderImpl;
+import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
 import de.murmelmeister.murmelapi.language.LanguageProviderImpl;
 import de.murmelmeister.murmelapi.language.message.MessageProvider;
@@ -73,9 +74,12 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 
 /**
@@ -281,6 +285,15 @@ public final class MurmelAPI {
         if (pattern == null)
             throw new IllegalArgumentException("No pattern for language " + languageId + " found!");
         return DateTimeFormatter.ofPattern(pattern);
+    }
+
+    public static DecimalFormat getDecimalFormat(int languageId, String pattern) {
+        Language language = getLanguageProvider().findById(languageId);
+        if (language == null)
+            throw new IllegalArgumentException("No language for id " + languageId + " found!");
+        Locale locale = Locale.of(language.code());
+        DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(locale);
+        return new DecimalFormat(pattern, symbols);
     }
 
     public static Long getFetchLimit() {
