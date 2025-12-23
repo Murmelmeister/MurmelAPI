@@ -40,7 +40,7 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
     public UserInventory create(int userId, int inventoryId, String value) {
         if (userId < 1 || inventoryId < 1 || value == null) return null;
 
-        String sql = "INSERT INTO " + TABLE_NAME + " (user_id, inventory_id, value) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO " + TABLE_NAME + " (user_id, inventory_id, inventory_value) VALUES (?, ?, ?)";
         int row = database.update(sql, stmt -> {
             stmt.setInt(1, userId);
             stmt.setInt(2, inventoryId);
@@ -77,7 +77,7 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
 
         if (Objects.equals(value, existing.value())) return existing;
 
-        String sql = "UPDATE " + TABLE_NAME + " SET value = ? WHERE user_id = ? AND inventory_id = ?";
+        String sql = "UPDATE " + TABLE_NAME + " SET inventory_value = ? WHERE user_id = ? AND inventory_id = ?";
         int row = database.update(sql, stmt -> {
             stmt.setString(1, value);
             stmt.setInt(2, userId);

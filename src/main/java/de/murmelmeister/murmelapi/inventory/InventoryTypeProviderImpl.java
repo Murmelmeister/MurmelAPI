@@ -42,7 +42,7 @@ public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
         if (normalizedName == null)
             return null;
 
-        String sql = "INSERT INTO " + TABLE_NAME + " (name) VALUES (?)";
+        String sql = "INSERT INTO " + TABLE_NAME + " (inventory_name) VALUES (?)";
         int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> stmt.setString(1, normalizedName));
         if (id < 1) return null;
 

@@ -84,7 +84,7 @@ public class UserInventoryCache implements MurmelCache {
     }
 
     private UserInventory loadById(InventoryKey key) {
-        String sql = "SELECT * FROM " + tableName + " WHERE userId = ? AND inventoryId = ?";
+        String sql = "SELECT * FROM " + tableName + " WHERE user_id = ? AND inventory_id = ?";
         return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userInventory(), stmt -> {
             stmt.setInt(1, key.userId());
             stmt.setInt(2, key.inventoryId());
