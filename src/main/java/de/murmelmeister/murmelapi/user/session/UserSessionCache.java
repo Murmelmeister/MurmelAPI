@@ -6,113 +6,119 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class UserSessionCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_USER_ID = "SELECT * FROM %s WHERE user_id = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE id = ?";
+
     private static final String ALL_KEY = "ALL";
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<@NotNull UUID, UserSession> cacheById;
-    private final LoadingCache<@NotNull Integer, UserSession> cacheByUserId;
-    private final LoadingCache<@NotNull String, List<UserSession>> listCache;
     private final Long fetchLimit;
 
-    public UserSessionCache(Database database, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull UUID, Optional<UserSession>> cacheById;
+    private final LoadingCache<@NotNull Integer, Optional<UserSession>> cacheByUserId;
+    private final LoadingCache<@NotNull String, List<UserSession>> listCache;
+
+    public UserSessionCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapcity, refreshInterval);
         this.cacheByUserId = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapcity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.USER_SESSIONS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
+            clear();
         else if (RefreshType.SINGLE_USER_SESSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof UUID sessionId)
-                    refreshSingle(sessionId);
-            } else {
-                UUID sessionId = UUID.fromString((String) key);
-                refreshSingle(sessionId);
+            if (key instanceof UUID sessionId)
+                remove(sessionId);
+            else if (key instanceof String s) {
+                try {
+                    remove(UUID.fromString(s));
+                } catch (IllegalArgumentException ignored) {
+                }
             }
         }
     }
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<UserSession> sessions = loadAllFromDatabase();
-        if (sessions.isEmpty())
-            return;
-        sessions.forEach(session -> {
-            cacheById.put(session.id(), session);
-            cacheByUserId.put(session.userId(), session);
-        });
-        listCache.put(ALL_KEY, List.copyOf(sessions));
-    }
-
-    private void refreshSingle(UUID sessionId) {
-        remove(sessionId);
-        UserSession session = loadById(sessionId);
-        if (session != null)
-            put(session);
-    }
-
-    private List<UserSession> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<UserSession> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userSession());
     }
 
-    private UserSession loadByUserId(int userId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE user_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
+    private Optional<UserSession> loadByUserId(int userId) {
+        String sql = SELECT_BY_USER_ID.formatted(tableName);
+        UserSession session = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
                 stmt -> stmt.setInt(1, userId));
+        return Optional.ofNullable(session);
     }
 
-    private UserSession loadById(UUID sessionId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
+    private Optional<UserSession> loadById(UUID sessionId) {
+        String sql = SELECT_BY_ID.formatted(tableName);
+        UserSession session = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
                 stmt -> stmt.setString(1, sessionId.toString()));
+        return Optional.ofNullable(session);
     }
 
-    public UserSession getById(UUID sessionId) {
-        return cacheById.get(sessionId);
+    public @Nullable UserSession getById(@Nullable UUID sessionId) {
+        if (sessionId == null) return null;
+        Optional<UserSession> optSession = cacheById.get(sessionId);
+        return optSession != null && optSession.isPresent() ? optSession.orElse(null) : null;
     }
 
-    public UserSession getByUserId(int userId) {
-        return cacheByUserId.get(userId);
+    public @Nullable UserSession getByUserId(int userId) {
+        Optional<UserSession> optSession = cacheByUserId.get(userId);
+        return optSession != null && optSession.isPresent() ? optSession.orElse(null) : null;
     }
 
-    public void put(UserSession session) {
-        cacheById.put(session.id(), session);
-        cacheByUserId.put(session.userId(), session);
+    public void put(@Nullable UserSession session) {
+        if (session == null) return;
+
+        cacheById.put(session.id(), Optional.of(session));
+        cacheByUserId.put(session.userId(), Optional.of(session));
         CacheUtil.put(listCache, ALL_KEY, session, v -> v.id().equals(session.id()));
     }
 
-    public void remove(UUID sessionId) {
-        UserSession session = cacheById.getIfPresent(sessionId);
+    public void remove(@NotNull UUID sessionId) {
+        Optional<UserSession> optSession = cacheById.getIfPresent(sessionId);
         cacheById.invalidate(sessionId);
-        if (session != null)
+
+        if (optSession != null && optSession.isPresent()) {
+            UserSession session = optSession.get();
             cacheByUserId.invalidate(session.userId());
+        }
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(sessionId));
     }
 
@@ -122,7 +128,7 @@ public class UserSessionCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public List<UserSession> getCachedSessions() {
+    public @NotNull List<UserSession> getCachedSessions() {
         List<UserSession> sessions = listCache.get(ALL_KEY);
         if (sessions == null || sessions.isEmpty())
             return Collections.emptyList();
