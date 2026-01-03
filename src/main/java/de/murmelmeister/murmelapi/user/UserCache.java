@@ -6,29 +6,45 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
 public class UserCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_NAME = "SELECT * FROM %s WHERE username = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_UUID = "SELECT * FROM %s WHERE mojang_id = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE id = ?";
+
     private static final String ALL_KEY = "ALL";
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<@NotNull Integer, User> cacheById;
-    private final LoadingCache<@NotNull UUID, User> cacheByUUID;
-    private final LoadingCache<@NotNull String, User> cacheByName;
-    private final LoadingCache<@NotNull String, List<User>> listCache;
     private final Long fetchLimit;
 
-    public UserCache(Database database, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull Integer, Optional<User>> cacheById;
+    private final LoadingCache<@NotNull UUID, Optional<User>> cacheByUUID;
+    private final LoadingCache<@NotNull String, Optional<User>> cacheByName;
+    private final LoadingCache<@NotNull String, List<User>> listCache;
+
+    public UserCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
@@ -37,120 +53,110 @@ public class UserCache implements MurmelCache {
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase().stream()
                 .filter(user -> !isBlocked(user))
                 .toList(), 1, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.USERS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_USER.getName().equalsIgnoreCase(cacheName)) {
-            Object key = event.key();
-            Integer id = null;
-            if (key instanceof Number number)
-                id = number.intValue();
-            else if (key instanceof String stringKey) {
-                try {
-                    id = Integer.parseInt(stringKey);
-                } catch (NumberFormatException ignored) {
-                    return;
-                }
-            }
-            if (id != null)
-                refreshSingle(id);
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
         }
+
+        if (RefreshType.SINGLE_USER.getName().equalsIgnoreCase(cacheName))
+            parseIdFromKey(event.key()).ifPresent(this::remove);
+    }
+
+    private Optional<Integer> parseIdFromKey(@Nullable Object key) {
+        if (key instanceof Integer i) return Optional.of(i);
+        if (key instanceof Number n) return Optional.of(n.intValue());
+        if (key instanceof String s && !s.isEmpty() && Character.isDigit(s.charAt(0))) {
+            try {
+                return Optional.of(Integer.parseInt(s));
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return Optional.empty();
     }
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<User> users = loadAllFromDatabase();
-        if (users.isEmpty())
-            return;
-        users.forEach(user -> {
-            cacheById.put(user.id(), user);
-            if (!isBlocked(user)) {
-                if (user.mojangId() != null) cacheByUUID.put(user.mojangId(), user);
-                cacheByName.put(user.username(), user);
-            }
-        });
-        listCache.put(ALL_KEY, List.copyOf(
-                users.stream().filter(user -> !isBlocked(user)).toList()
-        ));
-    }
-
-    private void refreshSingle(int id) {
-        remove(id);
-        User user = loadById(id);
-        if (user != null)
-            put(user);
-    }
-
-    private List<User> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<User> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.user());
     }
 
-    private User loadByName(String name) {
-        String sql = "SELECT * FROM " + tableName + " WHERE username = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+    private Optional<User> loadByName(String name) {
+        String sql = SELECT_BY_NAME.formatted(tableName);
+        User user = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
                 stmt -> stmt.setString(1, name));
+
+        return isBlocked(user) ? Optional.empty() : Optional.of(user);
     }
 
-    private User loadByUUID(UUID uuid) {
-        if (uuid == null) return null;
-        String sql = "SELECT * FROM " + tableName + " WHERE mojang_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+    private Optional<User> loadByUUID(UUID uuid) {
+        String sql = SELECT_BY_UUID.formatted(tableName);
+        User user = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
                 stmt -> stmt.setString(1, uuid.toString()));
+
+        return isBlocked(user) ? Optional.empty() : Optional.of(user);
     }
 
-    private User loadById(int id) {
-        String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+    private Optional<User> loadById(int id) {
+        String sql = SELECT_BY_ID.formatted(tableName);
+        User user = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
                 stmt -> stmt.setInt(1, id));
+
+        return Optional.ofNullable(user);
     }
 
-    public User getById(int id) {
-        return cacheById.get(id);
+    public @Nullable User getById(int id) {
+        Optional<User> optUser = cacheById.get(id);
+        return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
     }
 
-    public User getByUUID(UUID uuid) {
+    public @Nullable User getByUUID(@Nullable UUID uuid) {
         if (uuid == null) return null;
-        User user = cacheByUUID.get(uuid);
-        return isBlocked(user) ? null : user;
+        Optional<User> optUser = cacheByUUID.get(uuid);
+        return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
     }
 
-    public User getByName(String name) {
+    public @Nullable User getByName(@Nullable String name) {
         if (name == null) return null;
-        User user = cacheByName.get(name);
-        return isBlocked(user) ? null : user;
+        Optional<User> optUser = cacheByName.get(name);
+        return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
     }
 
-    public void put(User user) {
+    public void put(@Nullable User user) {
         if (user == null) return;
-        cacheById.put(user.id(), user);
+        cacheById.put(user.id(), Optional.of(user));
+
         if (!isBlocked(user)) {
-            if (user.mojangId() != null) cacheByUUID.put(user.mojangId(), user);
-            cacheByName.put(user.username(), user);
+            if (user.mojangId() != null) cacheByUUID.put(user.mojangId(), Optional.of(user));
+            cacheByName.put(user.username(), Optional.of(user));
             CacheUtil.put(listCache, ALL_KEY, user, v -> v.id() == user.id());
         }
     }
 
     public void remove(int id) {
-        User user = cacheById.getIfPresent(id);
-        if (user != null) {
-            cacheById.invalidate(id);
-            cacheByUUID.invalidate(user.mojangId());
+        Optional<User> value = cacheById.getIfPresent(id);
+        cacheById.invalidate(id);
+
+        if (value != null && value.isPresent()) {
+            User user = value.get();
+            if (user.mojangId() != null) cacheByUUID.invalidate(user.mojangId());
             cacheByName.invalidate(user.username());
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
+        } else {
+            listCache.invalidate(ALL_KEY);
         }
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
     }
 
     public void clear() {
@@ -160,14 +166,14 @@ public class UserCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public List<User> getCachedUsers() {
+    public @NotNull List<User> getCachedUsers() {
         List<User> users = listCache.get(ALL_KEY);
         if (users == null || users.isEmpty())
             return Collections.emptyList();
         return List.copyOf(users);
     }
 
-    private boolean isBlocked(User user) {
+    private boolean isBlocked(@Nullable User user) {
         return user == null || user.id() == CONSOLE_USER_ID || user.systemUser();
     }
 }
