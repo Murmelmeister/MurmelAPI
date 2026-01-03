@@ -1,5 +1,8 @@
 package de.murmelmeister.murmelapi.user.session;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.net.InetAddress;
 import java.util.List;
 import java.util.UUID;
@@ -7,13 +10,13 @@ import java.util.UUID;
 public interface UserSessionProvider {
     void refreshCache();
 
-    UserSession findById(UUID sessionId);
+    @Nullable UserSession findById(@Nullable UUID sessionId);
 
-    UserSession findByUserId(int userId);
+    @Nullable UserSession findByUserId(int userId);
 
-    List<UserSession> findAll();
+    @NotNull List<UserSession> findAll();
 
-    UserSession create(int userId, InetAddress inetAddress, String clientBrand, int protocolVersion);
+    @Nullable UserSession create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion);
 
-    int delete(UUID sessionId);
+    int delete(@Nullable UUID sessionId);
 }
