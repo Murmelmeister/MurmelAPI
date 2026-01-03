@@ -2,8 +2,12 @@ package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -24,9 +28,9 @@ public final class UserProviderImpl implements UserProvider {
     private final RefreshType all = RefreshType.USERS;
     private final RefreshType single = RefreshType.SINGLE_USER;
 
-    public UserProviderImpl(Database database, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new UserCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new UserCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -35,27 +39,27 @@ public final class UserProviderImpl implements UserProvider {
     }
 
     @Override
-    public User findById(int userId) {
+    public @Nullable User findById(int userId) {
         return cache.getById(userId);
     }
 
     @Override
-    public User findByMojangId(UUID uuid) {
+    public @Nullable User findByMojangId(@Nullable UUID uuid) {
         return cache.getByUUID(uuid);
     }
 
     @Override
-    public User findByUsername(String username) {
+    public @Nullable User findByUsername(@Nullable String username) {
         return cache.getByName(username);
     }
 
     @Override
-    public List<User> findAll() {
+    public @NotNull List<User> findAll() {
         return cache.getCachedUsers();
     }
 
     @Override
-    public List<UUID> findMojangIds() {
+    public @NotNull List<UUID> findMojangIds() {
         return findAll().stream()
                 .map(User::mojangId)
                 .filter(Objects::nonNull)
@@ -63,19 +67,22 @@ public final class UserProviderImpl implements UserProvider {
     }
 
     @Override
-    public List<String> findUsernames() {
+    public @NotNull List<String> findUsernames() {
         return findAll().stream()
                 .map(User::username)
-                .filter(Objects::nonNull)
                 .toList();
     }
 
     @Override
-    public User create(UUID uuid, String username) {
+    public @Nullable User create(@NotNull UUID uuid, @NotNull String username) {
         String normalizedUsername = StringUtil.normalize(username);
-        if (uuid == null || normalizedUsername == null) return null;
+        if (normalizedUsername == null) return null;
 
-        String sql = "INSERT INTO " + TABLE_NAME + " (mojang_id, username) VALUES (?, ?)";
+        @Language("MariaDB")
+        String sql = """
+                INSERT INTO %s (mojang_id, username)
+                VALUES (?, ?)
+                """.formatted(TABLE_NAME);
         int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> {
             stmt.setString(1, uuid.toString());
             stmt.setString(2, normalizedUsername);
@@ -91,7 +98,8 @@ public final class UserProviderImpl implements UserProvider {
     public int delete(int userId) {
         if (userId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
@@ -100,9 +108,9 @@ public final class UserProviderImpl implements UserProvider {
     }
 
     @Override
-    public User update(int userId, String username, LocalDateTime firstLogin, boolean debugUser, boolean debugEnabled, int languageId) {
+    public @Nullable User update(int userId, @NotNull String username, @Nullable LocalDateTime firstLogin, boolean debugUser, boolean debugEnabled, int languageId) {
         String normalizedUsername = StringUtil.normalize(username);
-        if (userId < 1 || firstLogin == null || normalizedUsername == null || languageId < 1)
+        if (userId < 1 || normalizedUsername == null || languageId < 1)
             return null;
 
         User existing = cache.getById(userId);
@@ -115,19 +123,33 @@ public final class UserProviderImpl implements UserProvider {
                 languageId == existing.languageId())
             return existing; // No changes, return existing user
 
-        String sql = "UPDATE " + TABLE_NAME + " SET mojang_id = ?, username = ?, first_login = ?, debug_user = ?, debug_enabled = ?, language_id = ? WHERE id = ?";
+        @Language("MariaDB")
+        String sql = """
+                UPDATE %s
+                SET username = ?,
+                    first_login = ?,
+                    debug_user = ?,
+                    debug_enabled = ?,
+                    language_id = ?
+                WHERE id = ?
+                """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
-                    stmt.setString(1, existing.mojangId().toString());
-                    stmt.setString(2, normalizedUsername);
-                    stmt.setTimestamp(3, Timestamp.valueOf(firstLogin));
-                    stmt.setBoolean(4, debugUser);
-                    stmt.setBoolean(5, debugEnabled);
-                    stmt.setInt(6, languageId);
-                    stmt.setInt(7, userId);
-                });
+            stmt.setString(1, normalizedUsername);
+            stmt.setTimestamp(2, firstLogin != null ? Timestamp.valueOf(firstLogin) : null);
+            stmt.setBoolean(3, debugUser);
+            stmt.setBoolean(4, debugEnabled);
+            stmt.setInt(5, languageId);
+            stmt.setInt(6, userId);
+        });
         if (row < 1) return null;
 
-        User user = existing.withUpdateMeta(normalizedUsername, firstLogin, debugUser, debugEnabled, languageId);
+        User user = User.builder(existing)
+                .username(normalizedUsername)
+                .firstLogin(firstLogin)
+                .debugUser(debugUser)
+                .debugEnabled(debugEnabled)
+                .languageId(languageId)
+                .build();
         RefreshUtil.fireSingle(single, userId);
         return user;
     }
