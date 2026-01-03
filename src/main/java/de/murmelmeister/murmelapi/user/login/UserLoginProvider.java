@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user.login;
 
 import de.murmelmeister.murmelapi.user.session.UserSession;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.time.LocalDateTime;
@@ -10,17 +12,17 @@ import java.util.UUID;
 public interface UserLoginProvider {
     void refreshCache();
 
-    UserLogin findById(UUID id);
+    @Nullable UserLogin findById(@Nullable UUID id);
 
-    List<UserLogin> findByUserId(int userId);
+    @NotNull List<UserLogin> findByUserId(int userId);
 
-    List<UserLogin> findByIpAddress(InetAddress inetAddress);
+    @NotNull List<UserLogin> findByIpAddress(@Nullable InetAddress inetAddress);
 
-    List<UserLogin> findAll();
+    @NotNull List<UserLogin> findAll();
 
-    UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, InetAddress inetAddress, String clientBrand, int protocolVersion);
+    @Nullable UserLogin create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion);
 
-    UserLogin create(UserSession session);
+    @Nullable UserLogin create(@NotNull UserSession session);
 
-    int delete(UUID id);
+    int delete(@Nullable UUID id);
 }

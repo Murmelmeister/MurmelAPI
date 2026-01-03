@@ -2,8 +2,11 @@ package de.murmelmeister.murmelapi.user.login;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.user.session.UserSession;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
@@ -16,46 +19,52 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     private static final String TABLE_NAME = "user_login";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final UserLoginCache cache;
     private final RefreshType all = RefreshType.USER_LOGINS;
     private final RefreshType single = RefreshType.SINGLE_USER_LOGIN;
 
-    public UserLoginProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserLoginProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new UserLoginCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new UserLoginCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public UserLogin findById(UUID id) {
+    public @Nullable UserLogin findById(@Nullable UUID id) {
         return cache.getById(id);
     }
 
     @Override
-    public List<UserLogin> findByUserId(int userId) {
+    public @NotNull List<UserLogin> findByUserId(int userId) {
         return cache.getByUserId(userId);
     }
 
     @Override
-    public List<UserLogin> findByIpAddress(InetAddress inetAddress) {
+    public @NotNull List<UserLogin> findByIpAddress(@Nullable InetAddress inetAddress) {
         return cache.getByIpAddress(inetAddress);
     }
 
     @Override
-    public List<UserLogin> findAll() {
+    public @NotNull List<UserLogin> findAll() {
         return cache.getCachedLogins();
     }
 
     @Override
-    public UserLogin create(UUID sessionId, int userId, LocalDateTime loginTime, InetAddress inetAddress, String clientBrand, int protocolVersion) {
-        if (sessionId == null || userId < 1 || loginTime == null || inetAddress == null)
+    public UserLogin create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, String clientBrand, int protocolVersion) {
+        if (userId < 1)
             return null;
 
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (id, user_id, login_time, ip_address, client_brand, protocol_version) VALUES (?, ?, ?, ?, ?, ?)";
+        @Language("MariaDB")
+        String insertSql = """
+                INSERT INTO %s (id, user_id, login_time, ip_address, client_brand, protocol_version)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """.formatted(TABLE_NAME);
         int row = database.update(insertSql, stmt -> {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
@@ -66,34 +75,35 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT logout_time FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT logout_time FROM %s WHERE id = ?".formatted(TABLE_NAME);
         LocalDateTime logoutTime = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("logout_time").toLocalDateTime(),
                 stmt -> stmt.setString(1, sessionId.toString()));
         if (logoutTime == null) return null;
 
         UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, inetAddress, clientBrand, protocolVersion);
-        RefreshUtil.fireSingle(single, sessionId);
+        refreshProvider.fireSingle(single, sessionId);
         return login;
     }
 
     @Override
-    public UserLogin create(UserSession session) {
-        if (session == null) return null;
+    public @Nullable UserLogin create(@NotNull UserSession session) {
         return create(session.id(), session.userId(), session.loginTime(),
                 session.inetAddress(), session.clientBrand(), session.protocolVersion());
     }
 
     @Override
-    public int delete(UUID id) {
+    public int delete(@Nullable UUID id) {
         if (id == null) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setString(1, id.toString()));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, id);
+        refreshProvider.fireSingle(single, id);
         return row;
     }
 }
