@@ -24,18 +24,20 @@ public final class UserProviderImpl implements UserProvider {
     private static final String TABLE_NAME = "users";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final UserCache cache;
     private final RefreshType all = RefreshType.USERS;
     private final RefreshType single = RefreshType.SINGLE_USER;
 
     public UserProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.cache = new UserCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
