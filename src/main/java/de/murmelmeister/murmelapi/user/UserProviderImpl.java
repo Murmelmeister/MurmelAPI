@@ -4,7 +4,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -92,7 +91,7 @@ public final class UserProviderImpl implements UserProvider {
         if (id < 1) return null;
 
         User newUser = new User(id, uuid, normalizedUsername, null, false, false, false, 1);
-        RefreshUtil.fireSingle(single, newUser.id());
+        refreshProvider.fireSingle(single, newUser.id());
         return newUser;
     }
 
@@ -105,7 +104,7 @@ public final class UserProviderImpl implements UserProvider {
         int row = database.update(sql, stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, userId);
         return row;
     }
 
@@ -152,7 +151,7 @@ public final class UserProviderImpl implements UserProvider {
                 .debugEnabled(debugEnabled)
                 .languageId(languageId)
                 .build();
-        RefreshUtil.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, userId);
         return user;
     }
 }
