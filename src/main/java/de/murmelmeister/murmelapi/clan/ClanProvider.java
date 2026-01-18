@@ -1,22 +1,25 @@
 package de.murmelmeister.murmelapi.clan;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 import java.util.UUID;
 
 public interface ClanProvider {
     void refreshCache();
 
-    Clan findById(UUID id);
+    @Nullable Clan findById(@Nullable UUID id);
 
-    Clan findByName(String name);
+    @Nullable Clan findByName(@Nullable String name);
 
-    Clan findByOwner(int ownerId);
+    @Nullable Clan findByOwner(int ownerId);
 
-    List<Clan> findAll();
+    @NotNull List<Clan> findAll();
 
-    Clan create(String name, String tag, String sign, String description, int ownerId, int createdBy);
+    @Nullable Clan create(@NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int createdBy);
 
-    int delete(UUID id);
+    int delete(@NotNull UUID id);
 
-    Clan update(UUID id, String name, String tag, String sign, String description, int ownerId, int changedBy);
+    @Nullable Clan update(@NotNull UUID id, @NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int changedBy);
 }
