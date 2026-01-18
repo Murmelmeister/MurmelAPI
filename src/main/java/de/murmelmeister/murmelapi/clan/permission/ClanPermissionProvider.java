@@ -1,22 +1,25 @@
 package de.murmelmeister.murmelapi.clan.permission;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 import java.util.UUID;
 
 public interface ClanPermissionProvider {
     void refreshCache();
 
-    ClanPermission findPermission(UUID clanId, UUID groupId, String permission);
+    @Nullable ClanPermission findPermission(@Nullable UUID clanId, @Nullable UUID groupId, @Nullable String permission);
 
-    List<ClanPermission> findPermissions(UUID clanId, UUID groupId);
+    @Nullable List<ClanPermission> findPermissions(@Nullable UUID clanId, @Nullable UUID groupId);
 
-    ClanPermission add(UUID clanId, UUID groupId, String permission, long duration, int createdBy);
+    @Nullable ClanPermission add(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String permission, long duration, int createdBy);
 
-    int remove(UUID clanId, UUID groupId, String permission);
+    int remove(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String permission);
 
-    int clear(UUID clanId, UUID groupId);
+    int clear(@NotNull UUID clanId, @NotNull UUID groupId);
 
-    ClanPermission update(UUID clanId, UUID groupId, String permission, long duration, int changedBy);
+    @Nullable ClanPermission update(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String permission, long duration, int changedBy);
 
     int loadExpired();
 }
