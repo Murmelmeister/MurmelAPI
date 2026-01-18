@@ -35,11 +35,25 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_mojang_id ON users (mojang_id);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
 
-CREATE TABLE IF NOT EXISTS user_playtime (
+--CREATE TABLE IF NOT EXISTS user_playtime (
+--    id INT PRIMARY KEY,
+--    play_time INT NOT NULL DEFAULT 0,
+--    login_count INT NOT NULL DEFAULT 0,
+--    FOREIGN KEY (id) REFERENCES users(id)
+--) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_stats (
     id INT PRIMARY KEY,
+
     play_time INT NOT NULL DEFAULT 0,
-    login_count INT NOT NULL DEFAULT 0,
-    FOREIGN KEY (id) REFERENCES users(id)
+    daily_streak INT NOT NULL DEFAULT 0,
+    daily_streak_last_day DATE NULL,
+    last_seen_at DATETIME NULL,
+
+    FOREIGN KEY (id) REFERENCES users(id),
+
+    INDEX idx_user_stats_last_seen_at (last_seen_at),
+    INDEX idx_user_stats_streak_day (daily_streak_last_day)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_login (
@@ -347,4 +361,76 @@ CREATE TABLE IF NOT EXISTS user_inventory (
     inventory_value LONGTEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (inventory_id) REFERENCES inventory_type(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS maintenance_windows (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    title VARCHAR(64) NULL,
+    reason VARCHAR(255) NULL,
+    status ENUM('PLANNED','ACTIVE','ENDED','CANCELED') NOT NULL DEFAULT 'PLANNED',
+    start_at DATETIME NOT NULL,
+    end_at DATETIME NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    created_by INT NOT NULL,
+    updated_at DATETIME NULL,
+    updated_by INT NULL,
+
+    PRIMARY KEY (id),
+    CONSTRAINT chk_maintenance_window_range CHECK (end_at > start_at),
+
+    INDEX idx_mw_status_time (status, start_at, end_at),
+    INDEX idx_mw_time (start_at, end_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS maintenance_whitelist (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    maintenance_id BIGINT UNSIGNED NOT NULL,
+    user_id INT NOT NULL,
+
+    start_at NULL,
+    end_at DATETIME NULL,
+
+    note VARCHAR(255) NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    created_by INT NOT NULL,
+    updated_at DATETIME NULL,
+    updated_by INT NULL,
+
+    PRIMARY KEY (id),
+
+    CONSTRAINT fk_mwh_maintenance
+        FOREIGN KEY (maintenance_id) REFERENCES maintenance_windows(id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT chk_mwh_range CHECK (
+        (start_at IS NULL AND end_at IS NULL) OR
+        (start_at IS NOT NULL AND (end_at IS NULL OR end_at > start_at))
+    ),
+
+    INDEX idx_mwh_maintenance_user (maintenance_id, user_id),
+    INDEX idx_mwh_user_time (user_id, start_at, end_at),
+    INDEX idx_mwh_maintenance_time (maintenance_id, start_at, end_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_excuse_windows (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+
+    start_at DATETIME NOT NULL,
+    end_at DATETIME NOT NULL,
+
+    reason VARCHAR(255) NULL,
+
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    created_by INT NOT NULL,
+    updated_at DATETIME NULL,
+    updated_by INT NULL,
+
+    PRIMARY KEY (id),
+    CONSTRAINT chk_uew_range CHECK (end_at > start_at),
+
+    INDEX idx_uew_user_time (user_id, start_at, end_at),
+    INDEX idx_uew_time (start_at, end_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
