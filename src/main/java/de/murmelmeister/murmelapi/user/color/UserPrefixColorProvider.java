@@ -1,17 +1,20 @@
 package de.murmelmeister.murmelapi.user.color;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 public interface UserPrefixColorProvider {
     void refreshCache();
 
-    UserPrefixColor findById(int userId, String colorId);
+    @Nullable UserPrefixColor findById(int userId, @NotNull String colorId);
 
-    List<UserPrefixColor> findAll();
+    @NotNull List<UserPrefixColor> findAll();
 
-    UserPrefixColor create(int userId, String colorId, boolean active);
+    @Nullable UserPrefixColor create(int userId, @NotNull String colorId, boolean active);
 
-    int delete(int userId, String colorId);
+    int delete(int userId, @NotNull String colorId);
 
-    UserPrefixColor update(int userId, String colorId, boolean active);
+    @Nullable UserPrefixColor update(int userId, @NotNull String colorId, boolean active);
 }
