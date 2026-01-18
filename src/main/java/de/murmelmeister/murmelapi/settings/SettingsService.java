@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.settings;
 
 import com.google.gson.Gson;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,7 @@ public final class SettingsService {
         this.gson = gson;
     }
 
-    public <T> T get(String tagId, Class<T> type, T defaultValue) {
+    public <T> T get(@NotNull String tagId, @NotNull Class<T> type, T defaultValue) {
         Settings settings = provider.findById(tagId);
         if (settings == null) return defaultValue;
 
@@ -26,20 +27,20 @@ public final class SettingsService {
         }
     }
 
-    public <T> T get(String tagId, Class<T> type) {
+    public <T> T get(@NotNull String tagId, @NotNull Class<T> type) {
         return get(tagId, type, null);
     }
 
-    public <T> T get(Settings settings, Class<T> type) {
+    public <T> T get(@NotNull Settings settings, @NotNull Class<T> type) {
         return get(settings.tagId(), type);
     }
 
-    public <T> Settings set(String tagId, T value) {
+    public <T> Settings set(@NotNull String tagId, @NotNull T value) {
         String json = gson.toJson(value);
-        return provider.upsert(new Settings(tagId, json, null));
+        return provider.upsert(tagId, json);
     }
 
-    public int delete(String tagId) {
+    public int delete(@NotNull String tagId) {
         return provider.delete(tagId);
     }
 }
