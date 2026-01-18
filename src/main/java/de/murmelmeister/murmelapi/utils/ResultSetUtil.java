@@ -27,9 +27,11 @@ import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTime;
 import de.murmelmeister.murmelapi.user.session.UserSession;
+import de.murmelmeister.murmelapi.user.stats.UserStats;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -381,6 +383,17 @@ public final class ResultSetUtil {
             int inventoryId = result.getInt("inventory_id");
             String value = result.getString("inventory_value");
             return new UserInventory(userId, inventoryId, value);
+        };
+    }
+
+    public static ResultSetProcessor<UserStats> userStats() {
+        return result -> {
+            int userId = result.getInt("id");
+            int playTime = result.getInt("play_time");
+            int dailyStreak = result.getInt("daily_streak");
+            LocalDate lastDay = result.getDate("last_day") != null ? result.getDate("last_day").toLocalDate() : null;
+            LocalDateTime lastSeen = result.getTimestamp("last_seen") != null ? result.getTimestamp("last_seen").toLocalDateTime() : null;
+            return new UserStats(userId, playTime, dailyStreak, lastDay, lastSeen);
         };
     }
 }
