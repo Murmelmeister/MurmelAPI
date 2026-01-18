@@ -1,20 +1,23 @@
 package de.murmelmeister.murmelapi.clan.member;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 import java.util.UUID;
 
 public interface ClanMemberProvider {
     void refreshCache();
 
-    ClanMember findMember(UUID clanId, int userId);
+    @Nullable ClanMember findMember(@NotNull UUID clanId, int userId);
 
-    List<ClanMember> findClan(UUID clanId);
+    @Nullable List<ClanMember> findClan(@Nullable UUID clanId);
 
-    List<ClanMember> findAll();
+    @NotNull List<ClanMember> findAll();
 
-    ClanMember create(UUID clanId, int userId, UUID groupId);
+    @Nullable ClanMember create(@NotNull UUID clanId, int userId, @NotNull UUID groupId);
 
-    int delete(UUID clanId, int userId);
+    int delete(@NotNull UUID clanId, int userId);
 
-    ClanMember update(UUID clanId, int userId, UUID groupId);
+    @Nullable ClanMember update(@NotNull UUID clanId, int userId, @NotNull UUID groupId);
 }
