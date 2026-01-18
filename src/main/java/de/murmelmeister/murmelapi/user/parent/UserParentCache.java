@@ -6,56 +6,75 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class UserParentCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_USER_ID = "SELECT * FROM %s WHERE user_id = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE user_id = ? AND parent_id = ?";
+
     private static final String ALL_KEY = "ALL";
     private static final Pattern KEY_PATTERN = Pattern.compile(".*userId=(\\d+), parentId=(\\d+).*");
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<ParentKey, UserParent> cacheByKey;
-    private final LoadingCache<Integer, List<UserParent>> cacheByUserId;
-    private final LoadingCache<String, List<UserParent>> listCache;
     private final Long fetchLimit;
 
-    public UserParentCache(Database database, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull ParentKey, Optional<UserParent>> cacheByKey;
+    private final LoadingCache<@NotNull Integer, List<UserParent>> cacheByUserId;
+    private final LoadingCache<@NotNull String, List<UserParent>> listCache;
+
+    public UserParentCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapacity, refreshInterval);
         this.cacheByUserId = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.USER_PARENTS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
+        }
+
+        if (RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (!(key instanceof String)) {
-                if (key instanceof ParentKey parentKey)
-                    refreshSingle(parentKey);
+                if (key instanceof ParentKey(int userId, int parentId))
+                    remove(userId, parentId);
                 else if (key instanceof Integer userId)
-                    refreshSingle(userId);
+                    remove(userId);
             } else {
                 Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     int userId = Integer.parseInt(matcher.group(1));
                     int parentId = Integer.parseInt(matcher.group(2));
-                    refreshSingle(new ParentKey(userId, parentId));
+                    remove(userId, parentId);
                 } else {
                     int userId = Integer.parseInt((String) key);
-                    refreshSingle(userId);
+                    remove(userId);
                 }
             }
         }
@@ -63,71 +82,45 @@ public class UserParentCache implements MurmelCache {
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<UserParent> parents = loadAllFromDatabase();
-        if (parents.isEmpty())
-            return;
-
-        Map<Integer, List<UserParent>> byUser = new HashMap<>();
-        for (UserParent parent : parents) {
-            ParentKey key = new ParentKey(parent.userId(), parent.parentId());
-            cacheByKey.put(key, parent);
-            byUser.computeIfAbsent(parent.userId(), ignored -> new ArrayList<>()).add(parent);
-        }
-
-        byUser.forEach((userId, values) -> cacheByUserId.put(userId, List.copyOf(values)));
-        listCache.put(ALL_KEY, List.copyOf(parents));
-    }
-
-    private void refreshSingle(int userId) {
-        remove(userId);
-        List<UserParent> parents = loadByUserId(userId);
-        parents.forEach(this::put);
-    }
-
-    private void refreshSingle(ParentKey key) {
-        remove(key.userId(), key.parentId());
-        UserParent userParent = loadByKey(key);
-        if (userParent != null)
-            put(userParent);
-    }
-
-    private List<UserParent> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<UserParent> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userParent());
     }
 
-    private List<UserParent> loadByUserId(int userId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE user_id = ?";
+    private @NotNull List<UserParent> loadByUserId(int userId) {
+        String sql = SELECT_BY_USER_ID.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userParent(),
                 stmt -> stmt.setInt(1, userId));
     }
 
-    private UserParent loadByKey(ParentKey key) {
-        String sql = "SELECT * FROM " + tableName + " WHERE user_id = ? AND parent_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userParent(),
+    private Optional<UserParent> loadByKey(ParentKey key) {
+        String sql = SELECT_BY_KEY.formatted(tableName);
+        UserParent userParent = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userParent(),
                 stmt -> {
                     stmt.setInt(1, key.userId());
                     stmt.setInt(2, key.parentId());
                 });
+
+        return Optional.ofNullable(userParent);
     }
 
-    public UserParent get(int userId, int parentId) {
-        return cacheByKey.get(new ParentKey(userId, parentId));
+    public @Nullable UserParent get(int userId, int parentId) {
+        Optional<UserParent> optParent = cacheByKey.get(new ParentKey(userId, parentId));
+        return optParent != null && optParent.isPresent() ? optParent.orElse(null) : null;
     }
 
-    public List<UserParent> getParents(int userId) {
+    public @Nullable List<UserParent> getParents(int userId) {
         return cacheByUserId.get(userId);
     }
 
-    public void put(UserParent userParent) {
+    public void put(@Nullable UserParent userParent) {
+        if (userParent == null) return;
         ParentKey key = new ParentKey(userParent.userId(), userParent.parentId());
-        cacheByKey.put(key, userParent);
+        cacheByKey.put(key, Optional.of(userParent));
         CacheUtil.put(cacheByUserId, userParent.userId(), userParent,
                 v -> v.userId() == userParent.userId() && v.parentId() == userParent.parentId());
         CacheUtil.put(listCache, ALL_KEY, userParent,
@@ -154,7 +147,7 @@ public class UserParentCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public List<UserParent> getCachedParents() {
+    public @NotNull List<UserParent> getCachedParents() {
         List<UserParent> parents = listCache.get(ALL_KEY);
         if (parents == null || parents.isEmpty())
             return Collections.emptyList();
