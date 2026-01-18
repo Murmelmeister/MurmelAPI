@@ -1,13 +1,48 @@
 package de.murmelmeister.murmelapi.settings;
 
-import java.time.LocalDateTime;
+import org.jetbrains.annotations.NotNull;
 
-public record Settings(String tagId, String json, LocalDateTime updatedAt) {
-    public Settings withUpdateMeta(String json, LocalDateTime updatedAt) {
-        return new Settings(
-                tagId,
-                json != null ? json : this.json,
-                updatedAt != null ? updatedAt : this.updatedAt
-        );
+import java.time.LocalDateTime;
+import java.util.Objects;
+
+public record Settings(
+        @NotNull String tagId,
+        @NotNull String json,
+        @NotNull LocalDateTime updatedAt
+) {
+    public Settings {
+        Objects.requireNonNull(tagId, "tagId must not be null");
+        Objects.requireNonNull(json, "json must not be null");
+        Objects.requireNonNull(updatedAt, "updatedAt must not be null");
+    }
+
+    public static @NotNull Builder builder(@NotNull Settings settings) {
+        return new Builder(settings);
+    }
+
+    public static class Builder {
+        private final String tagId;
+        private String json;
+        private LocalDateTime updatedAt;
+
+        private Builder(@NotNull Settings settings) {
+            this.tagId = settings.tagId();
+            this.json = settings.json();
+            this.updatedAt = settings.updatedAt();
+        }
+
+        public Builder json(@NotNull String json) {
+            this.json = json;
+            return this;
+        }
+
+        public Builder updatedAt(@NotNull LocalDateTime updatedAt) {
+            this.updatedAt = updatedAt;
+            return this;
+        }
+
+        public @NotNull Settings build() {
+            return new Settings(tagId, json, updatedAt);
+        }
     }
 }
