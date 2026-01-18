@@ -11,12 +11,12 @@ import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -28,34 +28,36 @@ import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
  */
 public final class PermissionProvider implements Permission, MurmelCache {
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final UserProvider userProvider;
     private final GroupParentProvider groupParentProvider;
     private final GroupPermissionProvider groupPermissionProvider;
     private final UserParentProvider userParentProvider;
     private final UserPermissionProvider userPermissionProvider;
-    private final LoadingCache<Integer, Set<String>> cache;
+    private final LoadingCache<@NotNull Integer, Set<String>> cache;
 
-    public PermissionProvider(Database database, UserProvider userProvider,
+    public PermissionProvider(Database database, RefreshProvider refreshProvider, UserProvider userProvider,
                               GroupParentProvider groupParentProvider, GroupPermissionProvider groupPermissionProvider,
                               UserParentProvider userParentProvider, UserPermissionProvider userPermissionProvider,
                               long cacheCapcity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.userProvider = userProvider;
         this.groupParentProvider = groupParentProvider;
         this.groupPermissionProvider = groupPermissionProvider;
         this.userParentProvider = userParentProvider;
         this.userPermissionProvider = userPermissionProvider;
         this.cache = CacheUtil.buildCacheRefresh(this::loadAllFromDatabase, cacheCapcity, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
-    private Set<String> loadAllFromDatabase(int userId) {
+    private @NotNull Set<String> loadAllFromDatabase(int userId) {
         return new LinkedHashSet<>(database.queryListCallable("CALL getUserPermission(?)",
                 resultSet -> resultSet.getString("permission"),
                 stmt -> stmt.setInt(1, userId)));
     }
 
-    public static void setup(Database database) {
+    public static void setup(@NotNull Database database) {
         database.update(Database.getProcedureQuery("getUserPermission", "p_user_id INT", """
                      WITH RECURSIVE grp(grp_id) AS (
                          SELECT parent_id AS grp_id
@@ -93,8 +95,8 @@ public final class PermissionProvider implements Permission, MurmelCache {
     }
 
     @Override
-    public boolean hasPermission(User user, String permission) {
-        if (user.id() < CONSOLE_USER_ID || permission == null || permission.isEmpty())
+    public boolean hasPermission(@NotNull User user, @NotNull String permission) {
+        if (user.id() < CONSOLE_USER_ID || permission.isEmpty())
             return false; // Invalid permission
         if (user.systemUser()) return true; // Special case for server-wide permissions
         Set<String> permissions = getPermissions(user.id());
@@ -123,7 +125,7 @@ public final class PermissionProvider implements Permission, MurmelCache {
     }
 
     @Override
-    public boolean hasPermission(UUID uuid, String permission) {
+    public boolean hasPermission(@NotNull UUID uuid, @NotNull String permission) {
         User user = userProvider.findByMojangId(uuid);
         if (user == null) return false; // User not found
         return hasPermission(user, permission);
@@ -139,7 +141,7 @@ public final class PermissionProvider implements Permission, MurmelCache {
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         // Let the cache refresh by single and all events (Not really optimal, but works for now)
         if (RefreshType.USER_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
@@ -152,14 +154,12 @@ public final class PermissionProvider implements Permission, MurmelCache {
                 || RefreshType.SINGLE_GROUP_PARENT.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             cache.invalidateAll();
-            List<Integer> userIds = userProvider.findAll().stream().map(User::id).toList();
-            userIds.forEach(id -> cache.put(id, loadAllFromDatabase(id)));
         }
     }
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         cache.invalidateAll();
     }
 }
