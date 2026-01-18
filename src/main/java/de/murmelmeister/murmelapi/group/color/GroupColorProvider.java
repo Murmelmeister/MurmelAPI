@@ -1,5 +1,8 @@
 package de.murmelmeister.murmelapi.group.color;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 /**
@@ -15,17 +18,17 @@ import java.util.List;
 public interface GroupColorProvider {
     void refreshCache();
 
-    GroupColor getGroupColor(int groupId, int typeId);
+    @Nullable GroupColor getGroupColor(int groupId, int typeId);
 
-    List<GroupColor> getGroupColors(int groupId);
+    @Nullable List<GroupColor> getGroupColors(int groupId);
 
-    List<GroupColor> getGroupColors();
+    @NotNull List<GroupColor> getGroupColors();
 
-    GroupColor add(int groupId, int typeId, String value, int createdBy);
+    @Nullable GroupColor add(int groupId, int typeId, @NotNull String value, int createdBy);
 
     int remove(int groupId, int typeId);
 
     int clear(int groupId);
 
-    GroupColor update(int groupId, int typeId, String value, int changedBy);
+    @Nullable GroupColor update(int groupId, int typeId, @NotNull String value, int changedBy);
 }
