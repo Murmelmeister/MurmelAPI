@@ -2,6 +2,8 @@ package de.murmelmeister.murmelapi.language.message;
 
 import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +29,7 @@ public final class MessageService {
         this.messageProvider = provider;
     }
 
-    public String getMessage(String key, int languageId) {
+    public @Nullable String getMessage(@NotNull String key, int languageId) {
         Language language = languageProvider.findById(languageId);
         if (language != null) {
             Message message = messageProvider.get(key, language.id());
@@ -47,7 +49,7 @@ public final class MessageService {
         return null;
     }
 
-    public String getMessage(String key, String code) {
+    public @Nullable String getMessage(@NotNull String key, @NotNull String code) {
         Language language = languageProvider.findByCode(code);
         if (language != null) {
             Message message = messageProvider.get(key, language.id());
