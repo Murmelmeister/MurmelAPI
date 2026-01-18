@@ -78,14 +78,14 @@ public class UserSessionCache implements MurmelCache {
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userSession());
     }
 
-    private Optional<UserSession> loadByUserId(int userId) {
+    private @NotNull Optional<UserSession> loadByUserId(int userId) {
         String sql = SELECT_BY_USER_ID.formatted(tableName);
         UserSession session = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
                 stmt -> stmt.setInt(1, userId));
         return Optional.ofNullable(session);
     }
 
-    private Optional<UserSession> loadById(UUID sessionId) {
+    private @NotNull Optional<UserSession> loadById(UUID sessionId) {
         String sql = SELECT_BY_ID.formatted(tableName);
         UserSession session = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
                 stmt -> stmt.setString(1, sessionId.toString()));
