@@ -24,7 +24,7 @@ public final class MessageService {
     private final LanguageProvider languageProvider;
     private final MessageProvider messageProvider;
 
-    public MessageService(LanguageProvider languageProvider, MessageProvider provider) {
+    public MessageService(@NotNull LanguageProvider languageProvider, @NotNull MessageProvider provider) {
         this.languageProvider = languageProvider;
         this.messageProvider = provider;
     }
