@@ -1,7 +1,6 @@
 package de.murmelmeister.murmelapi.user.color;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -16,13 +15,31 @@ public record UserPrefixColor(
         Objects.requireNonNull(colorId, "colorId must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
     }
+    public static @NotNull Builder builder(@NotNull UserPrefixColor userPrefixColor) {
+        return new Builder(userPrefixColor);
+    }
 
-    public UserPrefixColor withActive(@Nullable Boolean active) {
-        return new UserPrefixColor(
-                this.userId,
-                this.colorId,
-                active != null ? active : this.active,
-                this.createdAt
-        );
+    public static class Builder {
+        private final int userId;
+        private final String colorId;
+        private final LocalDateTime createdAt;
+
+        private boolean active;
+
+        private Builder(@NotNull UserPrefixColor userPrefixColor) {
+            this.userId = userPrefixColor.userId();
+            this.colorId = userPrefixColor.colorId();
+            this.active = userPrefixColor.active();
+            this.createdAt = userPrefixColor.createdAt();
+        }
+
+        public Builder active(boolean active) {
+            this.active = active;
+            return this;
+        }
+
+        public @NotNull UserPrefixColor build() {
+            return new UserPrefixColor(userId, colorId, active, createdAt);
+        }
     }
 }

@@ -104,7 +104,9 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
         });
         if (row < 1) return null;
 
-        UserPrefixColor updated = existing.withActive(active);
+        UserPrefixColor updated = UserPrefixColor.builder(existing)
+                .active(active)
+                .build();
         refreshProvider.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
         return updated;
     }
