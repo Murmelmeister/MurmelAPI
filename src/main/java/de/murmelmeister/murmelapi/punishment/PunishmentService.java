@@ -9,21 +9,23 @@ import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUser;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
+import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
+import java.util.Objects;
 import java.util.UUID;
 
-public final class PunishmentService {
-    private final PunishmentReasonProvider reasonProvider;
-    private final PunishmentLogProvider logProvider;
-    private final PunishmentCurrentIpProvider ipProvider;
-    private final PunishmentCurrentUserProvider userProvider;
-
-    public PunishmentService(PunishmentReasonProvider reasonProvider, PunishmentLogProvider logProvider, PunishmentCurrentIpProvider ipProvider, PunishmentCurrentUserProvider userProvider) {
-        this.reasonProvider = reasonProvider;
-        this.logProvider = logProvider;
-        this.ipProvider = ipProvider;
-        this.userProvider = userProvider;
+public record PunishmentService(
+        @NotNull PunishmentReasonProvider reasonProvider,
+        @NotNull PunishmentLogProvider logProvider,
+        @NotNull PunishmentCurrentIpProvider ipProvider,
+        @NotNull PunishmentCurrentUserProvider userProvider
+) {
+    public PunishmentService {
+        Objects.requireNonNull(reasonProvider, "reasonProvider must not be null");
+        Objects.requireNonNull(logProvider, "logProvider must not be null");
+        Objects.requireNonNull(ipProvider, "ipProvider must not be null");
+        Objects.requireNonNull(userProvider, "userProvider must not be null");
     }
 
     public int punishedUser(int userId, int reasonId, int createdBy) {
@@ -51,7 +53,7 @@ public final class PunishmentService {
         return 2; // Note: 1 for log creation, 1 for user update
     }
 
-    public int punishedIp(InetAddress inetAddress, int reasonId, int createdBy) {
+    public int punishedIp(@NotNull InetAddress inetAddress, int reasonId, int createdBy) {
         PunishmentReason reason = reasonProvider.getReason(reasonId);
         PunishmentLog log = reason == null ? null : logProvider.create(null, inetAddress, reason, createdBy);
         if (log == null)
@@ -63,7 +65,7 @@ public final class PunishmentService {
         return 2; // Note: 1 for log creation, 1 for IP creation
     }
 
-    public int updatedPunishedIp(InetAddress inetAddress, int reasonId, int createdBy) {
+    public int updatedPunishedIp(@NotNull InetAddress inetAddress, int reasonId, int createdBy) {
         PunishmentReason reason = reasonProvider.getReason(reasonId);
         PunishmentLog log = reason == null ? null : logProvider.modify(null, inetAddress, reason, createdBy);
         if (log == null)
@@ -76,7 +78,7 @@ public final class PunishmentService {
         return 2; // Note: 1 for log creation, 1 for IP update
     }
 
-    public int unpunishedUser(int userId, int typeId, UUID logId, int changedBy) {
+    public int unpunishedUser(int userId, int typeId, @NotNull UUID logId, int changedBy) {
         PunishmentLog currentLog = logProvider.getLog(logId);
         if (currentLog == null)
             throw new PunishmentException("Punishment log not found for user: " + userId + " with type: " + typeId);
@@ -91,7 +93,7 @@ public final class PunishmentService {
         return row;
     }
 
-    public int unpunishedIp(InetAddress inetAddress, int typeId, UUID logId, int changedBy) {
+    public int unpunishedIp(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId, int changedBy) {
         PunishmentLog currentLog = logProvider.getLog(logId);
         if (currentLog == null)
             throw new PunishmentException("Punishment log not found for IP: " + inetAddress.getHostAddress() + " with type: " + typeId);
@@ -110,7 +112,7 @@ public final class PunishmentService {
         userProvider.delete(userId, typeId);
     }
 
-    public void autoUnpunishedIp(InetAddress inetAddress, int typeId) {
+    public void autoUnpunishedIp(@NotNull InetAddress inetAddress, int typeId) {
         ipProvider.delete(inetAddress, typeId);
     }
 
@@ -118,16 +120,16 @@ public final class PunishmentService {
         return userProvider.getPunishedUser(userId, typeId) != null;
     }
 
-    public boolean isPunishedIp(InetAddress inetAddress, int typeId) {
+    public boolean isPunishedIp(@NotNull InetAddress inetAddress, int typeId) {
         return ipProvider.getPunishedIp(inetAddress, typeId) != null;
     }
 
-    public boolean isExpiredUser(UUID logId) {
+    public boolean isExpiredUser(@NotNull UUID logId) {
         PunishmentLog log = logProvider.getLog(logId);
         return log != null && log.isExpired();
     }
 
-    public boolean isExpiredIp(UUID logId) {
+    public boolean isExpiredIp(@NotNull UUID logId) {
         PunishmentLog log = logProvider.getLog(logId);
         return log != null && log.isExpired();
     }
