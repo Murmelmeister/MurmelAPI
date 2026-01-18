@@ -1,5 +1,8 @@
 package de.murmelmeister.murmelapi.group;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 /**
@@ -15,17 +18,17 @@ import java.util.List;
 public sealed interface GroupProvider permits GroupProviderImpl {
     void refreshCache();
 
-    Group findById(int id);
+    @Nullable Group findById(int id);
 
-    Group findByName(String groupName);
+    @Nullable Group findByName(@Nullable String groupName);
 
-    List<Group> findAll();
+    @NotNull List<Group> findAll();
 
-    List<String> findAllGroupNames();
+    @NotNull List<String> findAllGroupNames();
 
-    Group create(String groupName, int priority, int createdBy);
+    @Nullable Group create(@NotNull String groupName, int priority, int createdBy);
 
     int delete(int groupId);
 
-    Group update(int groupId, String groupName, int priority, int changedBy);
+    @Nullable Group update(int groupId, @NotNull String groupName, int priority, int changedBy);
 }
