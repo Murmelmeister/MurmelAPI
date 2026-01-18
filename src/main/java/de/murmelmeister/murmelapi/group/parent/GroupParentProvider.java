@@ -1,5 +1,7 @@
 package de.murmelmeister.murmelapi.group.parent;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 /**
@@ -10,17 +12,17 @@ import java.util.List;
 public sealed interface GroupParentProvider permits GroupParentProviderImpl {
     void refreshCache();
 
-    GroupParent getParent(int groupId, int parentId);
+    @Nullable GroupParent getParent(int groupId, int parentId);
 
-    List<GroupParent> getParents(int groupId);
+    @Nullable List<GroupParent> getParents(int groupId);
 
-    GroupParent add(int groupId, int parentId, long duration, int createdBy);
+    @Nullable GroupParent add(int groupId, int parentId, long duration, int createdBy);
 
     int remove(int groupId, int parentId);
 
     int clear(int groupId);
 
-    GroupParent update(int groupId, int parentId, long duration, int changedBy);
+    @Nullable GroupParent update(int groupId, int parentId, long duration, int changedBy);
 
     int loadExpired();
 }
