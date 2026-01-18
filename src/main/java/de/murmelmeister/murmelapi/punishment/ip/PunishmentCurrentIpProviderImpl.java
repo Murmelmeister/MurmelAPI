@@ -106,7 +106,9 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
         });
         if (row < 1) return null;
 
-        PunishmentCurrentIp punish = existing.withUpdateLog(logId);
+        PunishmentCurrentIp punish = PunishmentCurrentIp.builder(existing)
+                .logId(logId)
+                .build();
         refreshProvider.fireSingle(single, new PunishmentCurrentIpCache.IpTypeKey(inetAddress, typeId));
         return punish;
     }

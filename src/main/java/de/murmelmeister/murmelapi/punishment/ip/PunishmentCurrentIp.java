@@ -16,7 +16,29 @@ public record PunishmentCurrentIp(
         Objects.requireNonNull(logId, "logId must not be null");
     }
 
-    public @NotNull PunishmentCurrentIp withUpdateLog(UUID logId) {
-        return new PunishmentCurrentIp(inetAddress, typeId, logId != null ? logId : this.logId);
+    public static @NotNull Builder builder(@NotNull PunishmentCurrentIp currentIp) {
+        return new Builder(currentIp);
+    }
+
+    public static class Builder {
+        private final InetAddress inetAddress;
+        private final int typeId;
+
+        private UUID logId;
+
+        private Builder(@NotNull PunishmentCurrentIp currentIp) {
+            this.inetAddress = currentIp.inetAddress();
+            this.typeId = currentIp.typeId();
+            this.logId = currentIp.logId();
+        }
+
+        public Builder logId(@NotNull UUID logId) {
+            this.logId = logId;
+            return this;
+        }
+
+        public @NotNull PunishmentCurrentIp build() {
+            return new PunishmentCurrentIp(inetAddress, typeId, logId);
+        }
     }
 }
