@@ -1,17 +1,20 @@
 package de.murmelmeister.murmelapi.color;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 public interface PrefixColorProvider {
     void refreshCache();
 
-    PrefixColor findById(String id);
+    @Nullable PrefixColor findById(@Nullable String id);
 
-    List<PrefixColor> findAll();
+    @NotNull List<PrefixColor> findAll();
 
-    PrefixColor create(String id, String color, boolean animated, int createdBy);
+    @Nullable PrefixColor create(@NotNull String id, @NotNull String color, boolean animated, int createdBy);
 
-    int delete(String id);
+    int delete(@NotNull String id);
 
-    PrefixColor update(String id, String color, boolean animated, int changedBy);
+    @Nullable PrefixColor update(@NotNull String id, @NotNull String color, boolean animated, int changedBy);
 }
