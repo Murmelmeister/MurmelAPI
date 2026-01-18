@@ -1,15 +1,66 @@
 package de.murmelmeister.murmelapi.group.color;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.time.LocalDateTime;
+import java.util.Objects;
 
-public record GroupColor(int groupId, int typeId, String value, int createdBy, LocalDateTime createdAt,
-                         Integer changedBy, LocalDateTime changedAt) {
+public record GroupColor(
+        int groupId,
+        int typeId,
+        @NotNull String value,
+        int createdBy,
+        @NotNull LocalDateTime createdAt,
+        @Nullable Integer changedBy,
+        @Nullable LocalDateTime changedAt
+) {
+    public GroupColor {
+        Objects.requireNonNull(value, "value must not be null");
+        Objects.requireNonNull(createdAt, "createdAt must not be null");
+    }
 
-    public GroupColor withUpdateMeta(String value, Integer changedBy, LocalDateTime changedAt) {
-        return new GroupColor(groupId, typeId,
-                value != null ? value : this.value,
-                createdBy, createdAt,
-                changedBy != null ? changedBy : this.changedBy,
-                changedAt != null ? changedAt : this.changedAt);
+    public static @NotNull Builder builder(@NotNull GroupColor groupColor) {
+        return new Builder(groupColor);
+    }
+
+    public static class Builder {
+        private final int groupId;
+        private final int typeId;
+        private final int createdBy;
+        private final LocalDateTime createdAt;
+
+        private String value;
+        private Integer changedBy;
+        private LocalDateTime changedAt;
+
+        public Builder(@NotNull GroupColor groupColor) {
+            this.groupId = groupColor.groupId();
+            this.typeId = groupColor.typeId();
+            this.createdBy = groupColor.createdBy();
+            this.createdAt = groupColor.createdAt();
+            this.value = groupColor.value();
+            this.changedBy = groupColor.changedBy();
+            this.changedAt = groupColor.changedAt();
+        }
+
+        public Builder value(@NotNull String value) {
+            this.value = value;
+            return this;
+        }
+
+        public Builder changedBy(@Nullable Integer changedBy) {
+            this.changedBy = changedBy;
+            return this;
+        }
+
+        public Builder changedAt(@Nullable LocalDateTime changedAt) {
+            this.changedAt = changedAt;
+            return this;
+        }
+
+        public @NotNull GroupColor build() {
+            return new GroupColor(groupId, typeId, value, createdBy, createdAt, changedBy, changedAt);
+        }
     }
 }
