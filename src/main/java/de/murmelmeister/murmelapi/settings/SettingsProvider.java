@@ -1,19 +1,22 @@
 package de.murmelmeister.murmelapi.settings;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 public interface SettingsProvider {
     void refreshCache();
 
-    Settings findById(String tag);
+    @Nullable Settings findById(@Nullable String tag);
 
-    List<Settings> findAll();
+    @NotNull List<Settings> findAll();
 
-    Settings create(String tagId, String json);
+    @Nullable Settings create(@NotNull String tagId, @NotNull String json);
 
-    Settings update(String tagId, String json);
+    @Nullable Settings update(@NotNull String tagId, @NotNull String json);
 
-    Settings upsert(Settings settings);
+    @Nullable Settings upsert(@NotNull String tagId, @NotNull String json);
 
-    int delete(String tagId);
+    int delete(@NotNull String tagId);
 }
