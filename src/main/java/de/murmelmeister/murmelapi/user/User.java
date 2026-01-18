@@ -25,7 +25,7 @@ public record User(
         return debugUser && debugEnabled;
     }
 
-    public static @NotNull Builder builder(User user) {
+    public static @NotNull Builder builder(@NotNull User user) {
         return new Builder(user);
     }
 
@@ -40,7 +40,7 @@ public record User(
         private boolean debugEnabled;
         private int languageId;
 
-        private Builder(User user) {
+        private Builder(@NotNull User user) {
             this.id = user.id();
             this.mojangId = user.mojangId();
             this.systemUser = user.systemUser();
