@@ -1,8 +1,10 @@
 package de.murmelmeister.murmelapi.user.parent;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.Nullable;
 
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -20,37 +22,43 @@ public final class UserParentProviderImpl implements UserParentProvider {
     private static final String TABLE_NAME = "user_parent";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final UserParentCache cache;
     private final RefreshType all = RefreshType.USER_PARENTS;
     private final RefreshType single = RefreshType.SINGLE_USER_PARENT;
 
-    public UserParentProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserParentProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new UserParentCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new UserParentCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public UserParent getParent(int userId, int parentId) {
+    public @Nullable UserParent getParent(int userId, int parentId) {
         return cache.get(userId, parentId);
     }
 
     @Override
-    public List<UserParent> getParents(int userId) {
+    public @Nullable List<UserParent> getParents(int userId) {
         return cache.getParents(userId);
     }
 
     @Override
-    public UserParent add(int userId, int parentId, long duration, int createdBy) {
+    public @Nullable UserParent add(int userId, int parentId, long duration, int createdBy) {
         if (userId < 1 || parentId < 1 || duration < -1 || createdBy < CONSOLE_USER_ID)
             return null;
 
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (user_id, parent_id, expires_at, created_by) VALUES (?, ?, ?, ?)";
+        @Language("MariaDB")
+        String insertSql = """
+                INSERT INTO %s (user_id, parent_id, expires_at, created_by)
+                VALUES (?, ?, ?, ?)
+                """.formatted(TABLE_NAME);
         int row = database.update(insertSql, stmt -> {
             stmt.setInt(1, userId);
             stmt.setInt(2, parentId);
@@ -59,7 +67,8 @@ public final class UserParentProviderImpl implements UserParentProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE user_id = ? AND parent_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT created_at FROM %s WHERE user_id = ? AND parent_id = ?".formatted(TABLE_NAME);
         LocalDateTime createdAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> {
@@ -69,7 +78,7 @@ public final class UserParentProviderImpl implements UserParentProvider {
         if (createdAt == null) return null;
 
         UserParent userParent = new UserParent(userId, parentId, expiresAt, createdBy, createdAt, null, null);
-        RefreshUtil.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
+        refreshProvider.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
         return userParent;
     }
 
@@ -77,14 +86,15 @@ public final class UserParentProviderImpl implements UserParentProvider {
     public int remove(int userId, int parentId) {
         if (userId < 1 || parentId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE user_id = ? AND parent_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE user_id = ? AND parent_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setInt(1, userId);
             stmt.setInt(2, parentId);
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
+        refreshProvider.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
         return row;
     }
 
@@ -92,17 +102,18 @@ public final class UserParentProviderImpl implements UserParentProvider {
     public int clear(int userId) {
         if (userId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE user_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE user_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, userId);
         return row;
     }
 
     @Override
-    public UserParent update(int userId, int parentId, long duration, int changedBy) {
+    public @Nullable UserParent update(int userId, int parentId, long duration, int changedBy) {
         if (userId < 1 || parentId < 1 || duration < -1 || changedBy < CONSOLE_USER_ID)
             return null;
 
@@ -113,7 +124,8 @@ public final class UserParentProviderImpl implements UserParentProvider {
         if (Objects.equals(expiresAt, existing.expiresAt()))
             return existing; // No changes, return existing
 
-        String updateSql = "UPDATE " + TABLE_NAME + " SET expires_at = ?, changed_by = ? WHERE user_id = ? AND parent_id = ?";
+        @Language("MariaDB")
+        String updateSql = "UPDATE %s SET expires_at = ?, changed_by = ? WHERE user_id = ? AND parent_id = ?".formatted(TABLE_NAME);
         int row = database.update(updateSql, stmt -> {
             stmt.setTimestamp(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
             stmt.setInt(2, changedBy);
@@ -122,7 +134,8 @@ public final class UserParentProviderImpl implements UserParentProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE user_id = ? AND parent_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT changed_at FROM %s WHERE user_id = ? AND parent_id = ?".formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
@@ -131,8 +144,12 @@ public final class UserParentProviderImpl implements UserParentProvider {
                 });
         if (changedAt == null) return null;
 
-        UserParent userParent = existing.withUpdateMeta(expiresAt, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
+        UserParent userParent = UserParent.builder(existing)
+                .expiresAt(expiresAt)
+                .changedBy(changedBy)
+                .changedAt(changedAt)
+                .build();
+        refreshProvider.fireSingle(single, new UserParentCache.ParentKey(userId, parentId));
         return userParent;
     }
 
@@ -146,11 +163,12 @@ public final class UserParentProviderImpl implements UserParentProvider {
         if (expiredParents.isEmpty()) return 0;
 
         // Delete expired parents from the database
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP()";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP()".formatted(TABLE_NAME);
         int removed = database.update(sql);
 
         // Refresh the cache
-        expiredParents.forEach(key -> RefreshUtil.fireSingle(single, key));
+        expiredParents.forEach(key -> refreshProvider.fireSingle(single, key));
         return removed;
     }
 }
