@@ -1,5 +1,8 @@
 package de.murmelmeister.murmelapi.group.permission;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 /**
@@ -9,17 +12,17 @@ import java.util.List;
 public sealed interface GroupPermissionProvider permits GroupPermissionProviderImpl {
     void refreshCache();
 
-    GroupPermission getPermission(int groupId, String permission);
+    @Nullable GroupPermission getPermission(int groupId, @NotNull String permission);
 
-    List<GroupPermission> getPermissions(int groupId);
+    @Nullable List<GroupPermission> getPermissions(int groupId);
 
-    GroupPermission add(int groupId, String permission, long duration, int createdBy);
+    @Nullable GroupPermission add(int groupId, @NotNull String permission, long duration, int createdBy);
 
-    int remove(int groupId, String permission);
+    int remove(int groupId, @NotNull String permission);
 
     int clear(int groupId);
 
-    GroupPermission update(int groupId, String permission, long duration, int changedBy);
+    @Nullable GroupPermission update(int groupId, @NotNull String permission, long duration, int changedBy);
 
     int loadExpired();
 }
