@@ -6,8 +6,9 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -15,23 +16,27 @@ import java.util.List;
 
 public class UserPlayTimeCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<Integer, UserPlayTime> cache;
-    private final LoadingCache<String, List<UserPlayTime>> listCache;
     private final Long fetchLimit;
 
-    public UserPlayTimeCache(Database database, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    private final LoadingCache<Integer, UserPlayTime> cache;
+    private final LoadingCache<String, List<UserPlayTime>> listCache;
+
+    public UserPlayTimeCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cache = CacheUtil.buildCacheRefresh(this::loadById, cacheCapcity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.USER_PLAY_TIMES.getName().equalsIgnoreCase(cacheName)
             || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
@@ -50,7 +55,7 @@ public class UserPlayTimeCache implements MurmelCache {
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
