@@ -1,9 +1,23 @@
 package de.murmelmeister.murmelapi.group.parent;
 
-import java.time.LocalDateTime;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-public record GroupParent(int groupId, int parentId, LocalDateTime expiresAt, int createdBy, LocalDateTime createdAt,
-                          Integer changedBy, LocalDateTime changedAt) {
+import java.time.LocalDateTime;
+import java.util.Objects;
+
+public record GroupParent(
+        int groupId,
+        int parentId,
+        @Nullable LocalDateTime expiresAt,
+        int createdBy,
+        @NotNull LocalDateTime createdAt,
+        @Nullable Integer changedBy,
+        @Nullable LocalDateTime changedAt
+) {
+    public GroupParent {
+        Objects.requireNonNull(createdAt, "createdAt must not be null");
+    }
 
     public boolean isExpired() {
         return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
@@ -13,12 +27,47 @@ public record GroupParent(int groupId, int parentId, LocalDateTime expiresAt, in
         return expiresAt == null;
     }
 
-    public GroupParent withUpdateMeta(LocalDateTime expiresAt, Integer changedBy, LocalDateTime changedAt) {
-        return new GroupParent(groupId, parentId,
-                expiresAt != null ? expiresAt : this.expiresAt,
-                createdBy, createdAt,
-                changedBy != null ? changedBy : this.changedBy,
-                changedAt != null ? changedAt : this.changedAt
-        );
+    public static @NotNull Builder builder(@NotNull GroupParent groupParent) {
+        return new Builder(groupParent);
+    }
+
+    public static class Builder {
+        private final int groupId;
+        private final int parentId;
+        private final int createdBy;
+        private final LocalDateTime createdAt;
+
+        private LocalDateTime expiresAt;
+        private Integer changedBy;
+        private LocalDateTime changedAt;
+
+        private Builder(@NotNull GroupParent groupParent) {
+            this.groupId = groupParent.groupId();
+            this.parentId = groupParent.parentId();
+            this.createdBy = groupParent.createdBy();
+            this.createdAt = groupParent.createdAt();
+            this.expiresAt = groupParent.expiresAt();
+            this.changedBy = groupParent.changedBy();
+            this.changedAt = groupParent.changedAt();
+        }
+
+        public Builder expiresAt(@Nullable LocalDateTime expiresAt) {
+            this.expiresAt = expiresAt;
+            return this;
+        }
+
+        public Builder changedBy(@Nullable Integer changedBy) {
+            this.changedBy = changedBy;
+            return this;
+        }
+
+        public Builder changedAt(@Nullable LocalDateTime changedAt) {
+            this.changedAt = changedAt;
+            return this;
+        }
+
+        public @NotNull GroupParent build() {
+            return new GroupParent(groupId, parentId, expiresAt, createdBy, createdAt, changedBy, changedAt);
+        }
     }
 }
