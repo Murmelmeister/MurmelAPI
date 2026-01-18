@@ -1,21 +1,24 @@
 package de.murmelmeister.murmelapi.language;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 public interface LanguageProvider {
     void refreshCache();
 
-    Language findById(int id);
+    @Nullable Language findById(int id);
 
-    Language findByCode(String code);
+    @Nullable Language findByCode(@Nullable String code);
 
-    List<Language> findAll();
+    @NotNull List<Language> findAll();
 
-    Language create(String code);
+    @Nullable Language create(@NotNull String code);
 
     int delete(int id);
 
-    Language update(int id, String code);
+    @Nullable Language update(int id, @NotNull String code);
 
-    Language upsert(Language language);
+    @Nullable Language upsert(@NotNull Language language);
 }
