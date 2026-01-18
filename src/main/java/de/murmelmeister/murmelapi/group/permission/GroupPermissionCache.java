@@ -6,8 +6,11 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.*;
@@ -15,47 +18,61 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GroupPermissionCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_GROUP_ID = "SELECT * FROM %s WHERE group_id = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE group_id = ? AND permission = ?";
+
     private static final String ALL_KEY = "ALL";
     private static final Pattern KEY_PATTERN = Pattern.compile(".*groupId=(\\d+), permission=([^,\\]]+).*");
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<PermissionKey, GroupPermission> cacheByKey;
-    private final LoadingCache<Integer, List<GroupPermission>> cacheByGroupId;
-    private final LoadingCache<String, List<GroupPermission>> listCache;
     private final Long fetchLimit;
 
-    public GroupPermissionCache(Database database, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull PermissionKey, Optional<GroupPermission>> cacheByKey;
+    private final LoadingCache<@NotNull Integer, List<GroupPermission>> cacheByGroupId;
+    private final LoadingCache<@NotNull String, List<GroupPermission>> listCache;
+
+    public GroupPermissionCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapacity, refreshInterval);
         this.cacheByGroupId = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.GROUP_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
+        }
+
+        if (RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (!(key instanceof String)) {
-                if (key instanceof PermissionKey permissionKey)
-                    refreshSingle(permissionKey);
+                if (key instanceof PermissionKey(int groupId, String permission))
+                    remove(groupId, permission);
                 else if (key instanceof Integer groupId)
-                    refreshSingle(groupId);
+                    remove(groupId);
             } else {
                 Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     int groupId = Integer.parseInt(matcher.group(1));
                     String permission = matcher.group(2);
-                    refreshSingle(new PermissionKey(groupId, permission));
+                    remove(groupId, permission);
                 } else {
                     int groupId = Integer.parseInt((String) key);
-                    refreshSingle(groupId);
+                    remove(groupId);
                 }
             }
         }
@@ -63,78 +80,52 @@ public class GroupPermissionCache implements MurmelCache {
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<GroupPermission> permissions = loadAllFromDatabase();
-        if (permissions.isEmpty())
-            return;
-
-        Map<Integer, List<GroupPermission>> byGroup = new HashMap<>();
-        for (GroupPermission permission : permissions) {
-            PermissionKey key = new PermissionKey(permission.groupId(), permission.permission());
-            cacheByKey.put(key, permission);
-            byGroup.computeIfAbsent(permission.groupId(), ignored -> new ArrayList<>()).add(permission);
-        }
-
-        byGroup.forEach((groupId, values) -> cacheByGroupId.put(groupId, List.copyOf(values)));
-        listCache.put(ALL_KEY, List.copyOf(permissions));
-    }
-
-    private void refreshSingle(int groupId) {
-        remove(groupId);
-        List<GroupPermission> permissions = loadByUserId(groupId);
-        permissions.forEach(this::put);
-    }
-
-    private void refreshSingle(PermissionKey key) {
-        remove(key.groupId(), key.permission());
-        GroupPermission permission = loadByKey(key);
-        if (permission != null)
-            put(permission);
-    }
-
-    private List<GroupPermission> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<GroupPermission> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupPermission());
     }
 
-    private List<GroupPermission> loadByUserId(int groupId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE group_id = ?";
+    private @NotNull List<GroupPermission> loadByUserId(int groupId) {
+        String sql = SELECT_BY_GROUP_ID.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupPermission(),
                 stmt -> stmt.setInt(1, groupId));
     }
 
-    private GroupPermission loadByKey(PermissionKey key) {
-        String sql = "SELECT * FROM " + tableName + " WHERE group_id = ? AND permission = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupPermission(),
+    private @NotNull Optional<GroupPermission> loadByKey(PermissionKey key) {
+        String sql = SELECT_BY_KEY.formatted(tableName);
+        GroupPermission groupPermission = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupPermission(),
                 stmt -> {
                     stmt.setInt(1, key.groupId());
                     stmt.setString(2, key.permission());
                 });
+
+        return Optional.ofNullable(groupPermission);
     }
 
-    public GroupPermission get(int groupId, String permission) {
-        return cacheByKey.get(new PermissionKey(groupId, permission));
+    public @Nullable GroupPermission get(int groupId, @NotNull String permission) {
+        Optional<GroupPermission> optPermission = cacheByKey.get(new PermissionKey(groupId, permission));
+        return optPermission != null && optPermission.isPresent() ? optPermission.orElse(null) : null;
     }
 
-    public List<GroupPermission> getPermissions(int groupId) {
+    public @Nullable List<GroupPermission> getPermissions(int groupId) {
         return cacheByGroupId.get(groupId);
     }
 
-    public void put(GroupPermission groupPermission) {
+    public void put(@Nullable GroupPermission groupPermission) {
+        if (groupPermission == null) return;
         PermissionKey key = new PermissionKey(groupPermission.groupId(), groupPermission.permission());
-        cacheByKey.put(key, groupPermission);
+        cacheByKey.put(key, Optional.of(groupPermission));
         CacheUtil.put(cacheByGroupId, groupPermission.groupId(), groupPermission,
                 v -> v.groupId() == groupPermission.groupId() && v.permission().equals(groupPermission.permission()));
         CacheUtil.put(listCache, ALL_KEY, groupPermission,
                 v -> v.groupId() == groupPermission.groupId() && v.permission().equals(groupPermission.permission()));
     }
 
-    public void remove(int groupId, String permission) {
+    public void remove(int groupId, @NotNull String permission) {
         PermissionKey key = new PermissionKey(groupId, permission);
         cacheByKey.invalidate(key);
         CacheUtil.remove(cacheByGroupId, groupId,
@@ -156,13 +147,13 @@ public class GroupPermissionCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public List<GroupPermission> getCachedPermissions() {
+    public @NotNull List<GroupPermission> getCachedPermissions() {
         List<GroupPermission> permissions = listCache.get(ALL_KEY);
         if (permissions == null || permissions.isEmpty())
             return Collections.emptyList();
         return List.copyOf(permissions);
     }
 
-    protected record PermissionKey(int groupId, String permission) {
+    protected record PermissionKey(int groupId, @NotNull String permission) {
     }
 }
