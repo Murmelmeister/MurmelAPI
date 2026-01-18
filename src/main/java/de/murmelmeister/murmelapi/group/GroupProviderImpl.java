@@ -2,8 +2,11 @@ package de.murmelmeister.murmelapi.group;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -21,48 +24,53 @@ public final class GroupProviderImpl implements GroupProvider {
     private static final String TABLE_NAME = "groups";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final GroupCache cache;
     private final RefreshType all = RefreshType.GROUPS;
     private final RefreshType single = RefreshType.SINGLE_GROUP;
 
-    public GroupProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public GroupProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new GroupCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new GroupCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public Group findById(int id) {
+    public @Nullable Group findById(int id) {
         return cache.getById(id);
     }
 
     @Override
-    public Group findByName(String groupName) {
+    public @Nullable Group findByName(@Nullable String groupName) {
         return cache.getByName(groupName);
     }
 
     @Override
-    public List<Group> findAll() {
+    public @NotNull List<Group> findAll() {
         return cache.getCachedGroups();
     }
 
     @Override
-    public List<String> findAllGroupNames() {
+    public @NotNull List<String> findAllGroupNames() {
         return findAll().stream().map(Group::groupName).collect(Collectors.toList());
     }
 
     @Override
-    public Group create(String groupName, int priority, int createdBy) {
+    public @Nullable Group create(@NotNull String groupName, int priority, int createdBy) {
         String normalizedGroupName = StringUtil.normalize(groupName);
         if (normalizedGroupName == null || priority < 0 || createdBy < CONSOLE_USER_ID)
             return null;
 
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (group_name, priority, created_by) " +
-                "VALUES (?, ?, ?)";
+        @Language("MariaDB")
+        String insertSql = """
+                INSERT INTO %s (group_name, priority, created_by)
+                VALUES (?, ?, ?)
+                """.formatted(TABLE_NAME);
         int groupId = (int) database.updateAndGetGeneratedKeys(insertSql, stmt -> {
             stmt.setString(1, normalizedGroupName);
             stmt.setInt(2, priority);
@@ -70,14 +78,15 @@ public final class GroupProviderImpl implements GroupProvider {
         });
         if (groupId < 1) return null;
 
-        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT created_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
         LocalDateTime createdAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> stmt.setInt(1, groupId));
         if (createdAt == null) return null;
 
         Group group = new Group(groupId, normalizedGroupName, priority, false, createdBy, createdAt, null, null);
-        RefreshUtil.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, groupId);
         return group;
     }
 
@@ -85,17 +94,18 @@ public final class GroupProviderImpl implements GroupProvider {
     public int delete(int groupId) {
         if (groupId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, groupId);
         return row;
     }
 
     @Override
-    public Group update(int groupId, String groupName, int priority, int changedBy) {
+    public @Nullable Group update(int groupId, @NotNull String groupName, int priority, int changedBy) {
         String normalizedGroupName = StringUtil.normalize(groupName);
         if (normalizedGroupName == null || priority < 0 || changedBy < CONSOLE_USER_ID)
             return null;
@@ -107,7 +117,8 @@ public final class GroupProviderImpl implements GroupProvider {
                 priority == existing.priority())
             return existing; // No changes, return an existing group
 
-        String updateSql = "UPDATE " + TABLE_NAME + " SET group_name = ?, priority = ?, changed_by = ? WHERE id = ?";
+        @Language("MariaDB")
+        String updateSql = "UPDATE %s SET group_name = ?, priority = ?, changed_by = ? WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(updateSql, stmt -> {
             stmt.setString(1, normalizedGroupName);
             stmt.setInt(2, priority);
@@ -116,14 +127,20 @@ public final class GroupProviderImpl implements GroupProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT changed_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> stmt.setInt(1, groupId));
         if (changedAt == null) return null;
 
-        Group group = existing.withUpdateMeta(normalizedGroupName, priority, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, groupId);
+        Group group = Group.builder(existing)
+                .groupName(groupName)
+                .priority(priority)
+                .changedBy(changedBy)
+                .changedAt(changedAt)
+                .build();
+        refreshProvider.fireSingle(single, groupId);
         return group;
     }
 }
