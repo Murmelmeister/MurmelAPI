@@ -1,8 +1,8 @@
 package de.murmelmeister.murmelapi.user.playtime;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
 
 import java.time.Duration;
 import java.util.List;
@@ -12,18 +12,20 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
     private static final String TABLE_NAME = "user_playtime";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final UserPlayTimeCache cache;
     private final RefreshType all = RefreshType.USER_PLAY_TIMES;
     private final RefreshType single = RefreshType.SINGLE_USER_PLAY_TIME;
 
-    public UserPlayTimeProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserPlayTimeProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new UserPlayTimeCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new UserPlayTimeCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
@@ -49,7 +51,7 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         if (row < 1) return null;
 
         UserPlayTime newPlayTime = new UserPlayTime(userId, 0, 1);
-        RefreshUtil.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, userId);
         return newPlayTime;
 
     }
@@ -63,7 +65,7 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
                 stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, userId);
         return row;
     }
 
@@ -86,7 +88,7 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         });
         if (row < 1) return null;
 
-        RefreshUtil.fireSingle(single, playTime.getUserId());
+        refreshProvider.fireSingle(single, playTime.getUserId());
         return playTime;
     }
 
@@ -101,7 +103,7 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         if (Objects.equals(playTime, existing))
             return true; // No changes, return existing playtime
 
-        RefreshUtil.fireSingle(single, playTime.getUserId());
+        refreshProvider.fireSingle(single, playTime.getUserId());
         return true;
     }
 
@@ -122,6 +124,6 @@ public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
         if (row < 1) return; // No rows updated, exit early
 
         playTime.setPlayTime(currentPlayTime);
-        RefreshUtil.fireSingle(single, playTime.getUserId());
+        refreshProvider.fireSingle(single, playTime.getUserId());
     }
 }
