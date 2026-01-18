@@ -2,8 +2,11 @@ package de.murmelmeister.murmelapi.clan;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -17,42 +20,44 @@ public final class ClanProviderImpl implements ClanProvider {
     private static final String TABLE_NAME = "clans";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final ClanCache cache;
     private final RefreshType all = RefreshType.CLANS;
     private final RefreshType single = RefreshType.SINGLE_CLAN;
 
-    public ClanProviderImpl(Database database, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public ClanProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new ClanCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new ClanCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public Clan findById(UUID id) {
+    public @Nullable Clan findById(@Nullable UUID id) {
         return cache.getById(id);
     }
 
     @Override
-    public Clan findByName(String name) {
+    public @Nullable Clan findByName(@Nullable String name) {
         return cache.getByName(name);
     }
 
     @Override
-    public Clan findByOwner(int ownerId) {
+    public @Nullable Clan findByOwner(int ownerId) {
         return cache.getByOwner(ownerId);
     }
 
     @Override
-    public List<Clan> findAll() {
+    public @NotNull List<Clan> findAll() {
         return cache.getAll();
     }
 
     @Override
-    public Clan create(String name, String tag, String sign, String description, int ownerId, int createdBy) {
+    public @Nullable Clan create(@NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int createdBy) {
         String normalizedName = StringUtil.normalize(name);
         if (normalizedName == null || normalizedName.length() > 100
                 || tag.length() > 25 || sign.length() > 25
@@ -60,7 +65,11 @@ public final class ClanProviderImpl implements ClanProvider {
             return null;
 
         UUID id = UUID.randomUUID();
-        String sql = "INSERT INTO " + TABLE_NAME + " (id, name, tag, sign, description, owner_id, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        @Language("MariaDB")
+        String sql = """
+                INSERT INTO %s (id, name, tag, sign, description, owner_id, created_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setString(1, id.toString());
             stmt.setString(2, normalizedName);
@@ -72,35 +81,33 @@ public final class ClanProviderImpl implements ClanProvider {
         });
         if (row < 1) return null;
 
-        String createdAtSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String createdAtSql = "SELECT created_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
         LocalDateTime createdAt = database.query(createdAtSql, null,
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> stmt.setString(1, id.toString()));
         if (createdAt == null) return null;
 
         Clan clan = new Clan(id, normalizedName, tag, sign, description, ownerId, createdBy, createdAt, null, null);
-        RefreshUtil.fireSingle(single, id);
+        refreshProvider.fireSingle(single, id);
         return clan;
     }
 
     @Override
-    public int delete(UUID id) {
-        if (id == null) return 0;
-
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
+    public int delete(@NotNull UUID id) {
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> stmt.setString(1, id.toString()));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, id);
+        refreshProvider.fireSingle(single, id);
         return row;
     }
 
     @Override
-    public Clan update(UUID id, String name, String tag, String sign, String description, int ownerId, int changedBy) {
+    public @Nullable Clan update(@NotNull UUID id, @NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int changedBy) {
         String normalizedName = StringUtil.normalize(name);
-        if (id == null || normalizedName == null || normalizedName.length() > 100
-                || tag.length() > 25 || sign.length() > 25
-                || ownerId < 1 || changedBy < CONSOLE_USER_ID)
+        if (normalizedName == null || normalizedName.length() > 100 || tag.length() > 25 || sign.length() > 25 || ownerId < 1 || changedBy < CONSOLE_USER_ID)
             return null;
 
         Clan existing = cache.getById(id);
@@ -113,7 +120,17 @@ public final class ClanProviderImpl implements ClanProvider {
                 && ownerId == existing.ownerId())
             return existing;
 
-        String sql = "UPDATE " + TABLE_NAME + " SET name = ?, tag = ?, sign = ?, description = ?, owner_id = ?, changed_by = ? WHERE id = ?";
+        @Language("MariaDB")
+        String sql = """
+                UPDATE %s SET
+                    name = ?,
+                    tag = ?,
+                    sign = ?,
+                    description = ?,
+                    owner_id = ?,
+                    changed_by = ?
+                WHERE id = ?
+                """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setString(1, normalizedName);
             stmt.setString(2, tag);
@@ -125,14 +142,23 @@ public final class ClanProviderImpl implements ClanProvider {
         });
         if (row < 1) return null;
 
-        String changedAtSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String changedAtSql = "SELECT changed_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(changedAtSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> stmt.setString(1, id.toString()));
         if (changedAt == null) return null;
 
-        Clan clan = existing.withUpdateMeta(normalizedName, tag, sign, description, ownerId, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, id);
+        Clan clan = Clan.builder(existing)
+                .name(normalizedName)
+                .tag(tag)
+                .sign(sign)
+                .description(description)
+                .ownerId(ownerId)
+                .changedBy(changedBy)
+                .changedAt(changedAt)
+                .build();
+        refreshProvider.fireSingle(single, id);
         return clan;
     }
 }
