@@ -96,7 +96,9 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
         });
         if (row < 1) return null;
 
-        UserInventory inventory = existing.withValue(value);
+        UserInventory inventory = UserInventory.builder(existing)
+                .value(value)
+                .build();
         refreshProvider.fireSingle(single, new UserInventoryCache.InventoryKey(userId, inventoryId));
         return inventory;
     }
