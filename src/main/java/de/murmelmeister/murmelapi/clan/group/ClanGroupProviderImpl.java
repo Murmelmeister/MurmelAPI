@@ -2,8 +2,11 @@ package de.murmelmeister.murmelapi.clan.group;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -17,43 +20,49 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
     private static final String TABLE_NAME = "clan_groups";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final ClanGroupCache cache;
     private final RefreshType all = RefreshType.CLAN_GROUPS;
     private final RefreshType single = RefreshType.SINGLE_CLAN_GROUP;
 
-    public ClanGroupProviderImpl(Database database, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public ClanGroupProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new ClanGroupCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new ClanGroupCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public ClanGroup findById(UUID clanId, UUID groupId) {
+    public @Nullable ClanGroup findById(@Nullable UUID clanId, @Nullable UUID groupId) {
         return cache.getByKey(clanId, groupId);
     }
 
     @Override
-    public List<ClanGroup> findByClanId(UUID clanId) {
+    public @Nullable List<ClanGroup> findByClanId(@Nullable UUID clanId) {
         return cache.getByClanId(clanId);
     }
 
     @Override
-    public List<ClanGroup> findAll() {
+    public @NotNull List<ClanGroup> findAll() {
         return cache.getAll();
     }
 
     @Override
-    public ClanGroup create(UUID clanId, String groupName, int priority, boolean defaultGroup, int createdBy) {
+    public @Nullable ClanGroup create(@NotNull UUID clanId, @NotNull String groupName, int priority, boolean defaultGroup, int createdBy) {
         String normalizedGroupName = StringUtil.normalize(groupName);
-        if (clanId == null || normalizedGroupName == null || priority < 0 || createdBy < CONSOLE_USER_ID)
+        if (normalizedGroupName == null || priority < 0 || createdBy < CONSOLE_USER_ID)
             return null;
 
         UUID groupId = UUID.randomUUID();
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (group_id, clan_id, group_name, priority, created_by) VALUES (?, ?, ?, ?, ?)";
+        @Language("MariaDB")
+        String insertSql = """
+                INSERT INTO %s (group_id, clan_id, group_name, priority, created_by)
+                VALUES (?, ?, ?, ?, ?)
+                """.formatted(TABLE_NAME);
         int row = database.update(insertSql, stmt -> {
             stmt.setString(1, groupId.toString());
             stmt.setString(2, clanId.toString());
@@ -63,7 +72,8 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE clan_id = ? AND group_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT created_at FROM %s WHERE clan_id = ? AND group_id = ?".formatted(TABLE_NAME);
         LocalDateTime createdAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> {
@@ -72,29 +82,28 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
                 });
         if (createdAt == null) return null;
 
-        ClanGroup clanGroup = new ClanGroup(clanId, groupId, normalizedGroupName, priority, defaultGroup, createdAt, createdBy, null, null);
-        RefreshUtil.fireSingle(single, new ClanGroupCache.GroupKey(clanId, groupId));
+        ClanGroup clanGroup = new ClanGroup(clanId, groupId, normalizedGroupName, priority, defaultGroup, createdBy, createdAt, null, null);
+        refreshProvider.fireSingle(single, new ClanGroupCache.GroupKey(clanId, groupId));
         return clanGroup;
     }
 
     @Override
-    public int delete(UUID clanId, UUID groupId) {
-        if (clanId == null || groupId == null) return 0;
-
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE clan_id = ? AND group_id = ?";
+    public int delete(@NotNull UUID clanId, @NotNull UUID groupId) {
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE clan_id = ? AND group_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setString(1, clanId.toString());
             stmt.setString(2, groupId.toString());
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new ClanGroupCache.GroupKey(clanId, groupId));
+        refreshProvider.fireSingle(single, new ClanGroupCache.GroupKey(clanId, groupId));
         return row;
     }
 
     @Override
-    public ClanGroup update(UUID clanId, UUID groupId, String groupName, int priority, boolean defaultGroup, int changedBy) {
-        if (clanId == null || groupId == null || groupName == null || priority < 0 || changedBy < CONSOLE_USER_ID)
+    public @Nullable ClanGroup update(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String groupName, int priority, boolean defaultGroup, int changedBy) {
+        if (priority < 0 || changedBy < CONSOLE_USER_ID)
             return null;
 
         ClanGroup existing = cache.getByKey(clanId, groupId);
@@ -106,7 +115,15 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
             return existing;
 
         String normalizedGroupName = StringUtil.normalize(groupName);
-        String sql = "UPDATE " + TABLE_NAME + " SET group_name = ?, priority = ?, default_group = ?, changed_by = ? WHERE clan_id = ? AND group_id = ?";
+        @Language("MariaDB")
+        String sql = """
+                UPDATE %s SET
+                    group_name = ?,
+                    priority = ?,
+                    default_group = ?,
+                    changed_by = ?
+                WHERE clan_id = ? AND group_id = ?
+                """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setString(1, normalizedGroupName);
             stmt.setInt(2, priority);
@@ -117,7 +134,8 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE clan_id = ? AND group_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT changed_at FROM %s WHERE clan_id = ? AND group_id = ?".formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
@@ -126,8 +144,14 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
                 });
         if (changedAt == null) return null;
 
-        ClanGroup updated = existing.withUpdateMeta(normalizedGroupName, priority, defaultGroup, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, new ClanGroupCache.GroupKey(clanId, groupId));
+        ClanGroup updated = ClanGroup.builder(existing)
+                .groupName(normalizedGroupName)
+                .priority(priority)
+                .defaultGroup(defaultGroup)
+                .changedBy(changedBy)
+                .changedAt(changedAt)
+                .build();
+        refreshProvider.fireSingle(single, new ClanGroupCache.GroupKey(clanId, groupId));
         return updated;
     }
 }
