@@ -1,20 +1,23 @@
 package de.murmelmeister.murmelapi.clan.group;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 import java.util.UUID;
 
 public interface ClanGroupProvider {
     void refreshCache();
 
-    ClanGroup findById(UUID clanId, UUID groupId);
+    @Nullable ClanGroup findById(@Nullable UUID clanId, @Nullable UUID groupId);
 
-    List<ClanGroup> findByClanId(UUID clanId);
+    @Nullable List<ClanGroup> findByClanId(@Nullable UUID clanId);
 
-    List<ClanGroup> findAll();
+    @NotNull List<ClanGroup> findAll();
 
-    ClanGroup create(UUID clanId, String groupName, int priority, boolean defaultGroup, int createdBy);
+    @Nullable ClanGroup create(@NotNull UUID clanId, @NotNull String groupName, int priority, boolean defaultGroup, int createdBy);
 
-    int delete(UUID clanId, UUID groupId);
+    int delete(@NotNull UUID clanId, @NotNull UUID groupId);
 
-    ClanGroup update(UUID clanId, UUID groupId, String groupName, int priority, boolean defaultGroup, int changedBy);
+    @Nullable ClanGroup update(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String groupName, int priority, boolean defaultGroup, int changedBy);
 }
