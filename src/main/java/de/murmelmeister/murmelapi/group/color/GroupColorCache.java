@@ -6,8 +6,11 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.*;
@@ -15,47 +18,61 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GroupColorCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_GROUP_ID = "SELECT * FROM %s WHERE group_id = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE group_id = ? AND type_id = ?";
+
     private static final String ALL_KEY = "ALL";
     private static final Pattern KEY_PATTERN = Pattern.compile(".*groupId=(\\d+), typeId=(\\d+).*");
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<ColorKey, GroupColor> cacheByKey;
-    private final LoadingCache<Integer, List<GroupColor>> cacheByGroupId;
-    private final LoadingCache<String, List<GroupColor>> listCache;
     private final Long fetchLimit;
 
-    public GroupColorCache(Database database, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull ColorKey, Optional<GroupColor>> cacheByKey;
+    private final LoadingCache<@NotNull Integer, List<GroupColor>> cacheByGroupId;
+    private final LoadingCache<@NotNull String, List<GroupColor>> listCache;
+
+    public GroupColorCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheByKey = CacheUtil.buildCacheExpired(this::loadByKey, cacheCapcity, refreshInterval);
         this.cacheByGroupId = CacheUtil.buildCacheExpired(this::loadByGroupId, cacheCapcity, refreshInterval);
         this.listCache = CacheUtil.buildCacheExpired(key -> loadAllFromDatabase(), 1, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.GROUP_COLORS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_GROUP_COLOR.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
+        }
+
+        if (RefreshType.SINGLE_GROUP_COLOR.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (!(key instanceof String)) {
-                if (key instanceof ColorKey colorKey)
-                    refreshSingle(colorKey);
+                if (key instanceof ColorKey(int groupId, int typeId))
+                    remove(groupId, typeId);
                 else if (key instanceof Integer groupId)
-                    refreshSingle(groupId);
+                    remove(groupId);
             } else {
                 Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     int groupId = Integer.parseInt(matcher.group(1));
                     int typeId = Integer.parseInt(matcher.group(2));
-                    refreshSingle(new ColorKey(groupId, typeId));
+                    remove(groupId, typeId);
                 } else {
                     int groupId = Integer.parseInt((String) key);
-                    refreshSingle(groupId);
+                    remove(groupId);
                 }
             }
         }
@@ -63,73 +80,45 @@ public class GroupColorCache implements MurmelCache {
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<GroupColor> colors = loadAllFromDatabase();
-        if (colors.isEmpty())
-            return;
-
-        Map<Integer, List<GroupColor>> byGroup = new HashMap<>();
-        for (GroupColor color : colors) {
-            ColorKey key = new ColorKey(color.groupId(), color.typeId());
-            cacheByKey.put(key, color);
-            byGroup.computeIfAbsent(color.groupId(), ignored -> new ArrayList<>()).add(color);
-        }
-
-        byGroup.forEach((groupId, values) -> cacheByGroupId.put(groupId, List.copyOf(values)));
-        listCache.put(ALL_KEY, List.copyOf(colors));
-    }
-
-    private void refreshSingle(int groupId) {
-        remove(groupId);
-        List<GroupColor> groupColors = loadByGroupId(groupId);
-        groupColors.forEach(this::put);
-    }
-
-    private void refreshSingle(ColorKey key) {
-        remove(key.groupId(), key.typeId());
-        GroupColor groupColor = loadByKey(key);
-        if (groupColor != null)
-            put(groupColor);
-    }
-
-    private List<GroupColor> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<GroupColor> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupColor());
     }
 
-    private List<GroupColor> loadByGroupId(int groupId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE group_id = ?";
+    private @NotNull List<GroupColor> loadByGroupId(int groupId) {
+        String sql = SELECT_BY_GROUP_ID.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupColor(),
-                stmt -> {
-                    stmt.setInt(1, groupId);
-                });
+                stmt -> stmt.setInt(1, groupId));
     }
 
-    private GroupColor loadByKey(ColorKey key) {
-        String sql = "SELECT * FROM " + tableName + " WHERE group_id = ? AND type_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupColor(),
+    private @NotNull Optional<GroupColor> loadByKey(ColorKey key) {
+        String sql = SELECT_BY_KEY.formatted(tableName);
+        GroupColor groupColor = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupColor(),
                 stmt -> {
                     stmt.setInt(1, key.groupId());
                     stmt.setInt(2, key.typeId());
                 });
+
+        return Optional.ofNullable(groupColor);
     }
 
-    public GroupColor get(int groupId, int typeId) {
-        return cacheByKey.get(new ColorKey(groupId, typeId));
+    public @Nullable GroupColor get(int groupId, int typeId) {
+        Optional<GroupColor> optColor = cacheByKey.get(new ColorKey(groupId, typeId));
+        return optColor != null && optColor.isPresent() ? optColor.orElse(null) : null;
     }
 
-    public List<GroupColor> getByGroupId(int groupId) {
+    public @Nullable List<GroupColor> getByGroupId(int groupId) {
         return cacheByGroupId.get(groupId);
     }
 
-    public void put(GroupColor groupColor) {
+    public void put(@Nullable GroupColor groupColor) {
+        if (groupColor == null) return;
         ColorKey key = new ColorKey(groupColor.groupId(), groupColor.typeId());
-        cacheByKey.put(key, groupColor);
+        cacheByKey.put(key, Optional.of(groupColor));
         CacheUtil.put(cacheByGroupId, groupColor.groupId(), groupColor,
                 v -> v.groupId() == groupColor.groupId() && v.typeId() == groupColor.typeId());
         CacheUtil.put(listCache, ALL_KEY, groupColor,
@@ -156,7 +145,7 @@ public class GroupColorCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public List<GroupColor> getCachedColors() {
+    public @NotNull List<GroupColor> getCachedColors() {
         List<GroupColor> colors = listCache.get(ALL_KEY);
         if (colors == null || colors.isEmpty())
             return Collections.emptyList();
