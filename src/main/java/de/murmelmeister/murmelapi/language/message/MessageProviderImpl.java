@@ -2,8 +2,11 @@ package de.murmelmeister.murmelapi.language.message;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.*;
@@ -12,42 +15,48 @@ public final class MessageProviderImpl implements MessageProvider {
     private static final String TABLE_NAME = "messages";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final MessageCache cache;
     private final RefreshType all = RefreshType.MESSAGES;
     private final RefreshType single = RefreshType.SINGLE_MESSAGE;
 
-    public MessageProviderImpl(Database database, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public MessageProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new MessageCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new MessageCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public Message get(int messageId) {
+    public @Nullable Message get(int messageId) {
         return cache.getById(messageId);
     }
 
     @Override
-    public Message get(String tagId, int languageId) {
+    public @Nullable Message get(@NotNull String tagId, int languageId) {
         return cache.getByTag(tagId, languageId);
     }
 
     @Override
-    public List<Message> getAllMessages(int languageId) {
+    public @Nullable List<Message> getAllMessages(int languageId) {
         return cache.getByLanguage(languageId);
     }
 
     @Override
-    public Message create(String tagId, int languageId, String message) {
+    public @Nullable Message create(@NotNull String tagId, int languageId, @NotNull String message) {
         String normalizedTagId = StringUtil.normalize(tagId);
-        if (normalizedTagId == null || languageId < 1 || (message == null || message.isBlank()))
+        if (normalizedTagId == null || languageId < 1 || message.isBlank())
             return null;
 
-        String sql = "INSERT INTO " + TABLE_NAME + " (tag_id, language_id, message) VALUES (?, ?, ?)";
+        @Language("MariaDB")
+        String sql = """
+                INSERT INTO %s (tag_id, language_id, message)
+                VALUES (?, ?, ?)
+                """.formatted(TABLE_NAME);
         int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> {
             stmt.setString(1, normalizedTagId);
             stmt.setInt(2, languageId);
@@ -56,7 +65,7 @@ public final class MessageProviderImpl implements MessageProvider {
         if (id < 1) return null;
 
         Message msg = new Message(id, normalizedTagId, languageId, message);
-        RefreshUtil.fireSingle(single, msg.id());
+        refreshProvider.fireSingle(single, msg.id());
         return msg;
     }
 
@@ -64,28 +73,30 @@ public final class MessageProviderImpl implements MessageProvider {
     public int delete(int id) {
         if (id < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, id);
+        refreshProvider.fireSingle(single, id);
         return row;
     }
 
     @Override
-    public int delete(String tagId, int languageId) {
+    public int delete(@NotNull String tagId, int languageId) {
         String normalizedTagId = StringUtil.normalize(tagId);
         if (normalizedTagId == null || languageId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE tag_id = ? AND language_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE tag_id = ? AND language_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setString(1, normalizedTagId);
             stmt.setInt(2, languageId);
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new MessageCache.TagKey(normalizedTagId, languageId));
+        refreshProvider.fireSingle(single, new MessageCache.TagKey(normalizedTagId, languageId));
         return row;
     }
 
@@ -93,19 +104,20 @@ public final class MessageProviderImpl implements MessageProvider {
     public int deleteAll(int languageId) {
         if (languageId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE language_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE language_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, languageId));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new MessageCache.LanguageKey(languageId));
+        refreshProvider.fireSingle(single, new MessageCache.LanguageKey(languageId));
         return row;
     }
 
     @Override
-    public Message update(int id, String tagId, int languageId, String message) {
+    public @Nullable Message update(int id, @NotNull String tagId, int languageId, @NotNull String message) {
         String normalizedTagId = StringUtil.normalize(tagId);
-        if (id < 1 || normalizedTagId == null || languageId < 1 || (message == null || message.isBlank()))
+        if (id < 1 || normalizedTagId == null || languageId < 1 || message.isBlank())
             return null;
 
         Message existing = cache.getById(id);
@@ -116,7 +128,8 @@ public final class MessageProviderImpl implements MessageProvider {
                 Objects.equals(message, existing.message()))
             return existing; // No changes, return existing
 
-        String sql = "UPDATE " + TABLE_NAME + " SET tag_id = ?, language_id = ?, message = ? WHERE id = ?";
+        @Language("MariaDB")
+        String sql = "UPDATE %s SET tag_id = ?, language_id = ?, message = ? WHERE id = ?".formatted(TABLE_NAME);
         int rows = database.update(sql, stmt -> {
             stmt.setString(1, normalizedTagId);
             stmt.setInt(2, languageId);
@@ -125,19 +138,23 @@ public final class MessageProviderImpl implements MessageProvider {
         });
         if (rows < 1) return null;
 
-        Message msg = existing.withUpdateMeta(normalizedTagId, languageId, message);
-        RefreshUtil.fireSingle(single, id);
+        Message msg = Message.builder(existing)
+                .tagId(tagId)
+                .languageId(languageId)
+                .message(message)
+                .build();
+        refreshProvider.fireSingle(single, id);
         return msg;
     }
 
     @Override
-    public int[] upsertAll(Properties properties) {
+    public int @NotNull [] upsertAll(@NotNull Properties properties) {
         return upsertInternal(properties, true);
     }
 
     @Override
-    public int[] upsertAll(Collection<Properties> properties) {
-        if (properties == null || properties.isEmpty())
+    public int @NotNull [] upsertAll(@NotNull Collection<Properties> properties) {
+        if (properties.isEmpty())
             throw new IllegalArgumentException("Missing properties collection");
 
         List<int[]> results = new ArrayList<>();
@@ -151,7 +168,7 @@ public final class MessageProviderImpl implements MessageProvider {
         }
 
         if (changed)
-            RefreshUtil.fireCache(all);
+            refreshProvider.fireCache(all);
 
         int total = results.stream().mapToInt(arr -> arr.length).sum();
         int[] merged = new int[total];
@@ -164,7 +181,7 @@ public final class MessageProviderImpl implements MessageProvider {
     }
 
     @Override
-    public int[] createOrUpdateAll(Properties properties) {
+    public int @NotNull [] createOrUpdateAll(@NotNull Properties properties) {
         return upsertInternal(properties, true);
     }
 
@@ -184,13 +201,15 @@ public final class MessageProviderImpl implements MessageProvider {
         }
 
         // Load existing messages for the language at once
-        String selectSql = "SELECT tag_id, message FROM " + TABLE_NAME + " WHERE language_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT tag_id, message FROM %s WHERE language_id = ?".formatted(TABLE_NAME);
         Map<String, String> existing = new HashMap<>();
         database.queryList(selectSql, rs -> Map.entry(rs.getString(1), rs.getString(2)), stmt -> stmt.setInt(1, languageId))
                 .forEach(entry -> existing.put(entry.getKey(), entry.getValue()));
 
         // Batch only changed rows for update
-        String updateSql = "UPDATE " + TABLE_NAME + " SET message = ? WHERE tag_id = ? AND language_id = ?";
+        @Language("MariaDB")
+        String updateSql = "UPDATE %s SET message = ? WHERE tag_id = ? AND language_id = ?".formatted(TABLE_NAME);
         int[] updated = database.updateBatch(updateSql, stmt -> {
             for (String tagId : properties.stringPropertyNames()) {
                 if (tagId.isBlank() || tagId.startsWith("#") || tagId.equals("language.id")) continue;
@@ -209,7 +228,8 @@ public final class MessageProviderImpl implements MessageProvider {
         });
 
         // Batch only truly new rows for insert
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (tag_id, language_id, message) VALUES (?, ?, ?)";
+        @Language("MariaDB")
+        String insertSql = "INSERT INTO %s (tag_id, language_id, message) VALUES (?, ?, ?)".formatted(TABLE_NAME);
         int[] inserted = database.updateBatch(insertSql, stmt -> {
             for (String tagId : properties.stringPropertyNames()) {
                 if (tagId.isBlank() || tagId.startsWith("#") || tagId.equals("language.id")) continue;
@@ -227,7 +247,7 @@ public final class MessageProviderImpl implements MessageProvider {
 
         int totalOps = (updated == null ? 0 : updated.length) + (inserted == null ? 0 : inserted.length);
         if (fireCache && totalOps > 0)
-            RefreshUtil.fireCache(all);
+            refreshProvider.fireCache(all);
 
         // Merge counts for compatibility
         int updateLen = updated == null ? 0 : updated.length;
