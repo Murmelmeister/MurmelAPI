@@ -1,5 +1,8 @@
 package de.murmelmeister.murmelapi.punishment.type;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 public enum PunishmentType {
     BAN(1, "Ban", false),
     MUTE(2, "Mute", false),
@@ -33,14 +36,14 @@ public enum PunishmentType {
         return ipType;
     }
 
-    public static PunishmentType fromId(int id) {
+    public static @Nullable PunishmentType fromId(int id) {
         for (PunishmentType type : VALUES)
             if (type.getId() == id)
                 return type;
         return null;
     }
 
-    public static PunishmentType fromName(String name) {
+    public static @Nullable PunishmentType fromName(@NotNull String name) {
         for (PunishmentType type : VALUES)
             if (type.getName().equalsIgnoreCase(name))
                 return type;
