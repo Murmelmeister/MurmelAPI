@@ -64,8 +64,9 @@ import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProviderImpl;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
-import de.murmelmeister.murmelapi.utils.update.RefreshListener;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
+import de.murmelmeister.murmelapi.utils.update.RefreshProviderImpl;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,7 +79,6 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -87,162 +87,168 @@ import java.util.Properties;
  */
 public final class MurmelAPI {
     private static final Logger LOGGER = LoggerFactory.getLogger(MurmelAPI.class);
-    private static final Database DATABASE;
-    private static final Gson GSON = new GsonBuilder().disableHtmlEscaping().create();
 
     public static final String ENGLISH_CODE = "en-US";
     public static final String GERMAN_CODE = "de-DE";
     public static final int DEFAULT_GROUP_ID = 1;
     public static final int CONSOLE_USER_ID = -1;
 
-    private static Long fetchLimit = null;
-    private static long cacheCapacity = 10_000; // Default cache size
-    private static Duration refreshInterval = Duration.ofMinutes(30);
+    private final Database database;
+    private final Long fetchLimit;
+    private final long cacheCapacity;
+    private final Duration refreshInterval;
 
-    private static SettingsProvider settingsProvider;
-    private static SettingsService settingsService;
+    private final RefreshProvider refreshProvider;
 
-    private static LanguageProvider languageProvider;
-    private static MessageProvider messageProvider;
-    private static MessageService messageService;
+    private final SettingsProvider settingsProvider;
+    private final SettingsService settingsService;
 
-    private static UserProvider userProvider;
-    private static UserPlayTimeProvider userPlayTimeProvider;
-    private static UserLoginProvider userLoginProvider;
-    private static UserSessionProvider userSessionProvider;
-    private static UserService userService;
+    private final LanguageProvider languageProvider;
+    private final MessageProvider messageProvider;
+    private final MessageService messageService;
 
-    private static GroupProvider groupProvider;
-    private static GroupColorProvider groupColorProvider;
+    private final UserProvider userProvider;
+    private final UserPlayTimeProvider userPlayTimeProvider;
+    private final UserLoginProvider userLoginProvider;
+    private final UserSessionProvider userSessionProvider;
+    private final UserService userService;
 
-    private static UserPermissionProvider userPermissionProvider;
-    private static UserParentProvider userParentProvider;
-    private static GroupPermissionProvider groupPermissionProvider;
-    private static GroupParentProvider groupParentProvider;
-    private static Permission permission;
+    private final GroupProvider groupProvider;
+    private final GroupColorProvider groupColorProvider;
 
-    private static PunishmentReasonProvider punishReasonProvider;
-    private static PunishmentLogProvider punishLogProvider;
-    private static PunishmentCurrentIpProvider punishIpProvider;
-    private static PunishmentCurrentUserProvider punishUserProvider;
-    private static PunishmentService punishmentService;
+    private final UserPermissionProvider userPermissionProvider;
+    private final UserParentProvider userParentProvider;
+    private final GroupPermissionProvider groupPermissionProvider;
+    private final GroupParentProvider groupParentProvider;
+    private final Permission permission;
 
-    private static ClanProvider clanProvider;
-    private static ClanMemberProvider clanMemberProvider;
-    private static ClanGroupProvider clanGroupProvider;
-    private static ClanParentProvider clanParentProvider;
-    private static ClanPermissionProvider clanPermissionProvider;
+    private final PunishmentReasonProvider punishReasonProvider;
+    private final PunishmentLogProvider punishLogProvider;
+    private final PunishmentCurrentIpProvider punishIpProvider;
+    private final PunishmentCurrentUserProvider punishUserProvider;
+    private final PunishmentService punishmentService;
 
-    private static PrefixColorProvider prefixColorProvider;
-    private static UserPrefixColorProvider userPrefixColorProvider;
+    private final ClanProvider clanProvider;
+    private final ClanMemberProvider clanMemberProvider;
+    private final ClanGroupProvider clanGroupProvider;
+    private final ClanParentProvider clanParentProvider;
+    private final ClanPermissionProvider clanPermissionProvider;
 
-    private static InventoryTypeProvider inventoryTypeProvider;
-    private static UserInventoryProvider userInventoryProvider;
+    private final PrefixColorProvider prefixColorProvider;
+    private final UserPrefixColorProvider userPrefixColorProvider;
 
-    static {
-        DATABASE = new Database();
+    private final InventoryTypeProvider inventoryTypeProvider;
+    private final UserInventoryProvider userInventoryProvider;
+
+    public MurmelAPI() {
+        this(null, 10_000, Duration.ofMinutes(30));
     }
 
-    public static void connect(HikariConfig config) {
-        DATABASE.connect(config);
+    public MurmelAPI(Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+        this(new Database(), new GsonBuilder().setPrettyPrinting().create(), fetchLimit, cacheCapacity, refreshInterval);
     }
 
-    public static void connect(String propertyFileName) {
-        DATABASE.connect(propertyFileName);
+    public MurmelAPI(Database database, Gson gson, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+        this.database = database;
+        this.fetchLimit = fetchLimit;
+        this.cacheCapacity = cacheCapacity;
+        this.refreshInterval = refreshInterval;
+
+        this.refreshProvider = new RefreshProviderImpl();
+
+        this.settingsProvider = new SettingsProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.settingsService = new SettingsService(settingsProvider, gson);
+        this.languageProvider = new LanguageProviderImpl(database, refreshProvider, cacheCapacity);
+        this.messageProvider = new MessageProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.messageService = new MessageService(languageProvider, messageProvider);
+        this.userProvider = new UserProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userPlayTimeProvider = new UserPlayTimeProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userLoginProvider = new UserLoginProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userSessionProvider = new UserSessionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userService = new UserService(userProvider, userPlayTimeProvider, userLoginProvider, userSessionProvider);
+        this.groupProvider = new GroupProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.groupColorProvider = new GroupColorProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userPermissionProvider = new UserPermissionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userParentProvider = new UserParentProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.groupPermissionProvider = new GroupPermissionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.groupParentProvider = new GroupParentProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.permission = new PermissionProvider(database, refreshProvider, userProvider, groupParentProvider, groupPermissionProvider, userParentProvider, userPermissionProvider,
+                cacheCapacity, refreshInterval);
+        this.punishReasonProvider = new PunishmentReasonProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishLogProvider = new PunishmentLogProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishIpProvider = new PunishmentCurrentIpProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishUserProvider = new PunishmentCurrentUserProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishmentService = new PunishmentService(punishReasonProvider, punishLogProvider, punishIpProvider, punishUserProvider);
+        this.clanProvider = new ClanProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanMemberProvider = new ClanMemberProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanGroupProvider = new ClanGroupProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanParentProvider = new ClanParentProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanPermissionProvider = new ClanPermissionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.prefixColorProvider = new PrefixColorProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userPrefixColorProvider = new UserPrefixColorProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.inventoryTypeProvider = new InventoryTypeProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userInventoryProvider = new UserInventoryProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
     }
 
-    public static void connect(Properties properties) {
-        DATABASE.connect(properties);
+    public void connect(HikariConfig config) {
+        database.connect(config);
     }
 
-    public static void connect(String url, String user, String password) {
-        DATABASE.connect(url, user, password);
+    public void connect(String propertyFileName) {
+        database.connect(propertyFileName);
     }
 
-    public static void connectToMariadb(String hostname, int port, String databaseName, String user, String password) {
+    public void connect(Properties properties) {
+        database.connect(properties);
+    }
+
+    public void connect(String url, String user, String password) {
+        database.connect(url, user, password);
+    }
+
+    public void connectToMariadb(String hostname, int port, String databaseName, String user, String password) {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl("jdbc:mariadb://" + hostname + ":" + port + "/" + databaseName + "?useUnicode=true&characterEncoding=UTF-8");
         config.setUsername(user);
         config.setPassword(password);
         config.setDriverClassName("org.mariadb.jdbc.Driver");
-        DATABASE.connect(config);
+        database.connect(config);
     }
 
-    public static void disconnect() {
-        closeCaches();
-        DATABASE.disconnect();
+    public void disconnect() {
+        //closeCaches();
+        try {
+            refreshProvider.close();
+        } catch (Exception e) {
+            LOGGER.warn("Failed to close refresh provider", e);
+            throw new RuntimeException("Failed to close refresh provider", e);
+        }
+        database.disconnect();
     }
 
-    public static void setup() {
-        createAllTables();
-        initProviders();
-    }
-
-    public static void createAllTables() {
+    public void setupTables() {
         runSqlScript("schema.sql");
         runSqlScript("data.sql");
-        PermissionProvider.setup(DATABASE);
+        PermissionProvider.setup(database);
     }
 
-    private static void runSqlScript(String script) {
+    private void runSqlScript(String script) {
         try (InputStream in = MurmelAPI.class.getClassLoader().getResourceAsStream(script)) {
             if (in == null) throw new IllegalStateException("Missing schema.sql");
             try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
-                DATABASE.runSqlScript(reader);
+                database.runSqlScript(reader);
             }
         } catch (IOException e) {
+            LOGGER.error("Failed to load sql script {}", script, e);
             throw new RuntimeException("Failed to run schema.sql", e);
         }
     }
 
-    public static void initProviders() {
-        settingsProvider = getSettingsProvider();
-        settingsService = getSettingsService(settingsProvider);
-
-        languageProvider = getLanguageProvider();
-        messageProvider = getMessageProvider();
-        messageService = getMessageService(languageProvider, messageProvider);
-
-        userProvider = getUserProvider();
-        userPlayTimeProvider = getUserPlayTimeProvider();
-        userLoginProvider = getUserLoginProvider();
-        userSessionProvider = getUserSessionProvider();
-        userService = getUserService(userProvider, userPlayTimeProvider, userLoginProvider, userSessionProvider);
-
-        groupProvider = getGroupProvider();
-        groupColorProvider = getGroupColorProvider();
-
-        userPermissionProvider = getUserPermissionProvider();
-        userParentProvider = getUserParentProvider();
-        groupPermissionProvider = getGroupPermissionProvider();
-        groupParentProvider = getGroupParentProvider();
-        permission = getPermission(userProvider, groupParentProvider, groupPermissionProvider, userParentProvider, userPermissionProvider);
-
-        punishReasonProvider = getPunishmentReasonProvider();
-        punishLogProvider = getPunishmentLogProvider();
-        punishIpProvider = getPunishmentCurrentIpProvider();
-        punishUserProvider = getPunishmentCurrentUserProvider();
-        punishmentService = getPunishmentService(punishReasonProvider, punishLogProvider, punishIpProvider, punishUserProvider);
-
-        clanProvider = getClanProvider();
-        clanMemberProvider = getClanMemberProvider();
-        clanGroupProvider = getClanGroupProvider();
-        clanParentProvider = getClanParentProvider();
-        clanPermissionProvider = getClanPermissionProvider();
-
-        prefixColorProvider = getPrefixColorProvider();
-        userPrefixColorProvider = getUserPrefixColorProvider();
-
-        inventoryTypeProvider = getInventoryTypeProvider();
-        userInventoryProvider = getUserInventoryProvider();
-    }
-
-    public static void loadMessages() {
-        messageProvider = getMessageProvider(); // If messageProvider are null
+    public void loadMessages() {
         MurmelMessage.loadMessages(messageProvider);
     }
 
-    public static void closeCaches() {
+    /*public void closeCaches() {
         List<RefreshListener> listeners = List.copyOf(RefreshUtil.getListeners());
         listeners.forEach(listener -> {
             if (RefreshUtil.isRegistered(listener) && listener instanceof AutoCloseable closeable) {
@@ -254,7 +260,7 @@ public final class MurmelAPI {
                 RefreshUtil.unregister(listener);
             }
         });
-    }
+    }*/
 
     /*public static int deleteUserSoft(int userId) {
         if (userId < 1) return 0;
@@ -276,18 +282,18 @@ public final class MurmelAPI {
         return softDeleteRow + userRow;
     }*/
 
-    public static Database getDatabase() {
-        return DATABASE;
+    public Database getDatabase() {
+        return database;
     }
 
-    public static DateTimeFormatter getDateTimeFormatter(int languageId) {
+    public @NotNull DateTimeFormatter getDateTimeFormatter(int languageId) {
         String pattern = messageService.getMessage(MurmelMessage.DATE_TIME_FORMAT.getTag(), languageId);
         if (pattern == null)
             throw new IllegalArgumentException("No pattern for language " + languageId + " found!");
         return DateTimeFormatter.ofPattern(pattern);
     }
 
-    public static DecimalFormat getDecimalFormat(int languageId, String pattern) {
+    public @NotNull DecimalFormat getDecimalFormat(int languageId, @NotNull String pattern) {
         Language language = getLanguageProvider().findById(languageId);
         if (language == null)
             throw new IllegalArgumentException("No language for id " + languageId + " found!");
@@ -296,242 +302,143 @@ public final class MurmelAPI {
         return new DecimalFormat(pattern, symbols);
     }
 
-    public static Long getFetchLimit() {
+    public Long getFetchLimit() {
         return fetchLimit;
     }
 
-    public static void setFetchLimit(Long fetchLimit) {
-        MurmelAPI.fetchLimit = fetchLimit;
-    }
-
-    public static long getCacheCapacity() {
+    public long getCacheCapacity() {
         return cacheCapacity;
     }
 
-    public static void setCacheCapacity(long cacheCapacity) {
-        MurmelAPI.cacheCapacity = cacheCapacity;
-    }
-
-    public static Duration getRefreshInterval() {
+    public Duration getRefreshInterval() {
         return refreshInterval;
     }
 
-    public static void setRefreshInterval(Duration refreshInterval) {
-        MurmelAPI.refreshInterval = refreshInterval;
+    public RefreshProvider getRefreshProvider() {
+        return refreshProvider;
     }
 
-    public static SettingsProvider getSettingsProvider() {
-        if (settingsProvider == null)
-            settingsProvider = new SettingsProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public SettingsProvider getSettingsProvider() {
         return settingsProvider;
     }
 
-    public static SettingsService getSettingsService(SettingsProvider settingsProvider) {
-        if (settingsService == null)
-            settingsService = new SettingsService(settingsProvider, GSON);
+    public SettingsService getSettingsService() {
         return settingsService;
     }
 
-    public static SettingsService getSettingsService() {
-        return getSettingsService(getSettingsProvider());
-    }
-
-    public static LanguageProvider getLanguageProvider() {
-        if (languageProvider == null)
-            languageProvider = new LanguageProviderImpl(DATABASE, cacheCapacity);
+    public LanguageProvider getLanguageProvider() {
         return languageProvider;
     }
 
-    public static MessageProvider getMessageProvider() {
-        if (messageProvider == null)
-            messageProvider = new MessageProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public MessageProvider getMessageProvider() {
         return messageProvider;
     }
 
-    public static MessageService getMessageService(LanguageProvider languageProvider, MessageProvider messageProvider) {
-        if (messageService == null)
-            messageService = new MessageService(languageProvider, messageProvider);
+    public MessageService getMessageService() {
         return messageService;
     }
 
-    public static MessageService getMessageService() {
-        return getMessageService(getLanguageProvider(), getMessageProvider());
-    }
-
-    public static UserProvider getUserProvider() {
-        if (userProvider == null)
-            userProvider = new UserProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public UserProvider getUserProvider() {
         return userProvider;
     }
 
-    public static UserPlayTimeProvider getUserPlayTimeProvider() {
-        if (userPlayTimeProvider == null)
-            userPlayTimeProvider = new UserPlayTimeProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public UserPlayTimeProvider getUserPlayTimeProvider() {
         return userPlayTimeProvider;
     }
 
-    public static UserLoginProvider getUserLoginProvider() {
-        if (userLoginProvider == null)
-            userLoginProvider = new UserLoginProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public UserLoginProvider getUserLoginProvider() {
         return userLoginProvider;
     }
 
-    public static UserSessionProvider getUserSessionProvider() {
-        if (userSessionProvider == null)
-            userSessionProvider = new UserSessionProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public UserSessionProvider getUserSessionProvider() {
         return userSessionProvider;
     }
 
-    public static UserService getUserService(UserProvider userProvider,
-                                             UserPlayTimeProvider playTimeProvider,
-                                             UserLoginProvider loginProvider,
-                                             UserSessionProvider sessionProvider) {
-        if (userService == null)
-            userService = new UserService(userProvider, playTimeProvider, loginProvider, sessionProvider);
+    public UserService getUserService() {
         return userService;
     }
 
-    public static UserService getUserService() {
-        return getUserService(getUserProvider(), getUserPlayTimeProvider(), getUserLoginProvider(), getUserSessionProvider());
-    }
-
-    public static GroupProvider getGroupProvider() {
-        if (groupProvider == null)
-            groupProvider = new GroupProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public GroupProvider getGroupProvider() {
         return groupProvider;
     }
 
-    public static GroupColorProvider getGroupColorProvider() {
-        if (groupColorProvider == null)
-            groupColorProvider = new GroupColorProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public GroupColorProvider getGroupColorProvider() {
         return groupColorProvider;
     }
 
-    public static UserPermissionProvider getUserPermissionProvider() {
-        if (userPermissionProvider == null)
-            userPermissionProvider = new UserPermissionProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public UserPermissionProvider getUserPermissionProvider() {
         return userPermissionProvider;
     }
 
-    public static UserParentProvider getUserParentProvider() {
-        if (userParentProvider == null)
-            userParentProvider = new UserParentProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public UserParentProvider getUserParentProvider() {
         return userParentProvider;
     }
 
-    public static GroupPermissionProvider getGroupPermissionProvider() {
-        if (groupPermissionProvider == null)
-            groupPermissionProvider = new GroupPermissionProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public GroupPermissionProvider getGroupPermissionProvider() {
         return groupPermissionProvider;
     }
 
-    public static GroupParentProvider getGroupParentProvider() {
-        if (groupParentProvider == null)
-            groupParentProvider = new GroupParentProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public GroupParentProvider getGroupParentProvider() {
         return groupParentProvider;
     }
 
-    public static Permission getPermission(UserProvider userProvider, GroupParentProvider groupParentProvider,
-                                           GroupPermissionProvider groupPermissionProvider, UserParentProvider userParentProvider,
-                                           UserPermissionProvider userPermissionProvider) {
-        if (permission == null)
-            permission = new PermissionProvider(DATABASE, userProvider, groupParentProvider, groupPermissionProvider, userParentProvider, userPermissionProvider,
-                    cacheCapacity, refreshInterval);
+    public Permission getPermission() {
         return permission;
     }
 
-    public static Permission getPermission() {
-        return getPermission(getUserProvider(), getGroupParentProvider(), getGroupPermissionProvider(), getUserParentProvider(), getUserPermissionProvider());
-    }
-
-    public static PunishmentReasonProvider getPunishmentReasonProvider() {
-        if (punishReasonProvider == null)
-            punishReasonProvider = new PunishmentReasonProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public PunishmentReasonProvider getPunishReasonProvider() {
         return punishReasonProvider;
     }
 
-    public static PunishmentLogProvider getPunishmentLogProvider() {
-        if (punishLogProvider == null)
-            punishLogProvider = new PunishmentLogProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public PunishmentLogProvider getPunishLogProvider() {
         return punishLogProvider;
     }
 
-    public static PunishmentCurrentIpProvider getPunishmentCurrentIpProvider() {
-        if (punishIpProvider == null)
-            punishIpProvider = new PunishmentCurrentIpProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public PunishmentCurrentIpProvider getPunishIpProvider() {
         return punishIpProvider;
     }
 
-    public static PunishmentCurrentUserProvider getPunishmentCurrentUserProvider() {
-        if (punishUserProvider == null)
-            punishUserProvider = new PunishmentCurrentUserProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public PunishmentCurrentUserProvider getPunishUserProvider() {
         return punishUserProvider;
     }
 
-    public static PunishmentService getPunishmentService(PunishmentReasonProvider reasonProvider,
-                                                         PunishmentLogProvider logProvider,
-                                                         PunishmentCurrentIpProvider ipProvider,
-                                                         PunishmentCurrentUserProvider userProvider) {
-        if (punishmentService == null)
-            punishmentService = new PunishmentService(reasonProvider, logProvider, ipProvider, userProvider);
+    public PunishmentService getPunishmentService() {
         return punishmentService;
     }
 
-    public static PunishmentService getPunishmentService() {
-        return getPunishmentService(getPunishmentReasonProvider(), getPunishmentLogProvider(), getPunishmentCurrentIpProvider(), getPunishmentCurrentUserProvider());
-    }
-
-    public static ClanProvider getClanProvider() {
-        if (clanProvider == null)
-            clanProvider = new ClanProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public ClanProvider getClanProvider() {
         return clanProvider;
     }
 
-    public static ClanMemberProvider getClanMemberProvider() {
-        if (clanMemberProvider == null)
-            clanMemberProvider = new ClanMemberProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public ClanMemberProvider getClanMemberProvider() {
         return clanMemberProvider;
     }
 
-    public static ClanGroupProvider getClanGroupProvider() {
-        if (clanGroupProvider == null)
-            clanGroupProvider = new ClanGroupProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public ClanGroupProvider getClanGroupProvider() {
         return clanGroupProvider;
     }
 
-    public static ClanParentProvider getClanParentProvider() {
-        if (clanParentProvider == null)
-            clanParentProvider = new ClanParentProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public ClanParentProvider getClanParentProvider() {
         return clanParentProvider;
     }
 
-    public static ClanPermissionProvider getClanPermissionProvider() {
-        if (clanPermissionProvider == null)
-            clanPermissionProvider = new ClanPermissionProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public ClanPermissionProvider getClanPermissionProvider() {
         return clanPermissionProvider;
     }
 
-    public static PrefixColorProvider getPrefixColorProvider() {
-        if (prefixColorProvider == null)
-            prefixColorProvider = new PrefixColorProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public PrefixColorProvider getPrefixColorProvider() {
         return prefixColorProvider;
     }
 
-    public static UserPrefixColorProvider getUserPrefixColorProvider() {
-        if (userPrefixColorProvider == null)
-            userPrefixColorProvider = new UserPrefixColorProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public UserPrefixColorProvider getUserPrefixColorProvider() {
         return userPrefixColorProvider;
     }
 
-    public static InventoryTypeProvider getInventoryTypeProvider() {
-        if (inventoryTypeProvider == null)
-            inventoryTypeProvider = new InventoryTypeProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public InventoryTypeProvider getInventoryTypeProvider() {
         return inventoryTypeProvider;
     }
 
-    public static UserInventoryProvider getUserInventoryProvider() {
-        if (userInventoryProvider == null)
-            userInventoryProvider = new UserInventoryProviderImpl(DATABASE, fetchLimit, cacheCapacity, refreshInterval);
+    public UserInventoryProvider getUserInventoryProvider() {
         return userInventoryProvider;
     }
 }
