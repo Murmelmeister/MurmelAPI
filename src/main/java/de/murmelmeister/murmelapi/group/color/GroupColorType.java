@@ -1,5 +1,8 @@
 package de.murmelmeister.murmelapi.group.color;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 /**
  * The GroupColorType enum represents the types of group color customization
  * categories. Each type corresponds to a specific category of group color settings,
@@ -41,14 +44,14 @@ public enum GroupColorType {
         return name;
     }
 
-    public static GroupColorType fromId(int id) {
+    public static @Nullable GroupColorType fromId(int id) {
         for (GroupColorType type : VALUES)
             if (type.getId() == id)
                 return type;
         return null;
     }
 
-    public static GroupColorType fromName(String name) {
+    public static @Nullable GroupColorType fromName(@NotNull String name) {
         for (GroupColorType type : VALUES)
             if (type.getName().equalsIgnoreCase(name))
                 return type;
