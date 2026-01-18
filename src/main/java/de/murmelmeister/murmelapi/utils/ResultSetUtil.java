@@ -42,7 +42,7 @@ public final class ResultSetUtil {
         return resultSet -> {
             String tagId = resultSet.getString("tag_id");
             String json = resultSet.getString("value_json");
-            LocalDateTime updatedAt = resultSet.getObject("updated_at") != null ? resultSet.getTimestamp("updated_at").toLocalDateTime() : null;
+            LocalDateTime updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime();
             return new Settings(tagId, json, updatedAt);
         };
     }
@@ -314,7 +314,7 @@ public final class ResultSetUtil {
             int createdBy = result.getInt("created_by");
             LocalDateTime changedAt = result.getObject("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
             Integer changedBy = result.getObject("changed_by") != null ? result.getInt("changed_by") : null;
-            return new ClanGroup(clanId, groupId, groupName, priority, isDefault, createdAt, createdBy, changedAt, changedBy);
+            return new ClanGroup(clanId, groupId, groupName, priority, isDefault, createdBy, createdAt, changedBy, changedAt);
         };
     }
 
@@ -328,7 +328,7 @@ public final class ResultSetUtil {
             int createdBy = result.getInt("created_by");
             LocalDateTime changedAt = result.getObject("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
             Integer changedBy = result.getObject("changed_by") != null ? result.getInt("changed_by") : null;
-            return new ClanParent(clanId, groupId, parentId, expiresAt, createdAt, createdBy, changedAt, changedBy);
+            return new ClanParent(clanId, groupId, parentId, expiresAt, createdBy, createdAt, changedBy, changedAt);
         };
     }
 
@@ -342,7 +342,7 @@ public final class ResultSetUtil {
             int createdBy = result.getInt("created_by");
             LocalDateTime changedAt = result.getObject("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
             Integer changedBy = result.getObject("changed_by") != null ? result.getInt("changed_by") : null;
-            return new ClanPermission(clanId, groupId, permission, expiresAt, createdAt, createdBy, changedAt, changedBy);
+            return new ClanPermission(clanId, groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
         };
     }
 
