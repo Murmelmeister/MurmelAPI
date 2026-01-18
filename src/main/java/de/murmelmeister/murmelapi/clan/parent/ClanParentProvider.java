@@ -1,22 +1,25 @@
 package de.murmelmeister.murmelapi.clan.parent;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 import java.util.UUID;
 
 public interface ClanParentProvider {
     void refreshCache();
 
-    ClanParent findParent(UUID clanId, UUID groupId, int parentId);
+    @Nullable ClanParent findParent(@Nullable UUID clanId, @Nullable UUID groupId, int parentId);
 
-    List<ClanParent> findParents(UUID clanId, UUID groupId);
+    @Nullable List<ClanParent> findParents(@Nullable UUID clanId, @Nullable UUID groupId);
 
-    ClanParent add(UUID clanId, UUID groupId, int parentId, long duration, int createdBy);
+    @Nullable ClanParent add(@NotNull UUID clanId, @NotNull UUID groupId, int parentId, long duration, int createdBy);
 
-    int remove(UUID clanId, UUID groupId, int parentId);
+    int remove(@NotNull UUID clanId, @NotNull UUID groupId, int parentId);
 
-    int clear(UUID clanId, UUID groupId);
+    int clear(@NotNull UUID clanId, @NotNull UUID groupId);
 
-    ClanParent update(UUID clanId, UUID groupId, int parentId, long duration, int changedBy);
+    @Nullable ClanParent update(@NotNull UUID clanId, @NotNull UUID groupId, int parentId, long duration, int changedBy);
 
     int loadExpired();
 }
