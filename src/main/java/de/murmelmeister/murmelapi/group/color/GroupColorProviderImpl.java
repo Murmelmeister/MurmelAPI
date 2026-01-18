@@ -1,8 +1,11 @@
 package de.murmelmeister.murmelapi.group.color;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -19,41 +22,47 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
     private static final String TABLE_NAME = "group_color";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final GroupColorCache cache;
     private final RefreshType all = RefreshType.GROUP_COLORS;
     private final RefreshType single = RefreshType.SINGLE_GROUP_COLOR;
 
-    public GroupColorProviderImpl(Database database, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public GroupColorProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new GroupColorCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new GroupColorCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public GroupColor getGroupColor(int groupId, int typeId) {
+    public @Nullable GroupColor getGroupColor(int groupId, int typeId) {
         return cache.get(groupId, typeId);
     }
 
     @Override
-    public List<GroupColor> getGroupColors(int groupId) {
+    public @Nullable List<GroupColor> getGroupColors(int groupId) {
         return cache.getByGroupId(groupId);
     }
 
     @Override
-    public List<GroupColor> getGroupColors() {
+    public @NotNull List<GroupColor> getGroupColors() {
         return cache.getCachedColors();
     }
 
     @Override
-    public GroupColor add(int groupId, int typeId, String value, int createdBy) {
-        if (groupId < 1 || typeId < 1 || value == null || createdBy < CONSOLE_USER_ID)
+    public @Nullable GroupColor add(int groupId, int typeId, @NotNull String value, int createdBy) {
+        if (groupId < 1 || typeId < 1 || createdBy < CONSOLE_USER_ID)
             return null;
 
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (group_id, type_id, value, created_by) VALUES (?, ?, ?, ?)";
+        @Language("MariaDB")
+        String insertSql = """
+                INSERT INTO %s (group_id, type_id, value, created_by)
+                VALUES (?, ?, ?, ?)
+                """.formatted(TABLE_NAME);
         int row = database.update(insertSql, stmt -> {
             stmt.setInt(1, groupId);
             stmt.setInt(2, typeId);
@@ -62,7 +71,8 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE group_id = ? AND type_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT created_at FROM %s WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
         LocalDateTime createdAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> {
@@ -72,7 +82,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         if (createdAt == null) return null;
 
         GroupColor groupColor = new GroupColor(groupId, typeId, value, createdBy, createdAt, null, null);
-        RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
+        refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         return groupColor;
     }
 
@@ -80,14 +90,15 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
     public int remove(int groupId, int typeId) {
         if (groupId < 1 || typeId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ? AND type_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setInt(1, groupId);
             stmt.setInt(2, typeId);
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
+        refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         return row;
     }
 
@@ -95,18 +106,19 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
     public int clear(int groupId) {
         if (groupId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE group_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, groupId);
         return row;
     }
 
     @Override
-    public GroupColor update(int groupId, int typeId, String value, int changedBy) {
-        if (groupId < 1 || typeId < 1 || value == null || changedBy < CONSOLE_USER_ID)
+    public @Nullable GroupColor update(int groupId, int typeId, @NotNull String value, int changedBy) {
+        if (groupId < 1 || typeId < 1 || changedBy < CONSOLE_USER_ID)
             return null;
 
         GroupColor existing = cache.get(groupId, typeId);
@@ -115,7 +127,8 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         if (Objects.equals(value, existing.value()))
             return existing; // No changes, return existing
 
-        String updateSql = "UPDATE " + TABLE_NAME + " SET value = ?, changed_by = ? WHERE group_id = ? AND type_id = ?";
+        @Language("MariaDB")
+        String updateSql = "UPDATE %s SET value = ?, changed_by = ? WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
         int row = database.update(updateSql, stmt -> {
             stmt.setString(1, value);
             stmt.setInt(2, changedBy);
@@ -124,7 +137,8 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE group_id = ? AND type_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT changed_at FROM %s WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
@@ -133,8 +147,12 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                 });
         if (changedAt == null) return null;
 
-        GroupColor groupColor = existing.withUpdateMeta(value, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
+        GroupColor groupColor = GroupColor.builder(existing)
+                .value(value)
+                .changedBy(changedBy)
+                .changedAt(changedAt)
+                .build();
+        refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         return groupColor;
     }
 }
