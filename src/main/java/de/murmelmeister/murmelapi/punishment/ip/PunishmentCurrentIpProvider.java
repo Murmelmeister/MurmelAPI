@@ -1,5 +1,9 @@
 package de.murmelmeister.murmelapi.punishment.ip;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
+
 import java.net.InetAddress;
 import java.util.List;
 import java.util.UUID;
@@ -7,13 +11,15 @@ import java.util.UUID;
 public interface PunishmentCurrentIpProvider {
     void refreshCache();
 
+    @NotNull
+    @Unmodifiable
     List<InetAddress> getAllPunishedIps(int typeId);
 
-    PunishmentCurrentIp getPunishedIp(InetAddress inetAddress, int typeId);
+    @Nullable PunishmentCurrentIp getPunishedIp(@NotNull InetAddress inetAddress, int typeId);
 
-    PunishmentCurrentIp create(InetAddress inetAddress, int typeId, UUID logId);
+    @Nullable PunishmentCurrentIp create(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId);
 
-    int delete(InetAddress inetAddress, int typeId);
+    int delete(@NotNull InetAddress inetAddress, int typeId);
 
-    PunishmentCurrentIp update(InetAddress inetAddress, int typeId, UUID logId);
+    @Nullable PunishmentCurrentIp update(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId);
 }
