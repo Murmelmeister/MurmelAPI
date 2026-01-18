@@ -1,8 +1,11 @@
 package de.murmelmeister.murmelapi.user.color;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -12,35 +15,41 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
     private static final String TABLE_NAME = "user_prefix_colors";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final UserPrefixColorCache cache;
     private final RefreshType all = RefreshType.USER_PREFIX_COLORS;
     private final RefreshType single = RefreshType.SINGLE_USER_PREFIX_COLOR;
 
-    public UserPrefixColorProviderImpl(Database database, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserPrefixColorProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new UserPrefixColorCache(database, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new UserPrefixColorCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public UserPrefixColor findById(int userId, String colorId) {
+    public @Nullable UserPrefixColor findById(int userId, @NotNull String colorId) {
         return cache.get(userId, colorId);
     }
 
     @Override
-    public List<UserPrefixColor> findAll() {
+    public @NotNull List<UserPrefixColor> findAll() {
         return cache.getAll();
     }
 
     @Override
-    public UserPrefixColor create(int userId, String colorId, boolean active) {
-        if (userId < 1 || colorId == null) return null;
+    public @Nullable UserPrefixColor create(int userId, @NotNull String colorId, boolean active) {
+        if (userId < 1) return null;
 
-        String sql = "INSERT INTO " + TABLE_NAME + " (user_id, color_id, active) VALUES (?, ?, ?)";
+        @Language("MariaDB")
+        String sql = """
+                INSERT INTO %s (user_id, color_id, active)
+                VALUES (?, ?, ?)
+                """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setInt(1, userId);
             stmt.setString(2, colorId);
@@ -48,7 +57,8 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE user_id = ? AND color_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT created_at FROM %s WHERE user_id = ? AND color_id = ?".formatted(TABLE_NAME);
         LocalDateTime createdAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(), stmt -> {
                     stmt.setInt(1, userId);
@@ -57,34 +67,36 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
         if (createdAt == null) return null;
 
         UserPrefixColor color = new UserPrefixColor(userId, colorId, active, createdAt);
-        RefreshUtil.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
+        refreshProvider.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
         return color;
     }
 
     @Override
-    public int delete(int userId, String colorId) {
-        if (userId < 1 || colorId == null) return 0;
+    public int delete(int userId, @NotNull String colorId) {
+        if (userId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE user_id = ? AND color_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE user_id = ? AND color_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setInt(1, userId);
             stmt.setString(2, colorId);
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
+        refreshProvider.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
         return row;
     }
 
     @Override
-    public UserPrefixColor update(int userId, String colorId, boolean active) {
-        if (userId < 1 || colorId == null) return null;
+    public @Nullable UserPrefixColor update(int userId, @NotNull String colorId, boolean active) {
+        if (userId < 1) return null;
 
         UserPrefixColor existing = cache.get(userId, colorId);
         if (existing == null) return null;
 
         if (active == existing.active()) return existing;
-        String sql = "UPDATE " + TABLE_NAME + " SET active = ? WHERE user_id = ? AND color_id = ?";
+        @Language("MariaDB")
+        String sql = "UPDATE %s SET active = ? WHERE user_id = ? AND color_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setBoolean(1, active);
             stmt.setInt(2, userId);
@@ -93,7 +105,7 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
         if (row < 1) return null;
 
         UserPrefixColor updated = existing.withActive(active);
-        RefreshUtil.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
+        refreshProvider.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
         return updated;
     }
 }
