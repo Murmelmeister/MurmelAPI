@@ -113,7 +113,9 @@ public final class LanguageProviderImpl implements LanguageProvider {
         });
         if (rows < 1) return null;
 
-        Language language = existing.withCode(normalized);
+        Language language = Language.builder(existing)
+                .code(code)
+                .build();
         refreshProvider.fireSingle(single, id);
         return language;
     }
