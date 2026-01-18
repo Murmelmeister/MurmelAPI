@@ -6,54 +6,71 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ClanGroupCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE clan_id = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE clan_id = ? AND group_id = ?";
+
     private static final String ALL_KEY = "ALL";
     private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=([^,]+).*");
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<@NotNull GroupKey, ClanGroup> cacheByKey;
-    private final LoadingCache<@NotNull UUID, List<ClanGroup>> cacheByClanId;
-    private final LoadingCache<@NotNull String, List<ClanGroup>> listCache;
     private final Long fetchLimit;
 
-    public ClanGroupCache(Database database, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull GroupKey, Optional<ClanGroup>> cacheByKey;
+    private final LoadingCache<@NotNull UUID, List<ClanGroup>> cacheByClanId;
+    private final LoadingCache<@NotNull String, List<ClanGroup>> listCache;
+
+    public ClanGroupCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapcity, refreshInterval);
         this.cacheByClanId = CacheUtil.buildCacheRefresh(this::loadByClanId, cacheCapcity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapcity, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.CLAN_GROUPS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_CLAN_GROUP.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
+        }
+
+        if (RefreshType.SINGLE_CLAN_GROUP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (!(key instanceof String)) {
-                if (key instanceof GroupKey groupKey)
-                    refreshSingle(groupKey);
+                if (key instanceof GroupKey(UUID clanId, UUID groupId))
+                    remove(clanId, groupId);
             } else {
                 Matcher matcher = KEY_PATTERN.matcher((String) key);
                 if (matcher.matches()) {
                     UUID clanId = UUID.fromString(matcher.group(1));
                     UUID groupId = UUID.fromString(matcher.group(2));
-                    refreshSingle(new GroupKey(clanId, groupId));
+                    remove(clanId, groupId);
                 } else {
                     throw new IllegalArgumentException("Invalid key format: " + key);
                 }
@@ -63,65 +80,57 @@ public class ClanGroupCache implements MurmelCache {
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<ClanGroup> clans = loadAllFromDatabase();
-        if (clans.isEmpty())
-            return;
-        clans.forEach(this::put);
-    }
-
-    private void refreshSingle(GroupKey key) {
-        remove(key.clanId(), key.groupId());
-        ClanGroup group = loadByKey(key);
-        if (group != null) put(group);
-    }
-
-    private List<ClanGroup> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<ClanGroup> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanGroup());
     }
 
-    private List<ClanGroup> loadByClanId(UUID clanId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE clan_id = ?";
+    private @NotNull List<ClanGroup> loadByClanId(UUID clanId) {
+        String sql = SELECT_BY_ID.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanGroup(), stmt -> stmt.setString(1, clanId.toString()));
     }
 
-    private ClanGroup loadByKey(GroupKey key) {
-        String sql = "SELECT * FROM " + tableName + " WHERE clan_id = ? AND group_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanGroup(), stmt -> {
+    private @NotNull Optional<ClanGroup> loadByKey(GroupKey key) {
+        String sql = SELECT_BY_KEY.formatted(tableName);
+        ClanGroup clanGroup = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanGroup(), stmt -> {
             stmt.setString(1, key.clanId().toString());
             stmt.setString(2, key.groupId().toString());
         });
+
+        return Optional.ofNullable(clanGroup);
     }
 
-    public ClanGroup getByKey(UUID clanId, UUID groupId) {
-        return cacheByKey.get(new GroupKey(clanId, groupId));
+    public @Nullable ClanGroup getByKey(@Nullable UUID clanId, @Nullable UUID groupId) {
+        if (clanId == null || groupId == null) return null;
+        Optional<ClanGroup> optGroup = cacheByKey.get(new GroupKey(clanId, groupId));
+        return optGroup != null && optGroup.isPresent() ? optGroup.orElse(null) : null;
     }
 
-    public List<ClanGroup> getByClanId(UUID clanId) {
+    public @Nullable List<ClanGroup> getByClanId(@Nullable UUID clanId) {
+        if (clanId == null) return null;
         return cacheByClanId.get(clanId);
     }
 
-    public List<ClanGroup> getAll() {
+    public @NotNull List<ClanGroup> getAll() {
         List<ClanGroup> clans = listCache.get(ALL_KEY);
         if (clans == null || clans.isEmpty())
             return Collections.emptyList();
         return clans;
     }
 
-    public void put(ClanGroup group) {
+    public void put(@Nullable ClanGroup group) {
+        if (group == null) return;
         GroupKey key = new GroupKey(group.clanId(), group.groupId());
-        cacheByKey.put(key, group);
+        cacheByKey.put(key, Optional.of(group));
         CacheUtil.put(cacheByClanId, group.clanId(), group, v -> v.clanId().equals(group.clanId()));
         CacheUtil.put(listCache, ALL_KEY, group, v -> v.clanId().equals(group.clanId()) && v.groupId().equals(group.groupId()));
     }
 
-    public void remove(UUID clanId, UUID groupId) {
+    public void remove(@NotNull UUID clanId, @NotNull UUID groupId) {
         GroupKey key = new GroupKey(clanId, groupId);
         cacheByKey.invalidate(key);
         CacheUtil.remove(cacheByClanId, clanId, v -> v.clanId().equals(clanId));
@@ -134,6 +143,6 @@ public class ClanGroupCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    protected record GroupKey(UUID clanId, UUID groupId) {
+    protected record GroupKey(@NotNull UUID clanId, @NotNull UUID groupId) {
     }
 }
