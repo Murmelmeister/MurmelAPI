@@ -6,114 +6,114 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.*;
 
 public class PunishmentReasonCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_TYPE_ID = "SELECT * FROM %s WHERE type_id = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE id = ?";
+
     private static final String ALL_KEY = "ALL";
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<Integer, PunishmentReason> cacheById;
-    private final LoadingCache<Integer, List<PunishmentReason>> cacheByType;
-    private final LoadingCache<String, List<PunishmentReason>> listCache;
     private final Long fetchLimit;
 
-    public PunishmentReasonCache(Database database, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull Integer, Optional<PunishmentReason>> cacheById;
+    private final LoadingCache<@NotNull Integer, List<PunishmentReason>> cacheByType;
+    private final LoadingCache<@NotNull String, List<PunishmentReason>> listCache;
+
+    public PunishmentReasonCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapcity, refreshInterval);
         this.cacheByType = CacheUtil.buildCacheRefresh(this::loadByType, cacheCapcity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.PUNISHMENT_REASONS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_PUNISHMENT_REASON.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
+        }
+
+        if (RefreshType.SINGLE_PUNISHMENT_REASON.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (!(key instanceof String)) {
                 if (key instanceof Integer reasonId)
-                    refreshSingle(reasonId);
+                    remove(reasonId);
             } else {
                 int reasonId = Integer.parseInt((String) key);
-                refreshSingle(reasonId);
+                remove(reasonId);
             }
         }
     }
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<PunishmentReason> reasons = loadAllFromDatabase();
-        if (reasons.isEmpty())
-            return;
-
-        Map<Integer, List<PunishmentReason>> byType = new HashMap<>();
-        for (PunishmentReason reason : reasons) {
-            cacheById.put(reason.id(), reason);
-            byType.computeIfAbsent(reason.typeId(), ignored -> new ArrayList<>()).add(reason);
-        }
-
-        byType.forEach((typeId, values) -> cacheByType.put(typeId, List.copyOf(values)));
-        listCache.put(ALL_KEY, List.copyOf(reasons));
-    }
-
-    private void refreshSingle(int reasonId) {
-        remove(reasonId);
-        PunishmentReason reason = loadById(reasonId);
-        if (reason != null)
-            put(reason);
-    }
-
-    private List<PunishmentReason> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<PunishmentReason> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentReason());
     }
 
-    private List<PunishmentReason> loadByType(int typeId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE type_id = ?";
+    private @NotNull List<PunishmentReason> loadByType(int typeId) {
+        String sql = SELECT_BY_TYPE_ID.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentReason(),
                 stmt -> stmt.setInt(1, typeId));
     }
 
-    private PunishmentReason loadById(int reasonId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentReason(),
+    private @NotNull Optional<PunishmentReason> loadById(int reasonId) {
+        String sql = SELECT_BY_ID.formatted(tableName);
+        PunishmentReason punishmentReason = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentReason(),
                 stmt -> stmt.setInt(1, reasonId));
+
+        return Optional.ofNullable(punishmentReason);
     }
 
-    public PunishmentReason getById(int reasonId) {
-        return cacheById.get(reasonId);
+    public @Nullable PunishmentReason getById(int reasonId) {
+        Optional<PunishmentReason> optReason = cacheById.get(reasonId);
+        return optReason != null && optReason.isPresent() ? optReason.orElse(null) : null;
     }
 
-    public List<PunishmentReason> getByType(int typeId) {
+    public @Nullable List<PunishmentReason> getByType(int typeId) {
         return cacheByType.get(typeId);
     }
 
-    public void put(PunishmentReason reason) {
+    public void put(@Nullable PunishmentReason reason) {
+        if (reason == null) return;
         int reasonId = reason.id();
-        cacheById.put(reasonId, reason);
+        cacheById.put(reasonId, Optional.of(reason));
         CacheUtil.put(cacheByType, reason.typeId(), reason, v -> v.id() == reasonId);
         CacheUtil.put(listCache, ALL_KEY, reason, v -> v.id() == reasonId);
     }
 
     public void remove(int reasonId) {
-        PunishmentReason reason = cacheById.getIfPresent(reasonId);
-        if (reason != null) {
-            cacheById.invalidate(reasonId);
+        Optional<PunishmentReason> optReason = cacheById.getIfPresent(reasonId);
+        cacheById.invalidate(reasonId);
+
+        if (optReason != null && optReason.isPresent()) {
+            PunishmentReason reason = optReason.get();
             CacheUtil.remove(cacheByType, reason.typeId(), v -> v.id() == reasonId);
         }
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == reasonId);
@@ -125,7 +125,7 @@ public class PunishmentReasonCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public List<PunishmentReason> getCachedPunishReasons() {
+    public @NotNull List<PunishmentReason> getCachedPunishReasons() {
         List<PunishmentReason> reasons = listCache.get(ALL_KEY);
         if (reasons == null || reasons.isEmpty())
             return Collections.emptyList();
