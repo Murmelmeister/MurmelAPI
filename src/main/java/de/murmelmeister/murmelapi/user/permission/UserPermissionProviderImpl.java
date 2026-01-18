@@ -2,8 +2,11 @@ package de.murmelmeister.murmelapi.user.permission;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -23,38 +26,44 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
     private static final String TABLE_NAME = "user_permission";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final UserPermissionCache cache;
     private final RefreshType all = RefreshType.USER_PERMISSIONS;
     private final RefreshType single = RefreshType.SINGLE_USER_PERMISSION;
 
-    public UserPermissionProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserPermissionProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new UserPermissionCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new UserPermissionCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public UserPermission getPermission(int userId, String permission) {
+    public @Nullable UserPermission getPermission(int userId, @NotNull String permission) {
         return cache.get(userId, permission);
     }
 
     @Override
-    public List<UserPermission> getPermissions(int userId) {
+    public @Nullable List<UserPermission> getPermissions(int userId) {
         return cache.getPermissions(userId);
     }
 
     @Override
-    public UserPermission add(int userId, String permission, long duration, int createdBy) {
+    public @Nullable UserPermission add(int userId, @NotNull String permission, long duration, int createdBy) {
         String normalizedPermission = StringUtil.normalize(permission);
         if (userId < 1 || normalizedPermission == null || duration < -1 || createdBy < CONSOLE_USER_ID)
             return null;
 
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (user_id, permission, expires_at, created_by) VALUES (?, ?, ?, ?)";
+        @Language("MariaDB")
+        String insertSql = """
+                INSERT INTO %s (user_id, permission, expires_at, created_by)
+                VALUES (?, ?, ?, ?)
+                """.formatted(TABLE_NAME);
         int row = database.update(insertSql, stmt -> {
             stmt.setInt(1, userId);
             stmt.setString(2, normalizedPermission);
@@ -63,7 +72,8 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE user_id = ? AND permission = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT created_at FROM %s WHERE user_id = ? AND permission = ?".formatted(TABLE_NAME);
         LocalDateTime createdAt = database.query(selectSql, null, resultSet ->
                         resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> {
@@ -73,23 +83,24 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
         if (createdAt == null) return null;
 
         UserPermission userPermission = new UserPermission(userId, normalizedPermission, expiresAt, createdBy, createdAt, null, null);
-        RefreshUtil.fireSingle(single, new UserPermissionCache.PermissionKey(userId, normalizedPermission));
+        refreshProvider.fireSingle(single, new UserPermissionCache.PermissionKey(userId, normalizedPermission));
         return userPermission;
     }
 
     @Override
-    public int remove(int userId, String permission) {
+    public int remove(int userId, @NotNull String permission) {
         String normalizedPermission = StringUtil.normalize(permission);
         if (userId < 1 || normalizedPermission == null) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE user_id = ? AND permission = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE user_id = ? AND permission = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setInt(1, userId);
             stmt.setString(2, normalizedPermission);
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new UserPermissionCache.PermissionKey(userId, normalizedPermission));
+        refreshProvider.fireSingle(single, new UserPermissionCache.PermissionKey(userId, normalizedPermission));
         return row;
     }
 
@@ -97,17 +108,18 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
     public int clear(int userId) {
         if (userId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE user_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE user_id = ?".formatted(TABLE_NAME);
         int rows = database.update(sql,
                 stmt -> stmt.setInt(1, userId));
         if (rows < 1) return 0;
 
-        RefreshUtil.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, userId);
         return rows;
     }
 
     @Override
-    public UserPermission update(int userId, String permission, long duration, int changedBy) {
+    public @Nullable UserPermission update(int userId, @NotNull String permission, long duration, int changedBy) {
         String normalizedPermission = StringUtil.normalize(permission);
         if (userId < 1 || normalizedPermission == null || duration < -1 || changedBy < CONSOLE_USER_ID)
             return null;
@@ -119,7 +131,8 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
         if (Objects.equals(expiresAt, existing.expiresAt()))
             return existing; // No changes, return existing
 
-        String updateSql = "UPDATE " + TABLE_NAME + " SET expires_at = ?, changed_by = ? WHERE user_id = ? AND permission = ?";
+        @Language("MariaDB")
+        String updateSql = "UPDATE %s SET expires_at = ?, changed_by = ? WHERE user_id = ? AND permission = ?".formatted(TABLE_NAME);
         int row = database.update(updateSql, stmt -> {
             stmt.setTimestamp(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
             stmt.setInt(2, changedBy);
@@ -128,7 +141,8 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE user_id = ? AND permission = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT changed_at FROM %s WHERE user_id = ? AND permission = ?".formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
@@ -137,8 +151,12 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
                 });
         if (changedAt == null) return null;
 
-        UserPermission userPermission = existing.withUpdateMeta(expiresAt, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, new UserPermissionCache.PermissionKey(userId, normalizedPermission));
+        UserPermission userPermission = UserPermission.builder(existing)
+                .expiresAt(expiresAt)
+                .changedBy(changedBy)
+                .changedAt(changedAt)
+                .build();
+        refreshProvider.fireSingle(single, new UserPermissionCache.PermissionKey(userId, normalizedPermission));
         return userPermission;
     }
 
@@ -152,11 +170,12 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
         if (expiredPermissions.isEmpty()) return 0;
 
         // Delete expired permissions from the database
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP()";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP()".formatted(TABLE_NAME);
         int removed = database.update(sql);
 
         // Refresh the cache
-        expiredPermissions.forEach(key -> RefreshUtil.fireSingle(single, key));
+        expiredPermissions.forEach(key -> refreshProvider.fireSingle(single, key));
         return removed;
     }
 }
