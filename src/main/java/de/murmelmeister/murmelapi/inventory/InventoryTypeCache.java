@@ -6,92 +6,98 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public class InventoryTypeCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE id = ?";
+
     private static final String ALL_KEY = "ALL";
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<@NotNull Integer, InventoryType> cacheById;
-    private final LoadingCache<@NotNull String, List<InventoryType>> listCache;
     private final Long fetchLimit;
 
-    public InventoryTypeCache(Database database, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull Integer, Optional<InventoryType>> cacheById;
+    private final LoadingCache<@NotNull String, List<InventoryType>> listCache;
+
+    public InventoryTypeCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapacity, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.INVENTORY_TYPES.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_INVENTORY_TYPE.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
+        }
+
+        if (RefreshType.SINGLE_INVENTORY_TYPE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (!(key instanceof String)) {
                 if (key instanceof Integer id)
-                    refreshSingle(id);
+                    remove(id);
             } else {
                 int id = Integer.parseInt((String) key);
-                refreshSingle(id);
+                remove(id);
             }
         }
     }
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<InventoryType> types = loadAllFromDatabase();
-        if (types.isEmpty())
-            return;
-        types.forEach(this::put);
-    }
-
-    private void refreshSingle(int id) {
-        remove(id);
-        InventoryType type = loadById(id);
-        if (type != null) put(type);
-    }
-
-    private List<InventoryType> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<InventoryType> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.inventoryType());
     }
 
-    private InventoryType loadById(int id) {
-        String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.inventoryType(), stmt -> stmt.setInt(1, id));
+    private @NotNull Optional<InventoryType> loadById(int id) {
+        String sql = SELECT_BY_ID.formatted(tableName);
+        InventoryType inventoryType = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.inventoryType(),
+                stmt -> stmt.setInt(1, id));
+
+        return Optional.ofNullable(inventoryType);
     }
 
-    public InventoryType getById(int id) {
-        return cacheById.get(id);
+    public @Nullable InventoryType getById(int id) {
+        Optional<InventoryType> optType = cacheById.get(id);
+        return optType != null && optType.isPresent() ? optType.orElse(null) : null;
     }
 
-    public List<InventoryType> getAll() {
+    public @NotNull List<InventoryType> getAll() {
         List<InventoryType> types = listCache.get(ALL_KEY);
         if (types == null || types.isEmpty())
             return Collections.emptyList();
         return types;
     }
 
-    public void put(InventoryType type) {
-        cacheById.put(type.id(), type);
+    public void put(@Nullable InventoryType type) {
+        if (type == null) return;
+        cacheById.put(type.id(), Optional.of(type));
         CacheUtil.put(listCache, ALL_KEY, type, v -> v.id() == type.id());
     }
 
