@@ -10,7 +10,7 @@ public final class SettingsService {
     private final SettingsProvider provider;
     private final Gson gson;
 
-    public SettingsService(SettingsProvider provider, Gson gson) {
+    public SettingsService(@NotNull SettingsProvider provider, @NotNull Gson gson) {
         this.provider = provider;
         this.gson = gson;
     }
