@@ -1,8 +1,10 @@
 package de.murmelmeister.murmelapi.group.parent;
 
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.Nullable;
 
 import java.sql.Timestamp;
 import java.time.Duration;
@@ -20,37 +22,43 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
     private static final String TABLE_NAME = "group_parent";
 
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final GroupParentCache cache;
     private final RefreshType all = RefreshType.GROUP_PARENTS;
     private final RefreshType single = RefreshType.SINGLE_GROUP_PARENT;
 
-    public GroupParentProviderImpl(Database database, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public GroupParentProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
         this.database = database;
-        this.cache = new GroupParentCache(database, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.refreshProvider = refreshProvider;
+        this.cache = new GroupParentCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
     }
 
     @Override
     public void refreshCache() {
-        RefreshUtil.fireCache(all);
+        refreshProvider.fireCache(all);
     }
 
     @Override
-    public GroupParent getParent(int groupId, int parentId) {
+    public @Nullable GroupParent getParent(int groupId, int parentId) {
         return cache.get(groupId, parentId);
     }
 
     @Override
-    public List<GroupParent> getParents(int groupId) {
+    public @Nullable List<GroupParent> getParents(int groupId) {
         return cache.getParents(groupId);
     }
 
     @Override
-    public GroupParent add(int groupId, int parentId, long duration, int createdBy) {
+    public @Nullable GroupParent add(int groupId, int parentId, long duration, int createdBy) {
         if (groupId < 1 || parentId < 1 || duration < -1 || createdBy < CONSOLE_USER_ID)
             return null;
 
         LocalDateTime expiredAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
-        String insertSql = "INSERT INTO " + TABLE_NAME + " (group_id, parent_id, expires_at, created_by) VALUES (?, ?, ?, ?)";
+        @Language("MariaDB")
+        String insertSql = """
+                INSERT INTO %s (group_id, parent_id, expires_at, created_by)
+                VALUES (?, ?, ?, ?)
+                """.formatted(TABLE_NAME);
         int row = database.update(insertSql, stmt -> {
             stmt.setInt(1, groupId);
             stmt.setInt(2, parentId);
@@ -59,7 +67,8 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT created_at FROM " + TABLE_NAME + " WHERE group_id = ? AND parent_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT created_at FROM %s WHERE group_id = ? AND parent_id = ?".formatted(TABLE_NAME);
         LocalDateTime createAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
                 stmt -> {
@@ -69,7 +78,7 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         if (createAt == null) return null;
 
         GroupParent groupParent = new GroupParent(groupId, parentId, expiredAt, createdBy, createAt, null, null);
-        RefreshUtil.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
+        refreshProvider.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
         return groupParent;
     }
 
@@ -77,14 +86,15 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
     public int remove(int groupId, int parentId) {
         if (groupId < 1 || parentId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ? AND parent_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE group_id = ? AND parent_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setInt(1, groupId);
             stmt.setInt(2, parentId);
         });
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
+        refreshProvider.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
         return row;
     }
 
@@ -92,17 +102,18 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
     public int clear(int groupId) {
         if (groupId < 1) return 0;
 
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE group_id = ?";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE group_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        RefreshUtil.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, groupId);
         return row;
     }
 
     @Override
-    public GroupParent update(int groupId, int parentId, long duration, int changedBy) {
+    public @Nullable GroupParent update(int groupId, int parentId, long duration, int changedBy) {
         if (groupId < 1 || parentId < 1 || duration < -1 || changedBy < CONSOLE_USER_ID)
             return null;
 
@@ -113,7 +124,8 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         if (Objects.equals(expiresAt, existing.expiresAt()))
             return existing; // No changes, return existing
 
-        String updateSql = "UPDATE " + TABLE_NAME + " SET expires_at = ?, changed_by = ? WHERE group_id = ? AND parent_id = ?";
+        @Language("MariaDB")
+        String updateSql = "UPDATE %s SET expires_at = ?, changed_by = ? WHERE group_id = ? AND parent_id = ?".formatted(TABLE_NAME);
         int row = database.update(updateSql, stmt -> {
             stmt.setTimestamp(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
             stmt.setInt(2, changedBy);
@@ -122,7 +134,8 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         });
         if (row < 1) return null;
 
-        String selectSql = "SELECT changed_at FROM " + TABLE_NAME + " WHERE group_id = ? AND parent_id = ?";
+        @Language("MariaDB")
+        String selectSql = "SELECT changed_at FROM %s WHERE group_id = ? AND parent_id = ?".formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
@@ -131,8 +144,12 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
                 });
         if (changedAt == null) return null;
 
-        GroupParent groupParent = existing.withUpdateMeta(expiresAt, changedBy, changedAt);
-        RefreshUtil.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
+        GroupParent groupParent = GroupParent.builder(existing)
+                .expiresAt(expiresAt)
+                .changedBy(changedBy)
+                .changedAt(changedAt)
+                .build();
+        refreshProvider.fireSingle(single, new GroupParentCache.ParentKey(groupId, parentId));
         return groupParent;
     }
 
@@ -146,11 +163,12 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
         if (expiredParents.isEmpty()) return 0;
 
         // Delete expired parents from the database
-        String sql = "DELETE FROM " + TABLE_NAME + " WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP()";
+        @Language("MariaDB")
+        String sql = "DELETE FROM %s WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP()".formatted(TABLE_NAME);
         int removed = database.update(sql);
 
         // Refresh the cache
-        expiredParents.forEach(key -> RefreshUtil.fireSingle(single, key));
+        expiredParents.forEach(key -> refreshProvider.fireSingle(single, key));
         return removed;
     }
 }
