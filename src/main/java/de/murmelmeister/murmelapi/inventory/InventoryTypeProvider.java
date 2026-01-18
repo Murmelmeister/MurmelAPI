@@ -1,15 +1,18 @@
 package de.murmelmeister.murmelapi.inventory;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 public interface InventoryTypeProvider {
     void refreshCache();
 
-    InventoryType findById(int id);
+    @Nullable InventoryType findById(int id);
 
-    List<InventoryType> findAll();
+    @NotNull List<InventoryType> findAll();
 
-    InventoryType create(String name);
+    @Nullable InventoryType create(@NotNull String name);
 
     int delete(int id);
 }
