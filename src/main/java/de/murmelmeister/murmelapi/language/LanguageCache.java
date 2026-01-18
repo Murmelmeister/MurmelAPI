@@ -6,114 +6,120 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * LanguageCache provides a Caffeine-backed cache for language lookups by id and language code.
  */
 public class LanguageCache implements MurmelCache {
-    private static final String ALL_KEY = "ALL";
-    private final Database database;
-    private final String tableName;
-    private final LoadingCache<Integer, Language> cacheById;
-    private final LoadingCache<String, Integer> codeToId;
-    private final LoadingCache<String, List<Language>> listCache;
+    @org.intellij.lang.annotations.Language(value = "MariaDB")
+    private static final String SELECT_ALL = "SELECT id, code FROM %s";
+    @org.intellij.lang.annotations.Language(value = "MariaDB")
+    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE id = ?";
+    @org.intellij.lang.annotations.Language(value = "MariaDB")
+    private static final String SELECT_BY_CODE = "SELECT id FROM %s WHERE LOWER(code) = ?";
 
-    public LanguageCache(Database database, String tableName, long cacheCapacity) {
+    private static final String ALL_KEY = "ALL";
+
+    private final Database database;
+    private final RefreshProvider refreshProvider;
+    private final String tableName;
+
+    private final LoadingCache<@NotNull Integer, Optional<Language>> cacheById;
+    private final LoadingCache<@NotNull String, Optional<Integer>> codeToId;
+    private final LoadingCache<@NotNull String, List<Language>> listCache;
+
+    public LanguageCache(Database database, RefreshProvider refreshProvider, String tableName, long cacheCapacity) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.cacheById = CacheUtil.buildCache(this::loadById, cacheCapacity);
         this.codeToId = CacheUtil.buildCache(this::loadByCodeKey, cacheCapacity);
         this.listCache = CacheUtil.buildCache(key -> loadAllFromDatabase(), 1);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.LANGUAGES.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_LANGUAGE.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
+        }
+
+        if (RefreshType.SINGLE_LANGUAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (!(key instanceof String)) {
                 if (key instanceof Integer id)
-                    refreshSingle(id);
+                    remove(id);
             } else {
                 int id = Integer.parseInt((String) key);
-                refreshSingle(id);
+                remove(id);
             }
         }
     }
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<Language> languages = loadAllFromDatabase();
-        if (languages.isEmpty())
-            return;
-        languages.forEach(language -> {
-            cacheById.put(language.id(), language);
-            codeToId.put(toKey(language.code()), language.id());
-        });
-        listCache.put(ALL_KEY, List.copyOf(languages));
-    }
-
-    private void refreshSingle(int id) {
-        remove(id);
-        Language language = loadById(id);
-        if (language != null)
-            put(language);
-    }
-
-    private List<Language> loadAllFromDatabase() {
-        String sql = "SELECT id, code FROM " + tableName;
+    private @NotNull List<Language> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, null, ResultSetUtil.language());
     }
 
-    private Integer loadByCodeKey(String key) {
-        String sql = "SELECT id FROM " + tableName + " WHERE LOWER(code) = ?";
-        return CacheUtil.loadSingle(database, sql, null,
+    private @NotNull Optional<Integer> loadByCodeKey(String key) {
+        String sql = SELECT_BY_CODE.formatted(tableName);
+        Integer id = CacheUtil.loadSingle(database, sql, null,
                 resultSet -> resultSet.getInt("id"),
                 stmt -> stmt.setString(1, key));
+
+        return Optional.ofNullable(id);
     }
 
-    private Language loadById(int id) {
-        String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
-        return CacheUtil.loadSingle(database, sql, null, ResultSetUtil.language(),
+    private @NotNull Optional<Language> loadById(int id) {
+        String sql = SELECT_BY_ID.formatted(tableName);
+        Language language = CacheUtil.loadSingle(database, sql, null, ResultSetUtil.language(),
                 stmt -> stmt.setInt(1, id));
+
+        return Optional.ofNullable(language);
     }
 
-    public Language getById(int id) {
-        return cacheById.get(id);
+    public @Nullable Language getById(int id) {
+        Optional<Language> optLang = cacheById.get(id);
+        return optLang != null && optLang.isPresent() ? optLang.orElse(null) : null;
     }
 
-    public Language getByCode(String code) {
+    public @Nullable Language getByCode(@Nullable String code) {
         if (code == null) return null;
-        Integer id = codeToId.get(toKey(code));
-        return id != null ? cacheById.get(id) : null;
+        Optional<Integer> optId = codeToId.get(toKey(code));
+        return optId != null && optId.isPresent() ? getById(optId.get()) : null;
     }
 
-    public void put(Language language) {
-        cacheById.put(language.id(), language);
-        codeToId.put(toKey(language.code()), language.id());
+    public void put(@Nullable Language language) {
+        if (language == null) return;
+        cacheById.put(language.id(), Optional.of(language));
+        codeToId.put(toKey(language.code()), Optional.of(language.id()));
         CacheUtil.put(listCache, ALL_KEY, language, v -> v.id() == language.id());
     }
 
     public void remove(int id) {
-        Language removed = cacheById.getIfPresent(id);
-        if (removed != null) {
-            cacheById.invalidate(id);
-            codeToId.invalidate(toKey(removed.code()));
+        Optional<Language> optLang = cacheById.getIfPresent(id);
+        cacheById.invalidate(id);
+
+        if (optLang != null && optLang.isPresent()) {
+            Language language = optLang.get();
+            codeToId.invalidate(toKey(language.code()));
         }
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
     }
@@ -124,14 +130,14 @@ public class LanguageCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public List<Language> getCachedLanguages() {
+    public @NotNull List<Language> getCachedLanguages() {
         List<Language> languages = listCache.get(ALL_KEY);
         if (languages == null || languages.isEmpty())
             return Collections.emptyList();
         return List.copyOf(languages);
     }
 
-    private static String toKey(String code) {
+    private static @NotNull String toKey(@NotNull String code) {
         return code.toLowerCase();
     }
 }
