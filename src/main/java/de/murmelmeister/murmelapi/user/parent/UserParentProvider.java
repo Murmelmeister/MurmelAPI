@@ -1,5 +1,7 @@
 package de.murmelmeister.murmelapi.user.parent;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 /**
@@ -15,17 +17,17 @@ import java.util.List;
 public sealed interface UserParentProvider permits UserParentProviderImpl {
     void refreshCache();
 
-    UserParent getParent(int userId, int parentId);
+    @Nullable UserParent getParent(int userId, int parentId);
 
-    List<UserParent> getParents(int userId);
+    @Nullable List<UserParent> getParents(int userId);
 
-    UserParent add(int userId, int parentId, long duration, int createdBy);
+    @Nullable UserParent add(int userId, int parentId, long duration, int createdBy);
 
     int remove(int userId, int parentId);
 
     int clear(int userId);
 
-    UserParent update(int userId, int parentId, long duration, int changedBy);
+    @Nullable UserParent update(int userId, int parentId, long duration, int changedBy);
 
     int loadExpired();
 }
