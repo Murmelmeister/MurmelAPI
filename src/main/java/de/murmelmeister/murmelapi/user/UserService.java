@@ -9,6 +9,8 @@ import de.murmelmeister.murmelapi.user.playtime.UserPlayTime;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.time.LocalDate;
@@ -16,22 +18,21 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.UUID;
 
-public final class UserService {
-    private final UserProvider userProvider;
-    private final UserPlayTimeProvider playTimeProvider;
-    private final UserLoginProvider loginProvider;
-    private final UserSessionProvider sessionProvider;
-
-    public UserService(UserProvider userProvider, UserPlayTimeProvider playTimeProvider, UserLoginProvider loginProvider, UserSessionProvider sessionProvider) {
-        this.userProvider = userProvider;
-        this.playTimeProvider = playTimeProvider;
-        this.loginProvider = loginProvider;
-        this.sessionProvider = sessionProvider;
+public record UserService(
+        @NotNull UserProvider userProvider,
+        @NotNull UserPlayTimeProvider playTimeProvider,
+        @NotNull UserLoginProvider loginProvider,
+        @NotNull UserSessionProvider sessionProvider
+) {
+    public UserService {
+        Objects.requireNonNull(userProvider, "userProvider must not be null");
+        Objects.requireNonNull(playTimeProvider, "playTimeProvider must not be null");
+        Objects.requireNonNull(loginProvider, "loginProvider must not be null");
+        Objects.requireNonNull(sessionProvider, "sessionProvider must not be null");
     }
 
-
-    public void startSession(int userId, InetAddress inetAddress, String clientBrand, int protocolVersion) {
-        if (userId < 1 || inetAddress == null)
+    public void startSession(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
+        if (userId < 1)
             throw new IllegalArgumentException("Invalid parameters for session handling");
 
         UserSession session = sessionProvider.findByUserId(userId);
@@ -78,8 +79,8 @@ public final class UserService {
             throw new UserPlayTimeException("Failed to update play time for user ID: " + userId);
     }
 
-    public void checkLoginStreakWhileOnline(int userId, UserPlayTime playTime) {
-        if (userId < 1 || playTime == null) return;
+    public void checkLoginStreakWhileOnline(int userId, @NotNull UserPlayTime playTime) {
+        if (userId < 1) return;
 
         LocalDate today = LocalDate.now();
         LocalDate lastSeen = playTime.getLastSeenDate();
@@ -93,10 +94,7 @@ public final class UserService {
         }
     }
 
-    public User join(UUID uuid, String username) {
-        if (uuid == null || username == null)
-            throw new IllegalArgumentException("UUID and username cannot be null");
-
+    public @NotNull User join(@NotNull UUID uuid, @NotNull String username) {
         User user = userProvider.findByMojangId(uuid);
         if (user == null) {
             user = userProvider.create(uuid, username);
@@ -113,7 +111,7 @@ public final class UserService {
         }
 
         String currentUsername = user.username();
-        if (currentUsername == null || !currentUsername.equals(username))
+        if (!currentUsername.equals(username))
             userProvider.update(user.id(), username, user.firstLogin(), user.debugUser(), user.debugEnabled(), user.languageId());
 
         LocalDateTime firstJoin = user.firstLogin();
@@ -121,7 +119,8 @@ public final class UserService {
             userProvider.update(user.id(), user.username(), LocalDateTime.now(), user.debugUser(), user.debugEnabled(), user.languageId());
 
         if (playTime.getLastSeenDate() == null) {
-            LocalDateTime lastLogin = getLastLogin(user.id()) == null ? null : getLastLogin(user.id()).loginTime();
+            UserLogin userLogin = getLastLogin(user.id());
+            LocalDateTime lastLogin = userLogin == null ? null : userLogin.loginTime();
             LocalDate lastSeen = lastLogin != null ? lastLogin.toLocalDate() : LocalDate.now();
             playTime.setLastSeenDate(lastSeen);
             if (!playTimeProvider.updateOnlyCache(playTime))
@@ -137,7 +136,7 @@ public final class UserService {
         return sessionProvider.findByUserId(userId) != null;
     }
 
-    public UserLogin getLastLogin(int userId) {
+    public @Nullable UserLogin getLastLogin(int userId) {
         return loginProvider.findByUserId(userId).stream()
                 .max(Comparator.comparing(UserLogin::loginTime))
                 .orElse(null);
