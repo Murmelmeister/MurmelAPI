@@ -6,112 +6,135 @@ import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
-import de.murmelmeister.murmelapi.utils.update.RefreshUtil;
+import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class ClanCache implements MurmelCache {
+    @Language("MariaDB")
+    private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE clan_id = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_NAME = "SELECT * FROM %s WHERE clan_name = ?";
+    @Language("MariaDB")
+    private static final String SELECT_BY_OWNER = "SELECT * FROM %s WHERE owner_id = ?";
+
     private static final String ALL_KEY = "ALL";
+
     private final Database database;
+    private final RefreshProvider refreshProvider;
     private final String tableName;
-    private final LoadingCache<@NotNull UUID, Clan> cacheById;
-    private final LoadingCache<@NotNull String, Clan> cacheByName;
-    private final LoadingCache<@NotNull Integer, Clan> cacheByOwner;
-    private final LoadingCache<@NotNull String, List<Clan>> listCache;
     private final Long fetchLimit;
 
-    public ClanCache(Database database, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    private final LoadingCache<@NotNull UUID, Optional<Clan>> cacheById;
+    private final LoadingCache<@NotNull String, Optional<Clan>> cacheByName;
+    private final LoadingCache<@NotNull Integer, Optional<Clan>> cacheByOwner;
+    private final LoadingCache<@NotNull String, List<Clan>> listCache;
+
+    public ClanCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
         this.cacheByName = CacheUtil.buildCacheRefresh(this::loadByName, cacheCapacity, refreshInterval);
         this.cacheByOwner = CacheUtil.buildCacheRefresh(this::loadByOwner, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
-        RefreshUtil.register(this);
+        this.refreshProvider.register(this);
     }
 
     @Override
-    public void onRefresh(RefreshEvent<?> event) {
+    public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
         if (RefreshType.CLANS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
-            refreshAll();
-        else if (RefreshType.SINGLE_CLAN.getName().equalsIgnoreCase(cacheName)) {
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
+            clear();
+            return;
+        }
+
+        if (RefreshType.SINGLE_CLAN.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (key instanceof String uuid)
-                refreshSingle(UUID.fromString(uuid));
+                remove(UUID.fromString(uuid));
         }
     }
 
     @Override
     public void close() {
-        RefreshUtil.unregister(this);
+        refreshProvider.unregister(this);
         clear();
     }
 
-    private void refreshAll() {
-        clear();
-        List<Clan> clans = loadAllFromDatabase();
-        if (clans.isEmpty()) return;
-        clans.forEach(this::put);
-    }
-
-    private void refreshSingle(UUID uuid) {
-        remove(uuid);
-        Clan clan = loadById(uuid);
-        if (clan != null) put(clan);
-    }
-
-    private List<Clan> loadAllFromDatabase() {
-        String sql = "SELECT * FROM " + tableName;
+    private @NotNull List<Clan> loadAllFromDatabase() {
+        String sql = SELECT_ALL.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clan());
     }
 
-    private Clan loadById(UUID uuid) {
+    private @NotNull Optional<Clan> loadById(UUID uuid) {
+        if (uuid == null) return Optional.empty();
+        String sql = SELECT_BY_ID.formatted(tableName);
+        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(),
+                stmt -> stmt.setObject(1, uuid));
+
+        return Optional.ofNullable(clan);
+    }
+
+    private @NotNull Optional<Clan> loadByName(String name) {
+        String sql = SELECT_BY_NAME.formatted(tableName);
+        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(),
+                stmt -> stmt.setString(1, name));
+
+        return Optional.ofNullable(clan);
+    }
+
+    private @NotNull Optional<Clan> loadByOwner(int ownerId) {
+        String sql = SELECT_BY_OWNER.formatted(tableName);
+        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(),
+                stmt -> stmt.setInt(1, ownerId));
+
+        return Optional.ofNullable(clan);
+    }
+
+    public @Nullable Clan getById(@Nullable UUID uuid) {
         if (uuid == null) return null;
-        String sql = "SELECT * FROM " + tableName + " WHERE clan_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(), stmt -> stmt.setObject(1, uuid));
+        Optional<Clan> optClan = cacheById.get(uuid);
+        return optClan != null && optClan.isPresent() ? optClan.orElse(null) : null;
     }
 
-    private Clan loadByName(String name) {
-        String sql = "SELECT * FROM " + tableName + " WHERE clan_name = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(), stmt -> stmt.setString(1, name));
+    public @Nullable Clan getByName(@Nullable String name) {
+        if (name == null) return null;
+        Optional<Clan> optClan = cacheByName.get(name);
+        return optClan != null && optClan.isPresent() ? optClan.orElse(null) : null;
     }
 
-    private Clan loadByOwner(int ownerId) {
-        String sql = "SELECT * FROM " + tableName + " WHERE owner_id = ?";
-        return CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(), stmt -> stmt.setInt(1, ownerId));
+    public @Nullable Clan getByOwner(int ownerId) {
+        Optional<Clan> optClan = cacheByOwner.get(ownerId);
+        return optClan != null && optClan.isPresent() ? optClan.orElse(null) : null;
     }
 
-    public Clan getById(UUID uuid) {
-        return cacheById.get(uuid);
-    }
-
-    public Clan getByName(String name) {
-        return cacheByName.get(name);
-    }
-
-    public Clan getByOwner(int ownerId) {
-        return cacheByOwner.get(ownerId);
-    }
-
-    public void put(Clan clan) {
-        cacheById.put(clan.id(), clan);
-        cacheByName.put(clan.name(), clan);
-        cacheByOwner.put(clan.ownerId(), clan);
+    public void put(@Nullable Clan clan) {
+        if (clan == null) return;
+        cacheById.put(clan.id(), Optional.of(clan));
+        cacheByName.put(clan.name(), Optional.of(clan));
+        cacheByOwner.put(clan.ownerId(), Optional.of(clan));
         CacheUtil.put(listCache, ALL_KEY, clan, v -> v.id().equals(clan.id()));
     }
 
-    public void remove(UUID clanId) {
-        Clan clan = cacheById.getIfPresent(clanId);
-        if (clan != null) {
-            cacheById.invalidate(clanId);
+    public void remove(@NotNull UUID clanId) {
+        Optional<Clan> optClan = cacheById.getIfPresent(clanId);
+        cacheById.invalidate(clanId);
+
+        if (optClan != null && optClan.isPresent()) {
+            Clan clan = optClan.get();
             cacheByName.invalidate(clan.name());
             cacheByOwner.invalidate(clan.ownerId());
         }
@@ -125,7 +148,7 @@ public class ClanCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public List<Clan> getAll() {
+    public @NotNull List<Clan> getAll() {
         List<Clan> clans = listCache.get(ALL_KEY);
         if (clans == null || clans.isEmpty())
             return Collections.emptyList();
