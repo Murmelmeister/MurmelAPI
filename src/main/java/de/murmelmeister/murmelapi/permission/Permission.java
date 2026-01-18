@@ -1,6 +1,7 @@
 package de.murmelmeister.murmelapi.permission;
 
 import de.murmelmeister.murmelapi.user.User;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;
 import java.util.UUID;
@@ -12,9 +13,9 @@ import java.util.UUID;
 public sealed interface Permission permits PermissionProvider {
     Set<String> getPermissions(int userId);
 
-    boolean hasPermission(User user, String permission);
+    boolean hasPermission(@NotNull User user, @NotNull String permission);
 
-    boolean hasPermission(UUID uuid, String permission);
+    boolean hasPermission(@NotNull UUID uuid, @NotNull String permission);
 
     int loadExpired();
 }
