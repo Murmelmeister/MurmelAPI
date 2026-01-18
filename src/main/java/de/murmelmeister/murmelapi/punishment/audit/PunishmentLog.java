@@ -1,7 +1,11 @@
 package de.murmelmeister.murmelapi.punishment.audit;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.net.InetAddress;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -11,16 +15,32 @@ import java.util.UUID;
  * @param reasonId       ID of the reason, null if reason id deleted
  * @param reasonDuration Duration in seconds, null for permanent punishments
  */
-public record PunishmentLog(UUID id, Action action,
-                            Integer userId, InetAddress inetAddress, Integer reasonId, int reasonTypeId, String reasonText,
-                            Long reasonDuration, boolean reasonAutoFlagIp, boolean reasonAutoPunish, int createdBy,
-                            LocalDateTime createdAt) {
+public record PunishmentLog(
+        @NotNull UUID id,
+        @NotNull Action action,
+        @Nullable Integer userId,
+        @Nullable InetAddress inetAddress,
+        @Nullable Integer reasonId,
+        int reasonTypeId,
+        @NotNull String reasonText,
+        @Nullable Long reasonDuration,
+        boolean reasonAutoFlagIp,
+        boolean reasonAutoPunish,
+        int createdBy,
+        @NotNull LocalDateTime createdAt
+) {
+    public PunishmentLog {
+        Objects.requireNonNull(id, "Log ID cannot be null");
+        Objects.requireNonNull(action, "action cannot be null");
+        Objects.requireNonNull(reasonText, "reasonText cannot be null");
+        Objects.requireNonNull(createdAt, "createdAt cannot be null");
+    }
 
     public enum Action {
         CREATED, MODIFIED, REVOKED
     }
 
-    public LocalDateTime expiresAt() {
+    public @Nullable LocalDateTime expiresAt() {
         if (reasonDuration == null)
             return null; // Permanent punishments have no expiration
         return createdAt.plusSeconds(reasonDuration);
