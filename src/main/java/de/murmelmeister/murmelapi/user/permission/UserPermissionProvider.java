@@ -1,5 +1,8 @@
 package de.murmelmeister.murmelapi.user.permission;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.util.List;
 
 /**
@@ -10,17 +13,17 @@ import java.util.List;
 public interface UserPermissionProvider {
     void refreshCache();
 
-    UserPermission getPermission(int userId, String permission);
+    @Nullable UserPermission getPermission(int userId, @NotNull String permission);
 
-    List<UserPermission> getPermissions(int userId);
+    @Nullable List<UserPermission> getPermissions(int userId);
 
-    UserPermission add(int userId, String permission, long duration, int createdBy);
+    @Nullable UserPermission add(int userId, @NotNull String permission, long duration, int createdBy);
 
-    int remove(int userId, String permission);
+    int remove(int userId, @NotNull String permission);
 
     int clear(int userId);
 
-    UserPermission update(int userId, String permission, long duration, int changedBy);
+    @Nullable UserPermission update(int userId, @NotNull String permission, long duration, int changedBy);
 
     int loadExpired();
 }
