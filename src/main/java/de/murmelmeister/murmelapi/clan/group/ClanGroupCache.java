@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.clan.group;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,16 +13,18 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ClanGroupCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClanGroupCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -29,7 +33,6 @@ public class ClanGroupCache implements MurmelCache {
     private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE clan_id = ? AND group_id = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=([^,]+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -40,14 +43,14 @@ public class ClanGroupCache implements MurmelCache {
     private final LoadingCache<@NotNull UUID, List<ClanGroup>> cacheByClanId;
     private final LoadingCache<@NotNull String, List<ClanGroup>> listCache;
 
-    public ClanGroupCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public ClanGroupCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapcity, refreshInterval);
-        this.cacheByClanId = CacheUtil.buildCacheRefresh(this::loadByClanId, cacheCapcity, refreshInterval);
-        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapcity, refreshInterval);
+        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapacity, refreshInterval);
+        this.cacheByClanId = CacheUtil.buildCacheRefresh(this::loadByClanId, cacheCapacity, refreshInterval);
+        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapacity, refreshInterval);
         this.refreshProvider.register(this);
     }
 
@@ -62,17 +65,15 @@ public class ClanGroupCache implements MurmelCache {
 
         if (RefreshType.SINGLE_CLAN_GROUP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof GroupKey(UUID clanId, UUID groupId))
-                    remove(clanId, groupId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    UUID clanId = UUID.fromString(matcher.group(1));
-                    UUID groupId = UUID.fromString(matcher.group(2));
-                    remove(clanId, groupId);
-                } else {
-                    throw new IllegalArgumentException("Invalid key format: " + key);
+            if (key instanceof GroupKey groupKey)
+                remove(groupKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final GroupKey groupKey = gson.fromJson(json, GroupKey.class);
+                    remove(groupKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.error("Failed to parse GroupKey from JSON: {}", json, e);
                 }
             }
         }
@@ -122,19 +123,10 @@ public class ClanGroupCache implements MurmelCache {
         return clans;
     }
 
-    public void put(@Nullable ClanGroup group) {
-        if (group == null) return;
-        GroupKey key = new GroupKey(group.clanId(), group.groupId());
-        cacheByKey.put(key, Optional.of(group));
-        CacheUtil.put(cacheByClanId, group.clanId(), group, v -> v.clanId().equals(group.clanId()));
-        CacheUtil.put(listCache, ALL_KEY, group, v -> v.clanId().equals(group.clanId()) && v.groupId().equals(group.groupId()));
-    }
-
-    public void remove(@NotNull UUID clanId, @NotNull UUID groupId) {
-        GroupKey key = new GroupKey(clanId, groupId);
+    public void remove(@NotNull GroupKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByClanId, clanId, v -> v.clanId().equals(clanId));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(clanId) && v.groupId().equals(groupId));
+        CacheUtil.remove(cacheByClanId, key.clanId(), v -> v.clanId().equals(key.clanId()));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(key.clanId()) && v.groupId().equals(key.groupId()));
     }
 
     public void clear() {
@@ -143,6 +135,6 @@ public class ClanGroupCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    protected record GroupKey(@NotNull UUID clanId, @NotNull UUID groupId) {
+    public record GroupKey(@NotNull UUID clanId, @NotNull UUID groupId) {
     }
 }
