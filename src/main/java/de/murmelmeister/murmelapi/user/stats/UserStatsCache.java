@@ -20,7 +20,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 public class UserStatsCache implements MurmelCache {
-    private final Logger logger = LoggerFactory.getLogger(UserStatsCache.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserStatsCache.class);
 
     @Language("MariaDB")
     private static final String SELECT_BY_USER_ID = "SELECT * FROM %s WHERE id = ?";
@@ -60,7 +60,7 @@ public class UserStatsCache implements MurmelCache {
                     final UserStats userStats = gson.fromJson(json, UserStats.class);
                     remove(userStats);
                 } catch (JsonSyntaxException e) {
-                    logger.warn("Failed to parse JSON for single user stats refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single user stats refresh: {}", json, e);
                 }
             }
         }
