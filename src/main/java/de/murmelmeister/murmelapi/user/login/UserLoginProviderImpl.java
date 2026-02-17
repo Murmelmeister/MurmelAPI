@@ -24,10 +24,10 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     private final RefreshType all = RefreshType.USER_LOGINS;
     private final RefreshType single = RefreshType.SINGLE_USER_LOGIN;
 
-    public UserLoginProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserLoginProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new UserLoginCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.cache = new UserLoginCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -83,7 +83,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
         if (logoutTime == null) return null;
 
         UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, inetAddress, clientBrand, protocolVersion);
-        refreshProvider.fireSingle(single, sessionId);
+        refreshProvider.fireSingle(single, login);
         return login;
     }
 
@@ -97,13 +97,16 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     public int delete(@Nullable UUID id) {
         if (id == null) return 0;
 
+        UserLogin existing = cache.getById(id);
+        if (existing == null) return 0;
+
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setString(1, id.toString()));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, existing);
         return row;
     }
 }
