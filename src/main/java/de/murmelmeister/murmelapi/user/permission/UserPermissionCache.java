@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Types;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -100,7 +101,8 @@ public class UserPermissionCache implements MurmelCache {
         UserPermission userPermission = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userPermission(),
                 stmt -> {
                     stmt.setInt(1, key.userId());
-                    stmt.setString(2, key.permission());
+                    if (key.permission() != null) stmt.setString(2, key.permission());
+                    else stmt.setNull(2, Types.VARCHAR);
                 });
 
         return Optional.ofNullable(userPermission);
