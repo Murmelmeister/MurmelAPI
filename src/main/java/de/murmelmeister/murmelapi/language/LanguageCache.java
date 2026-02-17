@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.language;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -10,6 +12,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +23,8 @@ import java.util.Optional;
  * LanguageCache provides a Caffeine-backed cache for language lookups by id and language code.
  */
 public class LanguageCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(LanguageCache.class);
+
     @org.intellij.lang.annotations.Language(value = "MariaDB")
     private static final String SELECT_ALL = "SELECT id, code FROM %s";
     @org.intellij.lang.annotations.Language(value = "MariaDB")
@@ -57,12 +63,16 @@ public class LanguageCache implements MurmelCache {
 
         if (RefreshType.SINGLE_LANGUAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof Integer id)
-                    remove(id);
-            } else {
-                int id = Integer.parseInt((String) key);
-                remove(id);
+            if (key instanceof Language language)
+                remove(language);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final Language language = gson.fromJson(json, Language.class);
+                    remove(language);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single language refresh: {}", json, e);
+                }
             }
         }
     }
@@ -106,22 +116,10 @@ public class LanguageCache implements MurmelCache {
         return optId != null && optId.isPresent() ? getById(optId.get()) : null;
     }
 
-    public void put(@Nullable Language language) {
-        if (language == null) return;
-        cacheById.put(language.id(), Optional.of(language));
-        codeToId.put(toKey(language.code()), Optional.of(language.id()));
-        CacheUtil.put(listCache, ALL_KEY, language, v -> v.id() == language.id());
-    }
-
-    public void remove(int id) {
-        Optional<Language> optLang = cacheById.getIfPresent(id);
-        cacheById.invalidate(id);
-
-        if (optLang != null && optLang.isPresent()) {
-            Language language = optLang.get();
-            codeToId.invalidate(toKey(language.code()));
-        }
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
+    public void remove(@NotNull Language language) {
+        cacheById.invalidate(language.id());
+        codeToId.invalidate(toKey(language.code()));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == language.id());
     }
 
     public void clear() {
