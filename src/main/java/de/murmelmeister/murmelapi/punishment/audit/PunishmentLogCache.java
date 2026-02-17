@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.punishment.audit;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,12 +13,19 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.time.Duration;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public class PunishmentLogCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PunishmentLogCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s ORDER BY created_at DESC";
     @Language("MariaDB")
@@ -38,14 +47,14 @@ public class PunishmentLogCache implements MurmelCache {
     private final LoadingCache<@NotNull InetAddress, List<PunishmentLog>> cacheByIp;
     private final LoadingCache<@NotNull String, List<PunishmentLog>> listCache;
 
-    public PunishmentLogCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public PunishmentLogCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapcity, refreshInterval);
-        this.cacheByUser = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapcity, refreshInterval);
-        this.cacheByIp = CacheUtil.buildCacheRefresh(this::loadByIpAddress, cacheCapcity, refreshInterval);
+        this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
+        this.cacheByUser = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapacity, refreshInterval);
+        this.cacheByIp = CacheUtil.buildCacheRefresh(this::loadByIpAddress, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         this.refreshProvider.register(this);
     }
@@ -61,12 +70,16 @@ public class PunishmentLogCache implements MurmelCache {
 
         if (RefreshType.SINGLE_PUNISHMENT_LOG.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof UUID logId)
-                    remove(logId);
-            } else {
-                UUID logId = UUID.fromString((String) key);
-                remove(logId);
+            if (key instanceof PunishmentLog log)
+                remove(log);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final PunishmentLog log = gson.fromJson(json, PunishmentLog.class);
+                    remove(log);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single punishment log refresh: {}", json, e);
+                }
             }
         }
     }
@@ -119,25 +132,11 @@ public class PunishmentLogCache implements MurmelCache {
         return cacheByIp.get(inetAddress);
     }
 
-    public void put(@Nullable PunishmentLog log) {
-        if (log == null) return;
-        UUID logId = log.id();
-        cacheById.put(logId, Optional.of(log));
-        if (log.userId() != null) CacheUtil.put(cacheByUser, log.userId(), log, v -> v.id().equals(logId));
-        if (log.inetAddress() != null) CacheUtil.put(cacheByIp, log.inetAddress(), log, v -> v.id().equals(logId));
-        CacheUtil.put(listCache, ALL_KEY, log, v -> v.id().equals(logId));
-    }
-
-    public void remove(@NotNull UUID logId) {
-        Optional<PunishmentLog> optLog = cacheById.getIfPresent(logId);
-        cacheById.invalidate(logId);
-
-        if (optLog != null && optLog.isPresent()) {
-            PunishmentLog log = optLog.get();
-            if (log.userId() != null) CacheUtil.remove(cacheByUser, log.userId(), v -> v.id().equals(logId));
-            if (log.inetAddress() != null) CacheUtil.remove(cacheByIp, log.inetAddress(), v -> v.id().equals(logId));
-        }
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(logId));
+    public void remove(@NotNull PunishmentLog log) {
+        cacheById.invalidate(log.id());
+        if (log.userId() != null) CacheUtil.remove(cacheByUser, log.userId(), v -> v.id().equals(log.id()));
+        if (log.inetAddress() != null) CacheUtil.remove(cacheByIp, log.inetAddress(), v -> v.id().equals(log.id()));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(log.id()));
     }
 
     public void clear() {
