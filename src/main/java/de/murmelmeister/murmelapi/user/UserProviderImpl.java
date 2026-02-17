@@ -91,7 +91,7 @@ public final class UserProviderImpl implements UserProvider {
         if (id < 1) return null;
 
         User newUser = new User(id, uuid, normalizedUsername, null, false, false, false, 1);
-        refreshProvider.fireSingle(single, newUser.id());
+        refreshProvider.fireSingle(single, newUser);
         return newUser;
     }
 
@@ -99,12 +99,15 @@ public final class UserProviderImpl implements UserProvider {
     public int delete(int userId) {
         if (userId < 1) return 0;
 
+        User existing = cache.getById(userId);
+        if (existing == null) return 0;
+
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, existing);
         return row;
     }
 
@@ -151,7 +154,7 @@ public final class UserProviderImpl implements UserProvider {
                 .debugEnabled(debugEnabled)
                 .languageId(languageId)
                 .build();
-        refreshProvider.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, existing);
         return user;
     }
 }
