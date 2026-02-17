@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.group;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,6 +13,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -18,6 +22,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class GroupCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroupCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -58,12 +64,16 @@ public class GroupCache implements MurmelCache {
 
         if (RefreshType.SINGLE_GROUP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof Integer id)
-                    remove(id);
-            } else {
-                int id = Integer.parseInt((String) key);
-                remove(id);
+            if (key instanceof Group group)
+                remove(group);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final Group group = gson.fromJson(json, Group.class);
+                    remove(group);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single group refresh: {}", json, e);
+                }
             }
         }
     }
@@ -106,22 +116,10 @@ public class GroupCache implements MurmelCache {
         return optGroup != null && optGroup.isPresent() ? optGroup.orElse(null) : null;
     }
 
-    public void put(@Nullable Group group) {
-        if (group == null) return;
-        cacheById.put(group.id(), Optional.of(group));
-        cacheByName.put(group.groupName(), Optional.of(group));
-        CacheUtil.put(listCache, ALL_KEY, group, v -> v.id() == group.id());
-    }
-
-    public void remove(int id) {
-        Optional<Group> optGroup = cacheById.getIfPresent(id);
-        cacheById.invalidate(id);
-
-        if (optGroup != null && optGroup.isPresent()) {
-            Group group = optGroup.get();
-            cacheByName.invalidate(group.groupName());
-        }
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
+    public void remove(@NotNull Group group) {
+        cacheById.invalidate(group.id());
+        cacheByName.invalidate(group.groupName());
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == group.id());
     }
 
     public void clear() {
