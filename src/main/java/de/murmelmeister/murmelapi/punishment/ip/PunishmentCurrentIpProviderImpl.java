@@ -87,7 +87,7 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
     }
 
     @Override
-    public PunishmentCurrentIp update(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId) {
+    public @Nullable PunishmentCurrentIp update(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId) {
         if (typeId < 1)
             return null;
 
