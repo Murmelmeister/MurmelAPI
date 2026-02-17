@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user.parent;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,15 +13,17 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class UserParentCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserParentCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -28,7 +32,6 @@ public class UserParentCache implements MurmelCache {
     private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE user_id = ? AND parent_id = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*userId=(\\d+), parentId=(\\d+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -61,20 +64,15 @@ public class UserParentCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof ParentKey(int userId, int parentId))
-                    remove(userId, parentId);
-                else if (key instanceof Integer userId)
-                    remove(userId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    int userId = Integer.parseInt(matcher.group(1));
-                    int parentId = Integer.parseInt(matcher.group(2));
-                    remove(userId, parentId);
-                } else {
-                    int userId = Integer.parseInt((String) key);
-                    remove(userId);
+            if (key instanceof ParentKey parentKey)
+                remove(parentKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final ParentKey parentKey = gson.fromJson(json, ParentKey.class);
+                    remove(parentKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single user parent refresh: {}", json, e);
                 }
             }
         }
@@ -97,7 +95,7 @@ public class UserParentCache implements MurmelCache {
                 stmt -> stmt.setInt(1, userId));
     }
 
-    private Optional<UserParent> loadByKey(ParentKey key) {
+    private @NotNull Optional<UserParent> loadByKey(ParentKey key) {
         String sql = SELECT_BY_KEY.formatted(tableName);
         UserParent userParent = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userParent(),
                 stmt -> {
@@ -117,28 +115,10 @@ public class UserParentCache implements MurmelCache {
         return cacheByUserId.get(userId);
     }
 
-    public void put(@Nullable UserParent userParent) {
-        if (userParent == null) return;
-        ParentKey key = new ParentKey(userParent.userId(), userParent.parentId());
-        cacheByKey.put(key, Optional.of(userParent));
-        CacheUtil.put(cacheByUserId, userParent.userId(), userParent,
-                v -> v.userId() == userParent.userId() && v.parentId() == userParent.parentId());
-        CacheUtil.put(listCache, ALL_KEY, userParent,
-                v -> v.userId() == userParent.userId() && v.parentId() == userParent.parentId());
-    }
-
-    public void remove(int userId, int parentId) {
-        ParentKey key = new ParentKey(userId, parentId);
+    public void remove(@NotNull ParentKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByUserId, userId, v -> v.userId() == userId && v.parentId() == parentId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == userId && v.parentId() == parentId);
-    }
-
-    public void remove(int userId) {
-        cacheByKey.asMap().keySet().stream().filter(key -> key.userId() == userId)
-                .forEach(cacheByKey::invalidate);
-        cacheByUserId.invalidate(userId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == userId);
+        CacheUtil.remove(cacheByUserId, key.userId(), v -> v.userId() == key.userId() && v.parentId() == key.parentId());
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.parentId() == key.parentId());
     }
 
     public void clear() {
@@ -154,6 +134,6 @@ public class UserParentCache implements MurmelCache {
         return List.copyOf(parents);
     }
 
-    protected record ParentKey(int userId, int parentId) {
+    public record ParentKey(int userId, int parentId) {
     }
 }
