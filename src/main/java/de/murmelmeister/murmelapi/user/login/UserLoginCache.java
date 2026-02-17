@@ -24,7 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class UserLoginCache implements MurmelCache {
-    private final Logger logger = LoggerFactory.getLogger(UserLoginCache.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserLoginCache.class);
 
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
@@ -75,7 +75,7 @@ public class UserLoginCache implements MurmelCache {
                     final UserLogin login = gson.fromJson(json, UserLogin.class);
                     remove(login);
                 } catch (JsonSyntaxException e) {
-                    logger.warn("Failed to parse JSON for single user login refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single user login refresh: {}", json, e);
                 }
             }
         }
