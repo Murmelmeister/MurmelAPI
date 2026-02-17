@@ -3,6 +3,7 @@ package de.murmelmeister.murmelapi.user.playtime;
 import java.time.LocalDate;
 import java.util.Objects;
 
+@Deprecated
 public class UserPlayTime {
     private final int userId;
     private int playTime;

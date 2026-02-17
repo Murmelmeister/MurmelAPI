@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.user.playtime;
 
 import java.util.List;
 
+@Deprecated
 public interface UserPlayTimeProvider {
     void refreshCache();
 

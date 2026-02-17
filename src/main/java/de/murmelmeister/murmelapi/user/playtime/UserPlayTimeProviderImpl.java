@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 
+@Deprecated
 public final class UserPlayTimeProviderImpl implements UserPlayTimeProvider {
     private static final String TABLE_NAME = "user_playtime";
 

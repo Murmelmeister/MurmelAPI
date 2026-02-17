@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 
+@Deprecated
 public class UserPlayTimeCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
