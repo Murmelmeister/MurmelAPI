@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.punishment.user;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,22 +13,23 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class PunishmentCurrentUserCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PunishmentCurrentUserCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
     private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE user_id = ? AND type_id = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*userId=(\\d+), typeId=(\\d+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -36,12 +39,12 @@ public class PunishmentCurrentUserCache implements MurmelCache {
     private final LoadingCache<@NotNull UserTypeKey, Optional<PunishmentCurrentUser>> cache;
     private final LoadingCache<@NotNull String, List<PunishmentCurrentUser>> listCache;
 
-    public PunishmentCurrentUserCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public PunishmentCurrentUserCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cache = CacheUtil.buildCacheRefresh(this::loadFromDatabase, cacheCapcity, refreshInterval);
+        this.cache = CacheUtil.buildCacheRefresh(this::loadFromDatabase, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         this.refreshProvider.register(this);
     }
@@ -57,17 +60,15 @@ public class PunishmentCurrentUserCache implements MurmelCache {
 
         if (RefreshType.SINGLE_PUNISHMENT_USER.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof UserTypeKey(int userId, int typeId))
-                    remove(userId, typeId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    int userId = Integer.parseInt(matcher.group(1));
-                    int typeId = Integer.parseInt(matcher.group(2));
-                    remove(userId, typeId);
-                } else {
-                    throw new IllegalArgumentException("Invalid key format: " + key);
+            if (key instanceof UserTypeKey userTypeKey)
+                remove(userTypeKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final UserTypeKey userTypeKey = gson.fromJson(json, UserTypeKey.class);
+                    remove(userTypeKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single punishment user refresh: {}", json, e);
                 }
             }
         }
@@ -100,19 +101,9 @@ public class PunishmentCurrentUserCache implements MurmelCache {
         return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
     }
 
-    public void put(@Nullable PunishmentCurrentUser punish) {
-        if (punish == null) return;
-        UserTypeKey key = new UserTypeKey(punish.userId(), punish.typeId());
-        cache.put(key, Optional.of(punish));
-        CacheUtil.put(listCache, ALL_KEY, punish,
-                v -> v.userId() == punish.userId() && v.typeId() == punish.typeId());
-    }
-
-    public void remove(int userId, int typeId) {
-        UserTypeKey key = new UserTypeKey(userId, typeId);
+    public void remove(@NotNull UserTypeKey key) {
         cache.invalidate(key);
-        CacheUtil.remove(listCache, ALL_KEY,
-                v -> v.userId() == userId && v.typeId() == typeId);
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.typeId() == key.typeId());
     }
 
     public void clear() {
@@ -127,6 +118,6 @@ public class PunishmentCurrentUserCache implements MurmelCache {
         return List.copyOf(users);
     }
 
-    protected record UserTypeKey(int userId, int typeId) {
+    public record UserTypeKey(int userId, int typeId) {
     }
 }
