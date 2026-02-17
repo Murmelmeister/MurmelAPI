@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user.color;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,21 +13,22 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class UserPrefixColorCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserPrefixColorCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
     private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE user_id = ? AND color_id = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*userId=(\\d+), colorId=([^,]+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -56,17 +59,15 @@ public class UserPrefixColorCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER_PREFIX_COLOR.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof ColorKey(int userId, String colorId))
-                    remove(userId, colorId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    int userId = Integer.parseInt(matcher.group(1));
-                    String colorId = matcher.group(2);
-                    remove(userId, colorId);
-                } else {
-                    throw new IllegalArgumentException("Invalid key format: " + key);
+            if (key instanceof ColorKey colorKey)
+                remove(colorKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final ColorKey colorKey = gson.fromJson(json, ColorKey.class);
+                    remove(colorKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single user prefix color refresh: {}", json, e);
                 }
             }
         }
@@ -105,15 +106,9 @@ public class UserPrefixColorCache implements MurmelCache {
         return colors;
     }
 
-    public void put(@Nullable UserPrefixColor color) {
-        if (color == null) return;
-        cache.put(new ColorKey(color.userId(), color.colorId()), Optional.of(color));
-        CacheUtil.put(listCache, ALL_KEY, color, v -> v.userId() == color.userId() && v.colorId().equals(color.colorId()));
-    }
-
-    public void remove(int userId, @NotNull String colorId) {
-        cache.invalidate(new ColorKey(userId, colorId));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == userId && v.colorId().equals(colorId));
+    public void remove(@NotNull ColorKey key) {
+        cache.invalidate(key);
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.colorId().equals(key.colorId()));
     }
 
     public void clear() {
@@ -121,6 +116,6 @@ public class UserPrefixColorCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    protected record ColorKey(int userId, @NotNull String colorId) {
+    public record ColorKey(int userId, @NotNull String colorId) {
     }
 }
