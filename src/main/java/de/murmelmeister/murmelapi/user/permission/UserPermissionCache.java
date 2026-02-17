@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user.permission;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,13 +13,18 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.*;
-import java.util.regex.Matcher;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 public class UserPermissionCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserPermissionCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -37,13 +44,13 @@ public class UserPermissionCache implements MurmelCache {
     private final LoadingCache<@NotNull Integer, List<UserPermission>> cacheByUserId;
     private final LoadingCache<@NotNull String, List<UserPermission>> listCache;
 
-    public UserPermissionCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserPermissionCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapcity, refreshInterval);
-        this.cacheByUserId = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapcity, refreshInterval);
+        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapacity, refreshInterval);
+        this.cacheByUserId = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         this.refreshProvider.register(this);
     }
@@ -59,20 +66,15 @@ public class UserPermissionCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof PermissionKey(int userId, String permission))
-                    remove(userId, permission);
-                else if (key instanceof Integer userId)
-                    remove(userId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    int userId = Integer.parseInt(matcher.group(1));
-                    String permission = matcher.group(2);
-                    remove(userId, permission);
-                } else {
-                    int userId = Integer.parseInt((String) key);
-                    remove(userId);
+            if (key instanceof PermissionKey permissionKey)
+                remove(permissionKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final PermissionKey permissionKey = gson.fromJson(json, PermissionKey.class);
+                    remove(permissionKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single user permission refresh: {}", json, e);
                 }
             }
         }
@@ -115,27 +117,10 @@ public class UserPermissionCache implements MurmelCache {
         return cacheByUserId.get(userId);
     }
 
-    public void put(@Nullable UserPermission permission) {
-        if (permission == null) return;
-        PermissionKey key = new PermissionKey(permission.userId(), permission.permission());
-        cacheByKey.put(key, Optional.of(permission));
-        CacheUtil.put(cacheByUserId, permission.userId(), permission,
-                v -> v.userId() == permission.userId() && v.permission().equals(permission.permission()));
-        CacheUtil.put(listCache, ALL_KEY, permission, v -> v.userId() == permission.userId() && v.permission().equals(permission.permission()));
-    }
-
-    public void remove(int userId, @NotNull String permission) {
-        PermissionKey key = new PermissionKey(userId, permission);
+    public void remove(@NotNull PermissionKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByUserId, userId, v -> v.userId() == userId && v.permission().equals(permission));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == userId && v.permission().equals(permission));
-    }
-
-    public void remove(int userId) {
-        cacheByKey.asMap().keySet().stream().filter(key -> key.userId() == userId)
-                .forEach(cacheByKey::invalidate);
-        cacheByUserId.invalidate(userId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == userId);
+        CacheUtil.remove(cacheByUserId, key.userId(), v -> v.userId() == key.userId() && v.permission().equals(key.permission()));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.permission().equals(key.permission()));
     }
 
     public void clear() {
@@ -151,6 +136,6 @@ public class UserPermissionCache implements MurmelCache {
         return List.copyOf(permissions);
     }
 
-    protected record PermissionKey(int userId, @NotNull String permission) {
+    public record PermissionKey(int userId, @Nullable String permission) {
     }
 }
