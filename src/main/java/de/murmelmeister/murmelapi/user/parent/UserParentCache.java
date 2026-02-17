@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Types;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -100,7 +101,9 @@ public class UserParentCache implements MurmelCache {
         UserParent userParent = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userParent(),
                 stmt -> {
                     stmt.setInt(1, key.userId());
-                    stmt.setInt(2, key.parentId());
+                    if (key.parentId() != null)
+                        stmt.setInt(2, key.parentId());
+                    else stmt.setNull(2, Types.INTEGER);
                 });
 
         return Optional.ofNullable(userParent);
@@ -139,6 +142,6 @@ public class UserParentCache implements MurmelCache {
         return List.copyOf(parents);
     }
 
-    public record ParentKey(int userId, Integer parentId) {
+    public record ParentKey(int userId, @Nullable Integer parentId) {
     }
 }
