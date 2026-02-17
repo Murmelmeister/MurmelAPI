@@ -109,7 +109,7 @@ public final class ClanParentProviderImpl implements ClanParentProvider {
         });
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, new ClanParentCache.ParentKey(clanId, groupId, null));
         return row;
     }
 
