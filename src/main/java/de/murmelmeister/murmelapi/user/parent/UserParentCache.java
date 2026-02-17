@@ -117,8 +117,13 @@ public class UserParentCache implements MurmelCache {
 
     public void remove(@NotNull ParentKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByUserId, key.userId(), v -> v.userId() == key.userId() && v.parentId() == key.parentId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.parentId() == key.parentId());
+        if (key.parentId() == null) {
+            cacheByUserId.invalidate(key.userId());
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId());
+        } else {
+            CacheUtil.remove(cacheByUserId, key.userId(), v -> v.userId() == key.userId() && v.parentId() == key.parentId());
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.parentId() == key.parentId());
+        }
     }
 
     public void clear() {
@@ -134,6 +139,6 @@ public class UserParentCache implements MurmelCache {
         return List.copyOf(parents);
     }
 
-    public record ParentKey(int userId, int parentId) {
+    public record ParentKey(int userId, Integer parentId) {
     }
 }
