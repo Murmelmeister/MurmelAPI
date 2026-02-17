@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.inventory;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,6 +13,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -18,6 +22,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class InventoryTypeCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(InventoryTypeCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -54,12 +60,16 @@ public class InventoryTypeCache implements MurmelCache {
 
         if (RefreshType.SINGLE_INVENTORY_TYPE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof Integer id)
-                    remove(id);
-            } else {
-                int id = Integer.parseInt((String) key);
-                remove(id);
+            if (key instanceof InventoryType type)
+                remove(type);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final InventoryType type = gson.fromJson(json, InventoryType.class);
+                    remove(type);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single inventory type refresh: {}", json, e);
+                }
             }
         }
     }
@@ -95,15 +105,9 @@ public class InventoryTypeCache implements MurmelCache {
         return types;
     }
 
-    public void put(@Nullable InventoryType type) {
-        if (type == null) return;
-        cacheById.put(type.id(), Optional.of(type));
-        CacheUtil.put(listCache, ALL_KEY, type, v -> v.id() == type.id());
-    }
-
-    public void remove(int id) {
-        cacheById.invalidate(id);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
+    public void remove(@NotNull InventoryType type) {
+        cacheById.invalidate(type.id());
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == type.id());
     }
 
     public void clear() {
