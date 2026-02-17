@@ -71,13 +71,15 @@ public final class LanguageProviderImpl implements LanguageProvider {
         if (id < 1) return null;
 
         Language language = new Language(id, normalized);
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, language);
         return language;
     }
 
     @Override
     public int delete(int id) {
         if (id < 1 || id == 1 || id == 2) return 0;
+        Language existing = cache.getById(id);
+        if (existing == null) return 0;
 
         @org.intellij.lang.annotations.Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
@@ -85,7 +87,7 @@ public final class LanguageProviderImpl implements LanguageProvider {
                 stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, existing);
         return row;
     }
 
@@ -116,7 +118,7 @@ public final class LanguageProviderImpl implements LanguageProvider {
         Language language = Language.builder(existing)
                 .code(code)
                 .build();
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, language);
         return language;
     }
 
@@ -137,7 +139,7 @@ public final class LanguageProviderImpl implements LanguageProvider {
                 """.formatted(TABLE_NAME);
         Language saved = database.query(sql, null, ResultSetUtil.language(), stmt -> stmt.setString(1, language.code()));
         if (saved == null) return null;
-        refreshProvider.fireSingle(single, saved.id());
+        refreshProvider.fireSingle(single, saved);
         return saved;
     }
 
