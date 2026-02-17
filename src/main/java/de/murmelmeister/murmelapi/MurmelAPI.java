@@ -64,6 +64,9 @@ import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProviderImpl;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
+import de.murmelmeister.murmelapi.user.stats.UserStatsProvider;
+import de.murmelmeister.murmelapi.user.stats.UserStatsProviderImpl;
+import de.murmelmeister.murmelapi.utils.adapter.LocalDateTimeAdapter;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshProviderImpl;
 import org.jetbrains.annotations.NotNull;
@@ -78,6 +81,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Properties;
@@ -94,6 +98,7 @@ public final class MurmelAPI {
     public static final int CONSOLE_USER_ID = -1;
 
     private final Database database;
+    private final Gson gson;
     private final Long fetchLimit;
     private final long cacheCapacity;
     private final Duration refreshInterval;
@@ -108,6 +113,7 @@ public final class MurmelAPI {
     private final MessageService messageService;
 
     private final UserProvider userProvider;
+    private final UserStatsProvider userStatsProvider;
     private final UserPlayTimeProvider userPlayTimeProvider;
     private final UserLoginProvider userLoginProvider;
     private final UserSessionProvider userSessionProvider;
@@ -145,11 +151,12 @@ public final class MurmelAPI {
     }
 
     public MurmelAPI(Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
-        this(new Database(), new GsonBuilder().setPrettyPrinting().create(), fetchLimit, cacheCapacity, refreshInterval);
+        this(new Database(), fetchLimit, cacheCapacity, refreshInterval);
     }
 
-    public MurmelAPI(Database database, Gson gson, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public MurmelAPI(Database database, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = new GsonBuilder().registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter()).disableHtmlEscaping().create();
         this.fetchLimit = fetchLimit;
         this.cacheCapacity = cacheCapacity;
         this.refreshInterval = refreshInterval;
@@ -157,15 +164,16 @@ public final class MurmelAPI {
         this.refreshProvider = new RefreshProviderImpl();
 
         this.settingsProvider = new SettingsProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.settingsService = new SettingsService(settingsProvider, gson);
+        this.settingsService = new SettingsService(settingsProvider);
         this.languageProvider = new LanguageProviderImpl(database, refreshProvider, cacheCapacity);
         this.messageProvider = new MessageProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.messageService = new MessageService(languageProvider, messageProvider);
         this.userProvider = new UserProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userStatsProvider = new UserStatsProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPlayTimeProvider = new UserPlayTimeProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userLoginProvider = new UserLoginProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userSessionProvider = new UserSessionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userService = new UserService(userProvider, userPlayTimeProvider, userLoginProvider, userSessionProvider);
+        this.userService = new UserService(userProvider, userStatsProvider, userPlayTimeProvider, userLoginProvider, userSessionProvider);
         this.groupProvider = new GroupProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupColorProvider = new GroupColorProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPermissionProvider = new UserPermissionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -248,20 +256,6 @@ public final class MurmelAPI {
         MurmelMessage.loadMessages(messageProvider);
     }
 
-    /*public void closeCaches() {
-        List<RefreshListener> listeners = List.copyOf(RefreshUtil.getListeners());
-        listeners.forEach(listener -> {
-            if (RefreshUtil.isRegistered(listener) && listener instanceof AutoCloseable closeable) {
-                try {
-                    closeable.close();
-                } catch (Exception e) {
-                    LOGGER.warn("Failed to close listener {}", listener, e);
-                }
-                RefreshUtil.unregister(listener);
-            }
-        });
-    }*/
-
     /*public static int deleteUserSoft(int userId) {
         if (userId < 1) return 0;
         int sessionRow = activeSession.closeSession(userId);
@@ -284,6 +278,10 @@ public final class MurmelAPI {
 
     public Database getDatabase() {
         return database;
+    }
+
+    public Gson getGson() {
+        return gson;
     }
 
     public @NotNull DateTimeFormatter getDateTimeFormatter(int languageId) {
@@ -340,6 +338,10 @@ public final class MurmelAPI {
 
     public UserProvider getUserProvider() {
         return userProvider;
+    }
+
+    public UserStatsProvider getUserStatsProvider() {
+        return userStatsProvider;
     }
 
     public UserPlayTimeProvider getUserPlayTimeProvider() {
