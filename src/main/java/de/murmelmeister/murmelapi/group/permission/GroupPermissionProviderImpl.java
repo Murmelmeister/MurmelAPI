@@ -29,10 +29,10 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
     private final RefreshType all = RefreshType.GROUP_PERMISSIONS;
     private final RefreshType single = RefreshType.SINGLE_GROUP_PERMISSION;
 
-    public GroupPermissionProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public GroupPermissionProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new GroupPermissionCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.cache = new GroupPermissionCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -112,7 +112,7 @@ public final class GroupPermissionProviderImpl implements GroupPermissionProvide
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, new GroupPermissionCache.PermissionKey(groupId, null));
         return row;
     }
 
