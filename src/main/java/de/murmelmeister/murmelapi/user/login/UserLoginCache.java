@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user.login;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,12 +13,19 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.time.Duration;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public class UserLoginCache implements MurmelCache {
+    private final Logger logger = LoggerFactory.getLogger(UserLoginCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -38,14 +47,14 @@ public class UserLoginCache implements MurmelCache {
     private final LoadingCache<@NotNull InetAddress, List<UserLogin>> cacheByIpAddress;
     private final LoadingCache<@NotNull String, List<UserLogin>> listCache;
 
-    public UserLoginCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserLoginCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapcity, refreshInterval);
-        this.cacheByUserId = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapcity, refreshInterval);
-        this.cacheByIpAddress = CacheUtil.buildCacheRefresh(this::loadByIpAddress, cacheCapcity, refreshInterval);
+        this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
+        this.cacheByUserId = CacheUtil.buildCacheRefresh(this::loadByUserId, cacheCapacity, refreshInterval);
+        this.cacheByIpAddress = CacheUtil.buildCacheRefresh(this::loadByIpAddress, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         this.refreshProvider.register(this);
     }
@@ -58,12 +67,15 @@ public class UserLoginCache implements MurmelCache {
             clear();
         else if (RefreshType.SINGLE_USER_LOGIN.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof UUID sessionId)
-                remove(sessionId);
-            else if (key instanceof String s) {
+            if (key instanceof UserLogin login)
+                remove(login);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
                 try {
-                    remove(UUID.fromString(s));
-                } catch (IllegalArgumentException ignored) {
+                    final UserLogin login = gson.fromJson(json, UserLogin.class);
+                    remove(login);
+                } catch (JsonSyntaxException e) {
+                    logger.warn("Failed to parse JSON for single user login refresh: {}", json, e);
                 }
             }
         }
@@ -92,7 +104,7 @@ public class UserLoginCache implements MurmelCache {
                 stmt -> stmt.setString(1, inetAddress.getHostAddress()));
     }
 
-    private Optional<UserLogin> loadById(UUID id) {
+    private @NotNull Optional<UserLogin> loadById(UUID id) {
         String sql = SELECT_BY_ID.formatted(tableName);
         UserLogin login = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userLogin(),
                 stmt -> stmt.setString(1, id.toString()));
@@ -116,23 +128,11 @@ public class UserLoginCache implements MurmelCache {
         return list != null ? List.copyOf(list) : Collections.emptyList();
     }
 
-    public void put(@Nullable UserLogin userLogin) {
-        if (userLogin == null) return;
-        cacheById.put(userLogin.id(), Optional.of(userLogin));
-        CacheUtil.put(cacheByUserId, userLogin.userId(), userLogin, v -> v.id().equals(userLogin.id()));
-        CacheUtil.put(cacheByIpAddress, userLogin.inetAddress(), userLogin, v -> v.id().equals(userLogin.id()));
-        CacheUtil.put(listCache, ALL_KEY, userLogin, v -> v.id().equals(userLogin.id()));
-    }
-
-    public void remove(@NotNull UUID id) {
-        Optional<UserLogin> optLogin = cacheById.getIfPresent(id);
-        cacheById.invalidate(id);
-        if (optLogin != null && optLogin.isPresent()) {
-            UserLogin userLogin = optLogin.get();
-            CacheUtil.remove(cacheByUserId, userLogin.userId(), v -> v.id().equals(id));
-            CacheUtil.remove(cacheByIpAddress, userLogin.inetAddress(), v -> v.id().equals(id));
-        }
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(id));
+    public void remove(@NotNull UserLogin login) {
+        cacheById.invalidate(login.id());
+        CacheUtil.remove(cacheByUserId, login.userId(), v -> v.id().equals(login.id()));
+        CacheUtil.remove(cacheByIpAddress, login.inetAddress(), v -> v.id().equals(login.id()));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(login.id()));
     }
 
     public void clear() {
