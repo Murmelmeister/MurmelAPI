@@ -28,6 +28,7 @@ import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.playtime.UserPlayTime;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.stats.UserStats;
+import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -38,7 +39,7 @@ import java.util.UUID;
 import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
 
 public final class ResultSetUtil {
-    public static ResultSetProcessor<Settings> settings() {
+    public static @NotNull ResultSetProcessor<Settings> settings() {
         return resultSet -> {
             String tagId = resultSet.getString("tag_id");
             String json = resultSet.getString("value_json");
@@ -47,7 +48,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<Language> language() {
+    public static @NotNull ResultSetProcessor<Language> language() {
         return resultSet -> {
             int id = resultSet.getInt("id");
             String code = resultSet.getString("code");
@@ -55,7 +56,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<Message> message() {
+    public static @NotNull ResultSetProcessor<Message> message() {
         return resultSet -> {
             int id = resultSet.getInt("id");
             String tag = resultSet.getString("tag_id");
@@ -65,7 +66,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<User> user() {
+    public static @NotNull ResultSetProcessor<User> user() {
         return resultSet -> {
             int id = resultSet.getInt("id");
             UUID mojangId = resultSet.getString("mojang_id") != null ? UUID.fromString(resultSet.getString("mojang_id")) : null;
@@ -79,7 +80,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<UserPlayTime> userPlayTime() {
+    public static @NotNull ResultSetProcessor<UserPlayTime> userPlayTime() {
         return resultSet -> {
             int userId = resultSet.getInt("id");
             int playTime = resultSet.getInt("play_time");
@@ -88,7 +89,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<UserSession> userSession() {
+    public static @NotNull ResultSetProcessor<UserSession> userSession() {
         return result -> {
             UUID id = UUID.fromString(result.getString("id"));
             int userId = result.getInt("user_id");
@@ -107,7 +108,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<UserLogin> userLogin() {
+    public static @NotNull ResultSetProcessor<UserLogin> userLogin() {
         return resultSet -> {
             UUID id = UUID.fromString(resultSet.getString("id"));
             int userId = resultSet.getInt("user_id");
@@ -127,7 +128,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<UserPermission> userPermission() {
+    public static @NotNull ResultSetProcessor<UserPermission> userPermission() {
         return resultSet -> {
             int userId = resultSet.getInt("user_id");
             String permission = resultSet.getString("permission");
@@ -140,7 +141,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<UserParent> userParent() {
+    public static @NotNull ResultSetProcessor<UserParent> userParent() {
         return resultSet -> {
             int userId = resultSet.getInt("user_id");
             int parentId = resultSet.getInt("parent_id");
@@ -153,7 +154,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<Group> group() {
+    public static @NotNull ResultSetProcessor<Group> group() {
         return resultSet -> {
             int id = resultSet.getInt("id");
             String groupName = resultSet.getString("group_name");
@@ -167,7 +168,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<GroupColor> groupColor() {
+    public static @NotNull ResultSetProcessor<GroupColor> groupColor() {
         return resultSet -> {
             int groupId = resultSet.getInt("group_id");
             int typeId = resultSet.getInt("type_id");
@@ -180,7 +181,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<GroupPermission> groupPermission() {
+    public static @NotNull ResultSetProcessor<GroupPermission> groupPermission() {
         return resultSet -> {
             int groupId = resultSet.getInt("group_id");
             String permission = resultSet.getString("permission");
@@ -193,7 +194,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<GroupParent> groupParent() {
+    public static @NotNull ResultSetProcessor<GroupParent> groupParent() {
         return resultSet -> {
             int groupId = resultSet.getInt("group_id");
             int parentId = resultSet.getInt("parent_id");
@@ -206,7 +207,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<PunishmentLog> punishmentLog() {
+    public static @NotNull ResultSetProcessor<PunishmentLog> punishmentLog() {
         return resultSet -> {
             UUID id = UUID.fromString(resultSet.getString("id"));
             PunishmentLog.Action action = PunishmentLog.Action.valueOf(resultSet.getString("action"));
@@ -231,7 +232,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<PunishmentReason> punishmentReason() {
+    public static @NotNull ResultSetProcessor<PunishmentReason> punishmentReason() {
         return result -> {
             int id = result.getInt("id");
             int typeId = result.getInt("type_id");
@@ -251,7 +252,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<PunishmentCurrentIp> punishmentCurrentIp() {
+    public static @NotNull ResultSetProcessor<PunishmentCurrentIp> punishmentCurrentIp() {
         return result -> {
             String ipAddress = result.getString("ip_address");
             InetAddress inetAddress;
@@ -266,7 +267,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<PunishmentCurrentUser> punishmentCurrentUser() {
+    public static @NotNull ResultSetProcessor<PunishmentCurrentUser> punishmentCurrentUser() {
         return result -> {
             int userId = result.getInt("user_id");
             int typeId = result.getInt("type_id");
@@ -275,7 +276,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<Clan> clan() {
+    public static @NotNull ResultSetProcessor<Clan> clan() {
         return result -> {
             UUID id = UUID.fromString(result.getString("id"));
             String clanName = result.getString("name");
@@ -293,7 +294,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<ClanMember> clanMember() {
+    public static @NotNull ResultSetProcessor<ClanMember> clanMember() {
         return result -> {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
             int userId = result.getInt("user_id");
@@ -303,7 +304,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<ClanGroup> clanGroup() {
+    public static @NotNull ResultSetProcessor<ClanGroup> clanGroup() {
         return result -> {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
             UUID groupId = UUID.fromString(result.getString("group_id"));
@@ -318,7 +319,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<ClanParent> clanParent() {
+    public static @NotNull ResultSetProcessor<ClanParent> clanParent() {
         return result -> {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
             UUID groupId = UUID.fromString(result.getString("group_id"));
@@ -332,7 +333,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<ClanPermission> clanPermission() {
+    public static @NotNull ResultSetProcessor<ClanPermission> clanPermission() {
         return result -> {
             UUID clanId = UUID.fromString(result.getString("clan_id"));
             UUID groupId = UUID.fromString(result.getString("group_id"));
@@ -346,7 +347,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<PrefixColor> prefixColor() {
+    public static @NotNull ResultSetProcessor<PrefixColor> prefixColor() {
         return result -> {
             String id = result.getString("id");
             String color = result.getString("color");
@@ -359,7 +360,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<UserPrefixColor> userPrefixColor() {
+    public static @NotNull ResultSetProcessor<UserPrefixColor> userPrefixColor() {
         return result -> {
             int userId = result.getInt("user_id");
             String colorId = result.getString("color_id");
@@ -369,7 +370,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<InventoryType> inventoryType() {
+    public static @NotNull ResultSetProcessor<InventoryType> inventoryType() {
         return result -> {
             int id = result.getInt("id");
             String name = result.getString("inventory_name");
@@ -377,7 +378,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<UserInventory> userInventory() {
+    public static @NotNull ResultSetProcessor<UserInventory> userInventory() {
         return result -> {
             int userId = result.getInt("user_id");
             int inventoryId = result.getInt("inventory_id");
@@ -386,13 +387,13 @@ public final class ResultSetUtil {
         };
     }
 
-    public static ResultSetProcessor<UserStats> userStats() {
+    public static @NotNull ResultSetProcessor<UserStats> userStats() {
         return result -> {
             int userId = result.getInt("id");
             int playTime = result.getInt("play_time");
             int dailyStreak = result.getInt("daily_streak");
-            LocalDate lastDay = result.getDate("last_day") != null ? result.getDate("last_day").toLocalDate() : null;
-            LocalDateTime lastSeen = result.getTimestamp("last_seen") != null ? result.getTimestamp("last_seen").toLocalDateTime() : null;
+            LocalDate lastDay = result.getDate("daily_streak_last_day") != null ? result.getDate("daily_streak_last_day").toLocalDate() : null;
+            LocalDateTime lastSeen = result.getTimestamp("last_seen_at") != null ? result.getTimestamp("last_seen_at").toLocalDateTime() : null;
             return new UserStats(userId, playTime, dailyStreak, lastDay, lastSeen);
         };
     }
