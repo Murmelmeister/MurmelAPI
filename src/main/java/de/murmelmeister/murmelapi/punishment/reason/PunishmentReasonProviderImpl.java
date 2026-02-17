@@ -78,19 +78,22 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
         if (createdAt == null) return null;
 
         PunishmentReason reason = new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp, autoPunish, createdBy, createdAt, null, null);
-        refreshProvider.fireSingle(single, reason.id());
+        refreshProvider.fireSingle(single, reason);
         return reason;
     }
 
     @Override
     public int delete(int id) {
+        PunishmentReason existing = cache.getById(id);
+        if (existing == null) return 0;
+
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, existing);
         return row;
     }
 
@@ -147,7 +150,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
                 .changedBy(changedBy)
                 .changedAt(changedAt)
                 .build();
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, reason);
         return reason;
     }
 }
