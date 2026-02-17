@@ -113,7 +113,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
         PunishmentLog log = insertAndLoadLog(action, userId, inetAddress, reason, createdBy);
         if (log == null) return null;
 
-        refreshProvider.fireSingle(single, log.id());
+        refreshProvider.fireSingle(single, log);
         return log;
     }
 
@@ -126,7 +126,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
         PunishmentLog log = insertAndLoadLog(action, userId, inetAddress, reason, createdBy);
         if (log == null) return null;
 
-        refreshProvider.fireSingle(single, log.id());
+        refreshProvider.fireSingle(single, log);
         return log;
     }
 
@@ -178,7 +178,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
         PunishmentLog newLog = new PunishmentLog(logId, action, userId, inetAddress, log.reasonId(),
                 log.reasonTypeId(), log.reasonText(), log.reasonDuration(),
                 log.reasonAutoFlagIp(), log.reasonAutoPunish(), createdBy, createdAt);
-        refreshProvider.fireSingle(single, newLog.id());
+        refreshProvider.fireSingle(single, newLog);
         return newLog;
     }
 }
