@@ -112,7 +112,7 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
         });
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, new ClanPermissionCache.GroupKey(clanId, groupId));
+        refreshProvider.fireSingle(single, new ClanPermissionCache.PermissionKey(clanId, groupId, null));
         return row;
     }
 
