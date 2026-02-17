@@ -154,7 +154,7 @@ public final class UserProviderImpl implements UserProvider {
                 .debugEnabled(debugEnabled)
                 .languageId(languageId)
                 .build();
-        refreshProvider.fireSingle(single, existing);
+        refreshProvider.fireSingle(single, user);
         return user;
     }
 }
