@@ -27,10 +27,10 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
     private final RefreshType all = RefreshType.GROUP_PARENTS;
     private final RefreshType single = RefreshType.SINGLE_GROUP_PARENT;
 
-    public GroupParentProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public GroupParentProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new GroupParentCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.cache = new GroupParentCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -108,7 +108,7 @@ public final class GroupParentProviderImpl implements GroupParentProvider {
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, new GroupParentCache.ParentKey(groupId, null));
         return row;
     }
 
