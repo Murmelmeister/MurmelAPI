@@ -29,10 +29,10 @@ public final class GroupProviderImpl implements GroupProvider {
     private final RefreshType all = RefreshType.GROUPS;
     private final RefreshType single = RefreshType.SINGLE_GROUP;
 
-    public GroupProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public GroupProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new GroupCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.cache = new GroupCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -86,7 +86,7 @@ public final class GroupProviderImpl implements GroupProvider {
         if (createdAt == null) return null;
 
         Group group = new Group(groupId, normalizedGroupName, priority, false, createdBy, createdAt, null, null);
-        refreshProvider.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, group);
         return group;
     }
 
@@ -94,13 +94,16 @@ public final class GroupProviderImpl implements GroupProvider {
     public int delete(int groupId) {
         if (groupId < 1) return 0;
 
+        Group existing = cache.getById(groupId);
+        if (existing == null) return 0;
+
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, existing);
         return row;
     }
 
@@ -140,7 +143,7 @@ public final class GroupProviderImpl implements GroupProvider {
                 .changedBy(changedBy)
                 .changedAt(changedAt)
                 .build();
-        refreshProvider.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, group);
         return group;
     }
 }
