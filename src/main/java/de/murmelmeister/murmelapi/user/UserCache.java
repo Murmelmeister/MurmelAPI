@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,6 +13,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -21,6 +25,8 @@ import java.util.UUID;
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
 public class UserCache implements MurmelCache {
+    private final Logger logger = LoggerFactory.getLogger(UserCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -66,20 +72,20 @@ public class UserCache implements MurmelCache {
             return;
         }
 
-        if (RefreshType.SINGLE_USER.getName().equalsIgnoreCase(cacheName))
-            parseIdFromKey(event.key()).ifPresent(this::remove);
-    }
-
-    private Optional<Integer> parseIdFromKey(@Nullable Object key) {
-        if (key instanceof Integer i) return Optional.of(i);
-        if (key instanceof Number n) return Optional.of(n.intValue());
-        if (key instanceof String s && !s.isEmpty() && Character.isDigit(s.charAt(0))) {
-            try {
-                return Optional.of(Integer.parseInt(s));
-            } catch (NumberFormatException ignored) {
+        if (RefreshType.SINGLE_USER.getName().equalsIgnoreCase(cacheName)) {
+            Object key = event.key();
+            if (key instanceof User user)
+                remove(user);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final User user = gson.fromJson(json, User.class);
+                    remove(user);
+                } catch (JsonSyntaxException e) {
+                    logger.warn("Failed to parse JSON for single user refresh: {}", json, e);
+                }
             }
         }
-        return Optional.empty();
     }
 
     @Override
@@ -109,7 +115,7 @@ public class UserCache implements MurmelCache {
         return isBlocked(user) ? Optional.empty() : Optional.of(user);
     }
 
-    private Optional<User> loadById(int id) {
+    private @NotNull Optional<User> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
         User user = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
                 stmt -> stmt.setInt(1, id));
@@ -134,29 +140,11 @@ public class UserCache implements MurmelCache {
         return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
     }
 
-    public void put(@Nullable User user) {
-        if (user == null) return;
-        cacheById.put(user.id(), Optional.of(user));
-
-        if (!isBlocked(user)) {
-            if (user.mojangId() != null) cacheByUUID.put(user.mojangId(), Optional.of(user));
-            cacheByName.put(user.username(), Optional.of(user));
-            CacheUtil.put(listCache, ALL_KEY, user, v -> v.id() == user.id());
-        }
-    }
-
-    public void remove(int id) {
-        Optional<User> value = cacheById.getIfPresent(id);
-        cacheById.invalidate(id);
-
-        if (value != null && value.isPresent()) {
-            User user = value.get();
-            if (user.mojangId() != null) cacheByUUID.invalidate(user.mojangId());
-            cacheByName.invalidate(user.username());
-            CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == id);
-        } else {
-            listCache.invalidate(ALL_KEY);
-        }
+    public void remove(@NotNull User user) {
+        cacheById.invalidate(user.id());
+        if (user.mojangId() != null) cacheByUUID.invalidate(user.mojangId());
+        cacheByName.invalidate(user.username());
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == user.id());
     }
 
     public void clear() {
