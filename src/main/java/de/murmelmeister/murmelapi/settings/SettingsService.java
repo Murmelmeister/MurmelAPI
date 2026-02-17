@@ -1,18 +1,19 @@
 package de.murmelmeister.murmelapi.settings;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class SettingsService {
-    private final Logger logger = LoggerFactory.getLogger(SettingsService.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SettingsService.class);
     private final SettingsProvider provider;
     private final Gson gson;
 
-    public SettingsService(@NotNull SettingsProvider provider, @NotNull Gson gson) {
+    public SettingsService(@NotNull SettingsProvider provider) {
         this.provider = provider;
-        this.gson = gson;
+        this.gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
     public <T> T get(@NotNull String tagId, @NotNull Class<T> type, T defaultValue) {
@@ -22,7 +23,7 @@ public final class SettingsService {
         try {
             return gson.fromJson(settings.json(), type);
         } catch (Exception e) {
-            logger.warn("Invalid JSON for setting {}: {}", tagId, settings.json(), e);
+            LOGGER.warn("Invalid JSON for setting {}: {}", tagId, settings.json(), e);
             return defaultValue;
         }
     }
