@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.punishment.ip;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,24 +13,23 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class PunishmentCurrentIpCache implements MurmelCache {
+    private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(PunishmentCurrentIpCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
     private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE ip_address = ? AND type_id = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*ipAddress=([^,]+), typeId=(\\d+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -38,12 +39,12 @@ public class PunishmentCurrentIpCache implements MurmelCache {
     private final LoadingCache<@NotNull IpTypeKey, Optional<PunishmentCurrentIp>> cache;
     private final LoadingCache<@NotNull String, List<PunishmentCurrentIp>> listCache;
 
-    public PunishmentCurrentIpCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public PunishmentCurrentIpCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cache = CacheUtil.buildCacheRefresh(this::loadFromDatabase, cacheCapcity, refreshInterval);
+        this.cache = CacheUtil.buildCacheRefresh(this::loadFromDatabase, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         this.refreshProvider.register(this);
     }
@@ -59,24 +60,15 @@ public class PunishmentCurrentIpCache implements MurmelCache {
 
         if (RefreshType.SINGLE_PUNISHMENT_IP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof IpTypeKey(InetAddress inetAddress, int typeId))
-                    remove(inetAddress, typeId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    String ipAddress = matcher.group(1);
-                    InetAddress inetAddress;
-                    try {
-                        inetAddress = InetAddress.getByName(ipAddress);
-                    } catch (UnknownHostException e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    int typeId = Integer.parseInt(matcher.group(2));
-                    remove(inetAddress, typeId);
-                } else {
-                    throw new IllegalArgumentException("Invalid key format: " + key);
+            if (key instanceof IpTypeKey ipTypeKey)
+                remove(ipTypeKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final IpTypeKey ipTypeKey = gson.fromJson(json, IpTypeKey.class);
+                    remove(ipTypeKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single punishment ip refresh: {}", json, e);
                 }
             }
         }
@@ -109,19 +101,9 @@ public class PunishmentCurrentIpCache implements MurmelCache {
         return optIp != null && optIp.isPresent() ? optIp.orElse(null) : null;
     }
 
-    public void put(@Nullable PunishmentCurrentIp punish) {
-        if (punish == null) return;
-        IpTypeKey key = new IpTypeKey(punish.inetAddress(), punish.typeId());
-        cache.put(key, Optional.of(punish));
-        CacheUtil.put(listCache, ALL_KEY, punish,
-                v -> v.inetAddress().equals(key.inetAddress()) && v.typeId() == key.typeId());
-    }
-
-    public void remove(@NotNull InetAddress inetAddress, int typeId) {
-        IpTypeKey key = new IpTypeKey(inetAddress, typeId);
+    public void remove(@NotNull IpTypeKey key) {
         cache.invalidate(key);
-        CacheUtil.remove(listCache, ALL_KEY,
-                v -> v.inetAddress().equals(inetAddress) && v.typeId() == typeId);
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.inetAddress().equals(key.inetAddress()) && v.typeId() == key.typeId());
     }
 
     public void clear() {
@@ -136,6 +118,6 @@ public class PunishmentCurrentIpCache implements MurmelCache {
         return List.copyOf(ips);
     }
 
-    protected record IpTypeKey(@NotNull InetAddress inetAddress, int typeId) {
+    public record IpTypeKey(@NotNull InetAddress inetAddress, int typeId) {
     }
 }
