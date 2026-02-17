@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.clan;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,6 +13,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -19,6 +23,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class ClanCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClanCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -63,8 +69,17 @@ public class ClanCache implements MurmelCache {
 
         if (RefreshType.SINGLE_CLAN.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof String uuid)
-                remove(UUID.fromString(uuid));
+            if (key instanceof Clan clan)
+                remove(clan);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final Clan clan = gson.fromJson(json, Clan.class);
+                    remove(clan);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single clan refresh: {}", json, e);
+                }
+            }
         }
     }
 
@@ -121,24 +136,11 @@ public class ClanCache implements MurmelCache {
         return optClan != null && optClan.isPresent() ? optClan.orElse(null) : null;
     }
 
-    public void put(@Nullable Clan clan) {
-        if (clan == null) return;
-        cacheById.put(clan.id(), Optional.of(clan));
-        cacheByName.put(clan.name(), Optional.of(clan));
-        cacheByOwner.put(clan.ownerId(), Optional.of(clan));
-        CacheUtil.put(listCache, ALL_KEY, clan, v -> v.id().equals(clan.id()));
-    }
-
-    public void remove(@NotNull UUID clanId) {
-        Optional<Clan> optClan = cacheById.getIfPresent(clanId);
-        cacheById.invalidate(clanId);
-
-        if (optClan != null && optClan.isPresent()) {
-            Clan clan = optClan.get();
-            cacheByName.invalidate(clan.name());
-            cacheByOwner.invalidate(clan.ownerId());
-        }
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(clanId));
+    public void remove(@NotNull Clan clan) {
+        cacheById.invalidate(clan.id());
+        cacheByName.invalidate(clan.name());
+        cacheByOwner.invalidate(clan.ownerId());
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(clan.id()));
     }
 
     public void clear() {
