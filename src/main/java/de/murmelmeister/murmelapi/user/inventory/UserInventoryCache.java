@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user.inventory;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,22 +13,23 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class UserInventoryCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserInventoryCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
     private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE user_id = ? AND inventory_id = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*userId=(\\d+), inventoryId=(\\d+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -36,13 +39,13 @@ public class UserInventoryCache implements MurmelCache {
     private final LoadingCache<@NotNull InventoryKey, Optional<UserInventory>> cacheByKey;
     private final LoadingCache<@NotNull String, List<UserInventory>> listCache;
 
-    public UserInventoryCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserInventoryCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadById, cacheCapcity, refreshInterval);
-        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapcity, refreshInterval);
+        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
+        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapacity, refreshInterval);
         this.refreshProvider.register(this);
     }
 
@@ -57,17 +60,15 @@ public class UserInventoryCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER_INVENTORY.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof InventoryKey(int userId, int inventoryId))
-                    remove(userId, inventoryId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    int userId = Integer.parseInt(matcher.group(1));
-                    int inventoryId = Integer.parseInt(matcher.group(2));
-                    remove(userId, inventoryId);
-                } else {
-                    throw new IllegalArgumentException("Invalid key format: " + key);
+            if (key instanceof InventoryKey inventoryKey)
+                remove(inventoryKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final InventoryKey inventoryKey = gson.fromJson(json, InventoryKey.class);
+                    remove(inventoryKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single user inventory refresh: {}", json, e);
                 }
             }
         }
@@ -106,15 +107,9 @@ public class UserInventoryCache implements MurmelCache {
         return inventories;
     }
 
-    public void put(@Nullable UserInventory inventory) {
-        if (inventory == null) return;
-        cacheByKey.put(new InventoryKey(inventory.userId(), inventory.inventoryId()), Optional.of(inventory));
-        CacheUtil.put(listCache, ALL_KEY, inventory, v -> v.userId() == inventory.userId() && v.inventoryId() == inventory.inventoryId());
-    }
-
-    public void remove(int userId, int inventoryId) {
-        cacheByKey.invalidate(new InventoryKey(userId, inventoryId));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == userId && v.inventoryId() == inventoryId);
+    public void remove(@NotNull InventoryKey key) {
+        cacheByKey.invalidate(key);
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.inventoryId() == key.inventoryId());
     }
 
     public void clear() {
@@ -122,6 +117,6 @@ public class UserInventoryCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    protected record InventoryKey(int userId, int inventoryId) {
+    public record InventoryKey(int userId, int inventoryId) {
     }
 }
