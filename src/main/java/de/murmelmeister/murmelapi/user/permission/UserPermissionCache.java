@@ -20,7 +20,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 public class UserPermissionCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserPermissionCache.class);
@@ -33,7 +32,6 @@ public class UserPermissionCache implements MurmelCache {
     private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE user_id = ? AND permission = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*userId=(\\d+), permission=([^,\\]]+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
