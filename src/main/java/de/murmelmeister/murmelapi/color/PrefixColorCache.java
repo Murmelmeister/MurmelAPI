@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.color;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,6 +13,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -18,6 +22,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class PrefixColorCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PrefixColorCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -33,13 +39,13 @@ public class PrefixColorCache implements MurmelCache {
     private final LoadingCache<@NotNull String, Optional<PrefixColor>> cacheById;
     private final LoadingCache<@NotNull String, List<PrefixColor>> listCache;
 
-    public PrefixColorCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public PrefixColorCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapcity, refreshInterval);
-        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapcity, refreshInterval);
+        this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
+        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapacity, refreshInterval);
         this.refreshProvider.register(this);
     }
 
@@ -54,7 +60,17 @@ public class PrefixColorCache implements MurmelCache {
 
         if (RefreshType.SINGLE_PREFIX_COLOR.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof String) remove((String) key);
+            if (key instanceof PrefixColor color)
+                remove(color);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final PrefixColor color = gson.fromJson(json, PrefixColor.class);
+                    remove(color);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single prefix color refresh: {}", json, e);
+                }
+            }
         }
     }
 
@@ -90,15 +106,9 @@ public class PrefixColorCache implements MurmelCache {
         return colors;
     }
 
-    public void put(@Nullable PrefixColor color) {
-        if (color == null) return;
-        cacheById.put(color.id(), Optional.of(color));
-        CacheUtil.put(listCache, ALL_KEY, color, v -> v.id().equals(color.id()));
-    }
-
-    public void remove(@NotNull String id) {
-        cacheById.invalidate(id);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(id));
+    public void remove(@NotNull PrefixColor color) {
+        cacheById.invalidate(color.id());
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(color.id()));
     }
 
     public void clear() {
