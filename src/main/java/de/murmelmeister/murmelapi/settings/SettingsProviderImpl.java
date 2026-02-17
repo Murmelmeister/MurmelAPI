@@ -68,18 +68,21 @@ public final class SettingsProviderImpl implements SettingsProvider {
         if (updatedAt == null) return null;
 
         Settings settings = new Settings(normalizedTagId, json, updatedAt);
-        refreshProvider.fireSingle(single, normalizedTagId);
+        refreshProvider.fireSingle(single, settings);
         return settings;
     }
 
     @Override
     public int delete(@NotNull String tagId) {
+        Settings existing = cache.get(tagId);
+        if (existing == null) return 0;
+
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE tag_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> stmt.setString(1, tagId));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, tagId);
+        refreshProvider.fireSingle(single, existing);
         return row;
     }
 
@@ -113,7 +116,7 @@ public final class SettingsProviderImpl implements SettingsProvider {
                 .json(json)
                 .updatedAt(updatedAt)
                 .build();
-        refreshProvider.fireSingle(single, normalizedTagId);
+        refreshProvider.fireSingle(single, settings);
         return settings;
     }
 
@@ -135,7 +138,7 @@ public final class SettingsProviderImpl implements SettingsProvider {
         });
 
         if (saved == null) return null;
-        refreshProvider.fireSingle(single, saved.tagId());
+        refreshProvider.fireSingle(single, saved);
         return saved;
     }
 }
