@@ -112,7 +112,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                 stmt -> stmt.setInt(1, groupId));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, groupId);
+        refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, null));
         return row;
     }
 
