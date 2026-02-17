@@ -31,10 +31,10 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
     private final RefreshType all = RefreshType.USER_PERMISSIONS;
     private final RefreshType single = RefreshType.SINGLE_USER_PERMISSION;
 
-    public UserPermissionProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserPermissionProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new UserPermissionCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.cache = new UserPermissionCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -114,7 +114,7 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
                 stmt -> stmt.setInt(1, userId));
         if (rows < 1) return 0;
 
-        refreshProvider.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, new UserPermissionCache.PermissionKey(userId, null));
         return rows;
     }
 
