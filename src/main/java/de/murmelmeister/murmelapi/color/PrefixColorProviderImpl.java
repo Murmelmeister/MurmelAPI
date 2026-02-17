@@ -70,18 +70,21 @@ public final class PrefixColorProviderImpl implements PrefixColorProvider {
         if (createdAt == null) return null;
 
         PrefixColor prefixColor = new PrefixColor(id, color, animated, createdAt, createdBy, null, null);
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, prefixColor);
         return prefixColor;
     }
 
     @Override
     public int delete(@NotNull String id) {
+        PrefixColor existing = cache.getById(id);
+        if (existing == null) return 0;
+
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> stmt.setString(1, id));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, existing);
         return row;
     }
 
@@ -119,7 +122,7 @@ public final class PrefixColorProviderImpl implements PrefixColorProvider {
                 .changedBy(changedBy)
                 .changedAt(changedAt)
                 .build();
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, prefixColor);
         return prefixColor;
     }
 }
