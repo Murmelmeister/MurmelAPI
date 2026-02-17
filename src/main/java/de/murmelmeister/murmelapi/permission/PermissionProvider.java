@@ -39,7 +39,7 @@ public final class PermissionProvider implements Permission, MurmelCache {
     public PermissionProvider(Database database, RefreshProvider refreshProvider, UserProvider userProvider,
                               GroupParentProvider groupParentProvider, GroupPermissionProvider groupPermissionProvider,
                               UserParentProvider userParentProvider, UserPermissionProvider userPermissionProvider,
-                              long cacheCapcity, Duration refreshInterval) {
+                              long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.userProvider = userProvider;
@@ -47,7 +47,7 @@ public final class PermissionProvider implements Permission, MurmelCache {
         this.groupPermissionProvider = groupPermissionProvider;
         this.userParentProvider = userParentProvider;
         this.userPermissionProvider = userPermissionProvider;
-        this.cache = CacheUtil.buildCacheRefresh(this::loadAllFromDatabase, cacheCapcity, refreshInterval);
+        this.cache = CacheUtil.buildCacheRefresh(this::loadAllFromDatabase, cacheCapacity, refreshInterval);
         this.refreshProvider.register(this);
     }
 
