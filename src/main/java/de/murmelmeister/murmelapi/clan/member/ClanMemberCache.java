@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.clan.member;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,16 +13,18 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ClanMemberCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClanMemberCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -29,7 +33,6 @@ public class ClanMemberCache implements MurmelCache {
     private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE clan_id = ? AND user_id = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), userId=(\\d+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -62,15 +65,15 @@ public class ClanMemberCache implements MurmelCache {
 
         if (RefreshType.SINGLE_CLAN_MEMBER.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof Member(UUID clanId, int userId))
-                    remove(clanId, userId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    UUID clanId = UUID.fromString(matcher.group(1));
-                    int userId = Integer.parseInt(matcher.group(2));
-                    remove(clanId, userId);
+            if (key instanceof Member member)
+                remove(member);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final Member member = gson.fromJson(json, Member.class);
+                    remove(member);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.error("Failed to parse Member from JSON: {}", json, e);
                 }
             }
         }
@@ -114,19 +117,10 @@ public class ClanMemberCache implements MurmelCache {
         return cacheByClanId.get(clanId);
     }
 
-    public void put(@Nullable ClanMember member) {
-        if (member == null) return;
-        Member key = new Member(member.clanId(), member.userId());
-        cache.put(key, Optional.of(member));
-        CacheUtil.put(cacheByClanId, member.clanId(), member, v -> v.clanId().equals(member.clanId()));
-        CacheUtil.put(listCache, ALL_KEY, member, v -> v.clanId().equals(member.clanId()));
-    }
-
-    public void remove(@NotNull UUID clanId, int userId) {
-        Member key = new Member(clanId, userId);
-        cache.invalidate(key);
-        CacheUtil.remove(cacheByClanId, clanId, v -> v.clanId().equals(clanId));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(clanId));
+    public void remove(@NotNull Member member) {
+        cache.invalidate(member);
+        CacheUtil.remove(cacheByClanId, member.clanId(), v -> v.clanId().equals(member.clanId()));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(member.clanId()));
     }
 
     public void clear() {
@@ -142,6 +136,6 @@ public class ClanMemberCache implements MurmelCache {
         return List.copyOf(members);
     }
 
-    protected record Member(@NotNull UUID clanId, int userId) {
+    public record Member(@NotNull UUID clanId, int userId) {
     }
 }
