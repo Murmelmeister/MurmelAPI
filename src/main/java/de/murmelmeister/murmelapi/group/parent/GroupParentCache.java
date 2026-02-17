@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.group.parent;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,13 +13,18 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.sql.Types;
 import java.time.Duration;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 public class GroupParentCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroupParentCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -26,7 +33,6 @@ public class GroupParentCache implements MurmelCache {
     private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE group_id = ? AND parent_id = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*groupId=(\\d+), parentId=(\\d+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -59,20 +65,15 @@ public class GroupParentCache implements MurmelCache {
 
         if (RefreshType.SINGLE_GROUP_PARENT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof ParentKey(int groupId, int parentId))
-                    remove(groupId, parentId);
-                else if (key instanceof Integer groupId)
-                    remove(groupId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    int groupId = Integer.parseInt(matcher.group(1));
-                    int parentId = Integer.parseInt(matcher.group(2));
-                    remove(groupId, parentId);
-                } else {
-                    int groupId = Integer.parseInt((String) key);
-                    remove(groupId);
+            if (key instanceof ParentKey parentKey)
+                remove(parentKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final ParentKey parentKey = gson.fromJson(json, ParentKey.class);
+                    remove(parentKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single group parent refresh: {}", json, e);
                 }
             }
         }
@@ -100,7 +101,8 @@ public class GroupParentCache implements MurmelCache {
         GroupParent groupParent = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupParent(),
                 stmt -> {
                     stmt.setInt(1, key.groupId());
-                    stmt.setInt(2, key.parentId());
+                    if (key.parentId() != null) stmt.setInt(2, key.parentId());
+                    else stmt.setNull(2, Types.INTEGER);
                 });
 
         return Optional.ofNullable(groupParent);
@@ -115,28 +117,15 @@ public class GroupParentCache implements MurmelCache {
         return cacheByGroupId.get(groupId);
     }
 
-    public void put(@Nullable GroupParent groupParent) {
-        if (groupParent == null) return;
-        ParentKey key = new ParentKey(groupParent.groupId(), groupParent.parentId());
-        cacheByKey.put(key, Optional.of(groupParent));
-        CacheUtil.put(cacheByGroupId, groupParent.groupId(), groupParent,
-                v -> v.groupId() == groupParent.groupId() && v.parentId() == groupParent.parentId());
-        CacheUtil.put(listCache, ALL_KEY, groupParent,
-                v -> v.groupId() == groupParent.groupId() && v.parentId() == groupParent.parentId());
-    }
-
-    public void remove(int groupId, int parentId) {
-        ParentKey key = new ParentKey(groupId, parentId);
+    public void remove(@NotNull ParentKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByGroupId, groupId, v -> v.groupId() == groupId && v.parentId() == parentId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == groupId && v.parentId() == parentId);
-    }
-
-    public void remove(int groupId) {
-        cacheByKey.asMap().keySet().stream().filter(key -> key.groupId() == groupId)
-                .forEach(cacheByKey::invalidate);
-        cacheByGroupId.invalidate(groupId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == groupId);
+        if (key.parentId() == null) {
+            cacheByGroupId.invalidate(key.groupId());
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == key.groupId());
+        } else {
+            CacheUtil.remove(cacheByGroupId, key.groupId(), v -> v.groupId() == key.groupId() && v.parentId() == key.parentId());
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == key.groupId() && v.parentId() == key.parentId());
+        }
     }
 
     public void clear() {
@@ -152,6 +141,6 @@ public class GroupParentCache implements MurmelCache {
         return List.copyOf(parents);
     }
 
-    protected record ParentKey(int groupId, int parentId) {
+    public record ParentKey(int groupId, @Nullable Integer parentId) {
     }
 }
