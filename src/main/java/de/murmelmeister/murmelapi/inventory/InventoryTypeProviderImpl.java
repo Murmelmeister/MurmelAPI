@@ -53,20 +53,22 @@ public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
         if (id < 1) return null;
 
         InventoryType type = new InventoryType(id, normalizedName);
-        refreshProvider.fireSingle(single, type.id());
+        refreshProvider.fireSingle(single, type);
         return type;
     }
 
     @Override
     public int delete(int id) {
         if (id < 1) return 0;
+        InventoryType existing = cache.getById(id);
+        if (existing == null) return 0;
 
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, existing);
         return row;
     }
 }
