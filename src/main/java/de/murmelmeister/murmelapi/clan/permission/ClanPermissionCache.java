@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.clan.permission;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,16 +13,19 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.sql.Types;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class ClanPermissionCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClanPermissionCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -29,7 +34,6 @@ public class ClanPermissionCache implements MurmelCache {
     private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE clan_id = ? AND group_id = ? AND permission = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*clanId=([^,]+), groupId=([^,]+), permission=([^,\\]]+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -37,17 +41,17 @@ public class ClanPermissionCache implements MurmelCache {
     private final Long fetchLimit;
 
     private final LoadingCache<@NotNull PermissionKey, Optional<ClanPermission>> cacheByKey;
-    private final LoadingCache<@NotNull GroupKey, List<ClanPermission>> cacheByGroup;
+    private final LoadingCache<@NotNull PermissionKey, List<ClanPermission>> cacheByGroup;
     private final LoadingCache<@NotNull String, List<ClanPermission>> listCache;
 
-    public ClanPermissionCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public ClanPermissionCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapcity, refreshInterval);
-        this.cacheByGroup = CacheUtil.buildCacheRefresh(this::loadByGroup, cacheCapcity, refreshInterval);
-        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapcity, refreshInterval);
+        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapacity, refreshInterval);
+        this.cacheByGroup = CacheUtil.buildCacheRefresh(this::loadByGroup, cacheCapacity, refreshInterval);
+        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), cacheCapacity, refreshInterval);
         this.refreshProvider.register(this);
     }
 
@@ -62,18 +66,15 @@ public class ClanPermissionCache implements MurmelCache {
 
         if (RefreshType.SINGLE_CLAN_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof PermissionKey(UUID clanId, UUID groupId, String permission))
-                    remove(clanId, groupId, permission);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    UUID clanId = UUID.fromString(matcher.group(1));
-                    UUID groupId = UUID.fromString(matcher.group(2));
-                    String permission = matcher.group(3);
-                    remove(clanId, groupId, permission);
-                } else {
-                    throw new IllegalArgumentException("Invalid key format: " + key);
+            if (key instanceof PermissionKey permissionKey)
+                remove(permissionKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final PermissionKey permissionKey = gson.fromJson(json, PermissionKey.class);
+                    remove(permissionKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single clan permission refresh: {}", json, e);
                 }
             }
         }
@@ -90,7 +91,7 @@ public class ClanPermissionCache implements MurmelCache {
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanPermission());
     }
 
-    private @NotNull List<ClanPermission> loadByGroup(GroupKey key) {
+    private @NotNull List<ClanPermission> loadByGroup(PermissionKey key) {
         String sql = SELECT_BY_GROUP.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanPermission(), stmt -> {
             stmt.setString(1, key.clanId().toString());
@@ -103,7 +104,8 @@ public class ClanPermissionCache implements MurmelCache {
         ClanPermission clanPermission = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanPermission(), stmt -> {
             stmt.setString(1, key.clanId().toString());
             stmt.setString(2, key.groupId().toString());
-            stmt.setString(3, key.permission());
+            if (key.permission() != null) stmt.setString(3, key.permission());
+            else stmt.setNull(3, Types.VARCHAR);
         });
 
         return Optional.ofNullable(clanPermission);
@@ -117,7 +119,7 @@ public class ClanPermissionCache implements MurmelCache {
 
     public @Nullable List<ClanPermission> getByPermissions(@Nullable UUID clanId, @Nullable UUID groupId) {
         if (clanId == null || groupId == null) return null;
-        return cacheByGroup.get(new GroupKey(clanId, groupId));
+        return cacheByGroup.get(new PermissionKey(clanId, groupId, null));
     }
 
     public @NotNull List<ClanPermission> getAll() {
@@ -127,19 +129,10 @@ public class ClanPermissionCache implements MurmelCache {
         return List.copyOf(permissions);
     }
 
-    public void put(@Nullable ClanPermission clanPermission) {
-        if (clanPermission == null) return;
-        cacheByKey.put(new PermissionKey(clanPermission.clanId(), clanPermission.groupId(), clanPermission.permission()), Optional.of(clanPermission));
-        CacheUtil.put(cacheByGroup, new GroupKey(clanPermission.clanId(), clanPermission.groupId()), clanPermission,
-                v -> v.groupId().equals(clanPermission.groupId()));
-        CacheUtil.put(listCache, ALL_KEY, clanPermission, v -> v.groupId().equals(clanPermission.groupId()));
-    }
-
-    public void remove(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String permission) {
-        PermissionKey key = new PermissionKey(clanId, groupId, permission);
+    public void remove(@NotNull PermissionKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByGroup, new GroupKey(clanId, groupId), v -> v.groupId().equals(groupId));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId().equals(groupId));
+        CacheUtil.remove(cacheByGroup, key, v -> v.groupId().equals(key.groupId()));
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId().equals(key.groupId()));
     }
 
     public void clear() {
@@ -148,9 +141,6 @@ public class ClanPermissionCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    protected record PermissionKey(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String permission) {
-    }
-
-    protected record GroupKey(@NotNull UUID clanId, @NotNull UUID groupId) {
+    public record PermissionKey(@NotNull UUID clanId, @NotNull UUID groupId, @Nullable String permission) {
     }
 }
