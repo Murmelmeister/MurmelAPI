@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.settings;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,6 +13,8 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -18,6 +22,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class SettingsCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SettingsCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -54,8 +60,17 @@ public class SettingsCache implements MurmelCache {
 
         if (RefreshType.SINGLE_SETTING.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof String tagId)
-                remove(tagId);
+            if (key instanceof Settings settings)
+                remove(settings);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final Settings settings = gson.fromJson(json, Settings.class);
+                    remove(settings);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single setting refresh: {}", json, e);
+                }
+            }
         }
     }
 
@@ -91,15 +106,9 @@ public class SettingsCache implements MurmelCache {
         return List.copyOf(settings);
     }
 
-    public void put(@Nullable Settings settings) {
-        if (settings == null) return;
-        cache.put(settings.tagId(), Optional.of(settings));
-        CacheUtil.put(listCache, ALL_KEY, settings, v -> v.tagId().equals(settings.tagId()));
-    }
-
-    public void remove(@NotNull String tagId) {
-        cache.invalidate(tagId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.tagId().equals(tagId));
+    public void remove(@NotNull Settings settings) {
+        cache.invalidate(settings.tagId());
+        CacheUtil.remove(listCache, ALL_KEY, v -> v.tagId().equals(settings.tagId()));
     }
 
     public void clear() {
