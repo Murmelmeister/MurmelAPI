@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class UserSessionCache implements MurmelCache {
-    private final Logger logger = LoggerFactory.getLogger(UserSessionCache.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserSessionCache.class);
 
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
@@ -70,7 +70,7 @@ public class UserSessionCache implements MurmelCache {
                      final UserSession session = gson.fromJson(json, UserSession.class);
                      remove(session);
                  } catch (JsonSyntaxException e) {
-                     logger.error("Failed to parse UserSession from JSON: {}", json, e);
+                     LOGGER.error("Failed to parse UserSession from JSON: {}", json, e);
                  }
             }
         }
