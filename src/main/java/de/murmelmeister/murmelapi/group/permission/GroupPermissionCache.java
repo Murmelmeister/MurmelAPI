@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.group.permission;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,13 +13,18 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.sql.Types;
 import java.time.Duration;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 public class GroupPermissionCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroupPermissionCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -26,7 +33,6 @@ public class GroupPermissionCache implements MurmelCache {
     private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE group_id = ? AND permission = ?";
 
     private static final String ALL_KEY = "ALL";
-    private static final Pattern KEY_PATTERN = Pattern.compile(".*groupId=(\\d+), permission=([^,\\]]+).*");
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -59,20 +65,15 @@ public class GroupPermissionCache implements MurmelCache {
 
         if (RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof PermissionKey(int groupId, String permission))
-                    remove(groupId, permission);
-                else if (key instanceof Integer groupId)
-                    remove(groupId);
-            } else {
-                Matcher matcher = KEY_PATTERN.matcher((String) key);
-                if (matcher.matches()) {
-                    int groupId = Integer.parseInt(matcher.group(1));
-                    String permission = matcher.group(2);
-                    remove(groupId, permission);
-                } else {
-                    int groupId = Integer.parseInt((String) key);
-                    remove(groupId);
+            if (key instanceof PermissionKey permissionKey)
+                remove(permissionKey);
+            else if (key instanceof String json) {
+                final Gson gson = new Gson();
+                try {
+                    final PermissionKey permissionKey = gson.fromJson(json, PermissionKey.class);
+                    remove(permissionKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single group permission refresh: {}", json, e);
                 }
             }
         }
@@ -100,7 +101,8 @@ public class GroupPermissionCache implements MurmelCache {
         GroupPermission groupPermission = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupPermission(),
                 stmt -> {
                     stmt.setInt(1, key.groupId());
-                    stmt.setString(2, key.permission());
+                    if (key.permission() != null) stmt.setString(2, key.permission());
+                    else stmt.setNull(2, Types.VARCHAR);
                 });
 
         return Optional.ofNullable(groupPermission);
@@ -115,30 +117,15 @@ public class GroupPermissionCache implements MurmelCache {
         return cacheByGroupId.get(groupId);
     }
 
-    public void put(@Nullable GroupPermission groupPermission) {
-        if (groupPermission == null) return;
-        PermissionKey key = new PermissionKey(groupPermission.groupId(), groupPermission.permission());
-        cacheByKey.put(key, Optional.of(groupPermission));
-        CacheUtil.put(cacheByGroupId, groupPermission.groupId(), groupPermission,
-                v -> v.groupId() == groupPermission.groupId() && v.permission().equals(groupPermission.permission()));
-        CacheUtil.put(listCache, ALL_KEY, groupPermission,
-                v -> v.groupId() == groupPermission.groupId() && v.permission().equals(groupPermission.permission()));
-    }
-
-    public void remove(int groupId, @NotNull String permission) {
-        PermissionKey key = new PermissionKey(groupId, permission);
+    public void remove(@NotNull PermissionKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByGroupId, groupId,
-                v -> v.groupId() == groupId && v.permission().equals(permission));
-        CacheUtil.remove(listCache, ALL_KEY,
-                v -> v.groupId() == groupId && v.permission().equals(permission));
-    }
-
-    public void remove(int groupId) {
-        cacheByKey.asMap().keySet().stream().filter(key -> key.groupId() == groupId)
-                .forEach(cacheByKey::invalidate);
-        cacheByGroupId.invalidate(groupId);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == groupId);
+        if (key.permission() == null) {
+            cacheByGroupId.invalidate(key.groupId());
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == key.groupId());
+        } else {
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == key.groupId() && v.permission().equals(key.permission()));
+            CacheUtil.remove(cacheByGroupId, key.groupId(), v -> v.groupId() == key.groupId() && v.permission().equals(key.permission()));
+        }
     }
 
     public void clear() {
@@ -154,6 +141,6 @@ public class GroupPermissionCache implements MurmelCache {
         return List.copyOf(permissions);
     }
 
-    protected record PermissionKey(int groupId, @NotNull String permission) {
+    public record PermissionKey(int groupId, @Nullable String permission) {
     }
 }
