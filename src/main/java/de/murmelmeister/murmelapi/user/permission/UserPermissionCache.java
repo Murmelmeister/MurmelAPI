@@ -117,8 +117,13 @@ public class UserPermissionCache implements MurmelCache {
 
     public void remove(@NotNull PermissionKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByUserId, key.userId(), v -> v.userId() == key.userId() && v.permission().equals(key.permission()));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.permission().equals(key.permission()));
+        if (key.permission() == null) {
+            cacheByUserId.invalidate(key.userId());
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId());
+        } else {
+            CacheUtil.remove(cacheByUserId, key.userId(), v -> v.userId() == key.userId() && v.permission().equals(key.permission()));
+            CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.permission().equals(key.permission()));
+        }
     }
 
     public void clear() {
