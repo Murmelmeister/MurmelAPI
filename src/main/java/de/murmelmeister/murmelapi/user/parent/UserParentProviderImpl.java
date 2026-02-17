@@ -27,10 +27,10 @@ public final class UserParentProviderImpl implements UserParentProvider {
     private final RefreshType all = RefreshType.USER_PARENTS;
     private final RefreshType single = RefreshType.SINGLE_USER_PARENT;
 
-    public UserParentProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapcity, Duration refreshInterval) {
+    public UserParentProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new UserParentCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapcity, refreshInterval);
+        this.cache = new UserParentCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -108,7 +108,7 @@ public final class UserParentProviderImpl implements UserParentProvider {
                 stmt -> stmt.setInt(1, userId));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, userId);
+        refreshProvider.fireSingle(single, new UserParentCache.ParentKey(userId, null));
         return row;
     }
 
