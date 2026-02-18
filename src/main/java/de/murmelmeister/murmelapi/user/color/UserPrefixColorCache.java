@@ -31,6 +31,7 @@ public class UserPrefixColorCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -38,8 +39,9 @@ public class UserPrefixColorCache implements MurmelCache {
     private final LoadingCache<@NotNull ColorKey, Optional<UserPrefixColor>> cache;
     private final LoadingCache<@NotNull String, List<UserPrefixColor>> listCache;
 
-    public UserPrefixColorCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, java.time.Duration refreshInterval) {
+    public UserPrefixColorCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, java.time.Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -62,12 +64,17 @@ public class UserPrefixColorCache implements MurmelCache {
             if (key instanceof ColorKey colorKey)
                 remove(colorKey);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final ColorKey colorKey = gson.fromJson(json, ColorKey.class);
+
+                    if (colorKey == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(colorKey);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single user prefix color refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
