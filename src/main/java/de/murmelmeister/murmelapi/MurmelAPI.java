@@ -64,6 +64,7 @@ import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
 import de.murmelmeister.murmelapi.user.stats.UserStatsProvider;
 import de.murmelmeister.murmelapi.user.stats.UserStatsProviderImpl;
+import de.murmelmeister.murmelapi.utils.adapter.LocalDateAdapter;
 import de.murmelmeister.murmelapi.utils.adapter.LocalDateTimeAdapter;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshProviderImpl;
@@ -79,6 +80,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -153,7 +155,11 @@ public final class MurmelAPI {
 
     public MurmelAPI(Database database, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
-        this.gson = new GsonBuilder().registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter()).disableHtmlEscaping().create();
+        this.gson = new GsonBuilder()
+                .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
+                .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                .disableHtmlEscaping()
+                .create();
         this.fetchLimit = fetchLimit;
         this.cacheCapacity = cacheCapacity;
         this.refreshInterval = refreshInterval;
