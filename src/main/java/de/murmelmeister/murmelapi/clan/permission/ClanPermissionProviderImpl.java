@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.clan.permission;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -26,10 +27,10 @@ public final class ClanPermissionProviderImpl implements ClanPermissionProvider 
     private final RefreshType all = RefreshType.CLAN_PERMISSIONS;
     private final RefreshType single = RefreshType.SINGLE_CLAN_PERMISSION;
 
-    public ClanPermissionProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public ClanPermissionProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new ClanPermissionCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new ClanPermissionCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
