@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.punishment.audit;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -26,10 +27,10 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
     private final RefreshType all = RefreshType.PUNISHMENT_LOGS;
     private final RefreshType single = RefreshType.SINGLE_PUNISHMENT_LOG;
 
-    public PunishmentLogProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentLogProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new PunishmentLogCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new PunishmentLogCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override

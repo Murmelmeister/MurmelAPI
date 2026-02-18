@@ -38,6 +38,7 @@ public class PunishmentLogCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -47,8 +48,9 @@ public class PunishmentLogCache implements MurmelCache {
     private final LoadingCache<@NotNull InetAddress, List<PunishmentLog>> cacheByIp;
     private final LoadingCache<@NotNull String, List<PunishmentLog>> listCache;
 
-    public PunishmentLogCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentLogCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -73,12 +75,17 @@ public class PunishmentLogCache implements MurmelCache {
             if (key instanceof PunishmentLog log)
                 remove(log);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final PunishmentLog log = gson.fromJson(json, PunishmentLog.class);
+
+                    if (log == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(log);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single punishment log refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
