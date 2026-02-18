@@ -34,6 +34,7 @@ public class GroupCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -42,8 +43,9 @@ public class GroupCache implements MurmelCache {
     private final LoadingCache<@NotNull String, Optional<Group>> cacheByName;
     private final LoadingCache<@NotNull String, List<Group>> listCache;
 
-    public GroupCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public GroupCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -67,12 +69,17 @@ public class GroupCache implements MurmelCache {
             if (key instanceof Group group)
                 remove(group);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final Group group = gson.fromJson(json, Group.class);
+
+                    if (group == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(group);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single group refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
