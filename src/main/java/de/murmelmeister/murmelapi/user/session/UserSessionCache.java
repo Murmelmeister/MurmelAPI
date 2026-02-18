@@ -35,6 +35,7 @@ public class UserSessionCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -43,8 +44,9 @@ public class UserSessionCache implements MurmelCache {
     private final LoadingCache<@NotNull Integer, Optional<UserSession>> cacheByUserId;
     private final LoadingCache<@NotNull String, List<UserSession>> listCache;
 
-    public UserSessionCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserSessionCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -65,12 +67,17 @@ public class UserSessionCache implements MurmelCache {
             if (key instanceof UserSession session)
                 remove(session);
              else if (key instanceof String json) {
-                 final Gson gson = new Gson();
                  try {
                      final UserSession session = gson.fromJson(json, UserSession.class);
+
+                     if (session == null) {
+                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                         return;
+                     }
+
                      remove(session);
                  } catch (JsonSyntaxException e) {
-                     LOGGER.error("Failed to parse UserSession from JSON: {}", json, e);
+                     LOGGER.error("Failed to parse JSON for single refresh: {}", json, e);
                  }
             }
         }
