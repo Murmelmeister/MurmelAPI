@@ -26,14 +26,16 @@ public class UserStatsCache implements MurmelCache {
     private static final String SELECT_BY_USER_ID = "SELECT * FROM %s WHERE id = ?";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
 
     private final LoadingCache<@NotNull Integer, Optional<UserStats>> cacheById;
 
-    public UserStatsCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserStatsCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -55,12 +57,17 @@ public class UserStatsCache implements MurmelCache {
             if (key instanceof UserStats userStats)
                 remove(userStats);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final UserStats userStats = gson.fromJson(json, UserStats.class);
+
+                    if (userStats == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(userStats);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single user stats refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
