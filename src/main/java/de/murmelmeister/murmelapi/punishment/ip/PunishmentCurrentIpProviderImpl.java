@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.punishment.ip;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -23,10 +24,10 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
     private final RefreshType all = RefreshType.PUNISHMENT_IPS;
     private final RefreshType single = RefreshType.SINGLE_PUNISHMENT_IP;
 
-    public PunishmentCurrentIpProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentCurrentIpProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new PunishmentCurrentIpCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new PunishmentCurrentIpCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
