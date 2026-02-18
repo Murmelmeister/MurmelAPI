@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.user.login;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -24,10 +25,10 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     private final RefreshType all = RefreshType.USER_LOGINS;
     private final RefreshType single = RefreshType.SINGLE_USER_LOGIN;
 
-    public UserLoginProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserLoginProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new UserLoginCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new UserLoginCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
