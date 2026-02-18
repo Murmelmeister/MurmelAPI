@@ -25,7 +25,6 @@ import de.murmelmeister.murmelapi.user.inventory.UserInventory;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
-import de.murmelmeister.murmelapi.user.playtime.UserPlayTime;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.stats.UserStats;
 import org.jetbrains.annotations.NotNull;
@@ -77,15 +76,6 @@ public final class ResultSetUtil {
             boolean isDebugActive = resultSet.getBoolean("debug_enabled");
             int languageId = resultSet.getInt("language_id");
             return new User(id, mojangId, username, firstJoin, isSystemUser, isDebugUser, isDebugActive, languageId);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<UserPlayTime> userPlayTime() {
-        return resultSet -> {
-            int userId = resultSet.getInt("id");
-            int playTime = resultSet.getInt("play_time");
-            int loginStreak = resultSet.getInt("login_count");
-            return new UserPlayTime(userId, playTime, loginStreak);
         };
     }
 

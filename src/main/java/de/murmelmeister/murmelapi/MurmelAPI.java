@@ -60,8 +60,6 @@ import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
 import de.murmelmeister.murmelapi.user.parent.UserParentProviderImpl;
 import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
 import de.murmelmeister.murmelapi.user.permission.UserPermissionProviderImpl;
-import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
-import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProviderImpl;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
 import de.murmelmeister.murmelapi.user.stats.UserStatsProvider;
@@ -114,7 +112,6 @@ public final class MurmelAPI {
 
     private final UserProvider userProvider;
     private final UserStatsProvider userStatsProvider;
-    private final UserPlayTimeProvider userPlayTimeProvider;
     private final UserLoginProvider userLoginProvider;
     private final UserSessionProvider userSessionProvider;
     private final UserService userService;
@@ -170,10 +167,9 @@ public final class MurmelAPI {
         this.messageService = new MessageService(languageProvider, messageProvider);
         this.userProvider = new UserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userStatsProvider = new UserStatsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userPlayTimeProvider = new UserPlayTimeProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userLoginProvider = new UserLoginProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userSessionProvider = new UserSessionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userService = new UserService(userProvider, userStatsProvider, userPlayTimeProvider, userLoginProvider, userSessionProvider);
+        this.userService = new UserService(userProvider, userStatsProvider, userLoginProvider, userSessionProvider);
         this.groupProvider = new GroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupColorProvider = new GroupColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPermissionProvider = new UserPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -341,10 +337,6 @@ public final class MurmelAPI {
 
     public UserStatsProvider getUserStatsProvider() {
         return userStatsProvider;
-    }
-
-    public UserPlayTimeProvider getUserPlayTimeProvider() {
-        return userPlayTimeProvider;
     }
 
     public UserLoginProvider getUserLoginProvider() {
