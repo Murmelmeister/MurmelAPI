@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.clan.parent;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -25,10 +26,10 @@ public final class ClanParentProviderImpl implements ClanParentProvider {
     private final RefreshType all = RefreshType.CLAN_PARENTS;
     private final RefreshType single = RefreshType.SINGLE_CLAN_PARENT;
 
-    public ClanParentProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public ClanParentProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new ClanParentCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new ClanParentCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override

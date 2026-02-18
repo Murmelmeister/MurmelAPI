@@ -36,6 +36,7 @@ public class ClanParentCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -44,8 +45,9 @@ public class ClanParentCache implements MurmelCache {
     private final LoadingCache<@NotNull ParentKey, List<ClanParent>> cacheByGroup;
     private final LoadingCache<@NotNull String, List<ClanParent>> listCache;
 
-    public ClanParentCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public ClanParentCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -69,12 +71,17 @@ public class ClanParentCache implements MurmelCache {
             if (key instanceof ParentKey parentKey)
                 remove(parentKey);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final ParentKey parentKey = gson.fromJson(json, ParentKey.class);
+
+                    if (parentKey == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(parentKey);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.error("Failed to parse JSON for single clan parent refresh", e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
