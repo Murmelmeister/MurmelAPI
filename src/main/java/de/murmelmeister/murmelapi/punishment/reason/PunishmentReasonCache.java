@@ -34,6 +34,7 @@ public class PunishmentReasonCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -42,8 +43,9 @@ public class PunishmentReasonCache implements MurmelCache {
     private final LoadingCache<@NotNull Integer, List<PunishmentReason>> cacheByType;
     private final LoadingCache<@NotNull String, List<PunishmentReason>> listCache;
 
-    public PunishmentReasonCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentReasonCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -67,12 +69,17 @@ public class PunishmentReasonCache implements MurmelCache {
             if (key instanceof PunishmentReason reason)
                 remove(reason);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final PunishmentReason reason = gson.fromJson(json, PunishmentReason.class);
+
+                    if (reason == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(reason);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single punishment reason refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }

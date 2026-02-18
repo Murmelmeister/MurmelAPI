@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.punishment.reason;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -23,10 +24,10 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
     private final RefreshType all = RefreshType.PUNISHMENT_REASONS;
     private final RefreshType single = RefreshType.SINGLE_PUNISHMENT_REASON;
 
-    public PunishmentReasonProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentReasonProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new PunishmentReasonCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new PunishmentReasonCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
