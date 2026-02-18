@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.user.inventory;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -20,10 +21,10 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
     private final RefreshType all = RefreshType.USER_INVENTORIES;
     private final RefreshType single = RefreshType.SINGLE_USER_INVENTORY;
 
-    public UserInventoryProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserInventoryProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new UserInventoryCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new UserInventoryCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
