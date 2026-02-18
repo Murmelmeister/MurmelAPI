@@ -64,7 +64,6 @@ public final class UserProviderImpl implements UserProvider {
     public @NotNull List<UUID> findMojangIds() {
         return findAll().stream()
                 .map(User::mojangId)
-                .filter(Objects::nonNull)
                 .toList();
     }
 

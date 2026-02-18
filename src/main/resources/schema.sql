@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS messages (
 -- Users and session/login data
 CREATE TABLE IF NOT EXISTS users (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    mojang_id UUID NULL,
+    mojang_id UUID NOT NULL,
     username VARCHAR(16) NOT NULL,
     first_login DATETIME NULL,
     system_user BOOLEAN NOT NULL DEFAULT FALSE,

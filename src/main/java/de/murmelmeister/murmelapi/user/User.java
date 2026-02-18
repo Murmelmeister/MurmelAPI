@@ -9,7 +9,7 @@ import java.util.UUID;
 
 public record User(
         int id,
-        @Nullable UUID mojangId,
+        @NotNull UUID mojangId,
         @NotNull String username,
         @Nullable LocalDateTime firstLogin,
         boolean systemUser,
@@ -18,7 +18,10 @@ public record User(
         int languageId
 ) {
     public User {
+        Objects.requireNonNull(mojangId, "mojangId cannot be null");
         Objects.requireNonNull(username, "username cannot be null");
+        if (username.length() > 16)
+            throw new IllegalArgumentException("username cannot be longer than 16 characters");
     }
 
     public boolean debugMode() {
