@@ -1,32 +1,35 @@
 package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
-import de.murmelmeister.murmelapi.exceptions.user.UserPlayTimeException;
 import de.murmelmeister.murmelapi.exceptions.user.UserSessionException;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
-import de.murmelmeister.murmelapi.user.playtime.UserPlayTime;
-import de.murmelmeister.murmelapi.user.playtime.UserPlayTimeProvider;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
+import de.murmelmeister.murmelapi.user.stats.UserStats;
+import de.murmelmeister.murmelapi.user.stats.UserStatsProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 public record UserService(
         @NotNull UserProvider userProvider,
-        @NotNull UserPlayTimeProvider playTimeProvider,
+        @NotNull UserStatsProvider statsProvider,
         @NotNull UserLoginProvider loginProvider,
         @NotNull UserSessionProvider sessionProvider
 ) {
     public UserService {
         Objects.requireNonNull(userProvider, "userProvider must not be null");
-        Objects.requireNonNull(playTimeProvider, "playTimeProvider must not be null");
+        Objects.requireNonNull(statsProvider, "statsProvider must not be null");
         Objects.requireNonNull(loginProvider, "loginProvider must not be null");
         Objects.requireNonNull(sessionProvider, "sessionProvider must not be null");
     }
@@ -57,41 +60,26 @@ public record UserService(
     }
 
     public void loginStreak(int userId) {
-        // TODO: Check if login streak works correctly
-
         if (userId < 1)
             throw new IllegalArgumentException("User ID must be greater than 0");
-
-        UserPlayTime playTime = playTimeProvider.findByUserId(userId);
-        if (playTime == null)
-            throw new UserPlayTimeException("Play time not found for user ID: " + userId);
-
-        LocalDate today = LocalDate.now();
-        LocalDate lastSeen = playTime.getLastSeenDate();
-        if (lastSeen == null || lastSeen.plusDays(1).equals(today)) {
-            playTime.setLoginCount(playTime.getLoginCount() + 1);
-        } else if (!lastSeen.equals(today)) {
-            playTime.setLoginCount(1);
-        }
-
-        playTime.setLastSeenDate(today);
-        if (playTimeProvider.update(playTime) == null)
-            throw new UserPlayTimeException("Failed to update play time for user ID: " + userId);
+        loginStreak(
+                userId,
+                ZoneId.systemDefault(),
+                (ignoredUserId, ignoredDay) -> false,
+                ignoredUserId -> false
+        );
     }
 
-    public void checkLoginStreakWhileOnline(int userId, @NotNull UserPlayTime playTime) {
+    public void checkLoginStreakWhileOnline(int userId, @NotNull UserStats stats) {
         if (userId < 1) return;
-
-        LocalDate today = LocalDate.now();
-        LocalDate lastSeen = playTime.getLastSeenDate();
-        if (lastSeen == null || lastSeen.isBefore(today)) {
-            if (lastSeen != null && lastSeen.plusDays(1).equals(today))
-                playTime.setLoginCount(playTime.getLoginCount() + 1);
-            else playTime.setLoginCount(1);
-            playTime.setLastSeenDate(today);
-            if (playTimeProvider.update(playTime) == null)
-                throw new UserPlayTimeException("Failed to update play time for user ID: " + userId);
-        }
+        Objects.requireNonNull(stats, "stats must not be null");
+        checkLoginStreakWhileOnline(
+                userId,
+                stats,
+                ZoneId.systemDefault(),
+                (ignoredUserId, ignoredDay) -> false,
+                ignoredUserId -> false
+        );
     }
 
     public @NotNull User join(@NotNull UUID uuid, @NotNull String username) {
@@ -103,11 +91,11 @@ public record UserService(
             userProvider.update(user.id(), username, LocalDateTime.now(), user.debugUser(), user.debugEnabled(), user.languageId());
         }
 
-        UserPlayTime playTime = playTimeProvider.findByUserId(user.id());
-        if (playTime == null) {
-            playTime = playTimeProvider.create(user.id());
-            if (playTime == null)
-                throw new UserPlayTimeException("Failed to create play time for user with ID: " + user.id());
+        UserStats stats = statsProvider.findByUserId(user.id());
+        if (stats == null) {
+            stats = statsProvider.create(user.id());
+            if (stats == null)
+                throw new UserException("Failed to create stats for user with ID: " + user.id());
         }
 
         String currentUsername = user.username();
@@ -118,16 +106,15 @@ public record UserService(
         if (firstJoin == null)
             userProvider.update(user.id(), user.username(), LocalDateTime.now(), user.debugUser(), user.debugEnabled(), user.languageId());
 
-        if (playTime.getLastSeenDate() == null) {
+        if (stats.dailyStreakLastDay() == null) {
             UserLogin userLogin = getLastLogin(user.id());
             LocalDateTime lastLogin = userLogin == null ? null : userLogin.loginTime();
             LocalDate lastSeen = lastLogin != null ? lastLogin.toLocalDate() : LocalDate.now();
-            playTime.setLastSeenDate(lastSeen);
-            if (!playTimeProvider.updateOnlyCache(playTime))
-                throw new UserPlayTimeException("Failed to update last seen date for user with ID: " + user.id());
+
+            if (statsProvider.update(user.id(), stats.playTime(), stats.dailyStreak(), lastSeen, stats.lastSeenAt()) == null)
+                throw new UserException("Failed to update stats for user with ID: " + user.id());
         }
 
-        // TODO: Add refresh users
         return user;
     }
 
@@ -140,5 +127,114 @@ public record UserService(
         return loginProvider.findByUserId(userId).stream()
                 .max(Comparator.comparing(UserLogin::loginTime))
                 .orElse(null);
+    }
+
+    /**
+     * Daily streak update for "user was active today" (login or first tick after midnight while online).
+     * <p>
+     * Rules:
+     * - 1 second of activity counts for the day.
+     * - Gap days only break the streak if NOT all gap days are forgiven.
+     * - Forgiven days are NOT added to the streak, they only prevent breaking it.
+     * - Permanent user/IP bans should break the streak (reset), so no unnecessary state is kept.
+     *
+     * @param userId               user ID
+     * @param zoneId               time zone used to determine "calendar day"
+     * @param isForgivenDay        true if the user could not/was not allowed to join on that day
+     *                             (maintenance/outage/excuse/temporary ban)
+     * @param isPermanentlyBlocked true if the user is permanently banned (then reset)
+     */
+    public void loginStreak(int userId,
+                            ZoneId zoneId,
+                            BiPredicate<Integer, LocalDate> isForgivenDay,
+                            Predicate<Integer> isPermanentlyBlocked) {
+
+        if (userId < 1)
+            throw new IllegalArgumentException("User ID must be greater than 0");
+        Objects.requireNonNull(zoneId, "zoneId must not be null");
+        Objects.requireNonNull(isForgivenDay, "isForgivenDay must not be null");
+        Objects.requireNonNull(isPermanentlyBlocked, "isPermanentlyBlocked must not be null");
+
+        UserStats stats = statsProvider.findByUserId(userId);
+        if (stats == null)
+            throw new UserException("Stats not found for user ID: " + userId);
+
+        // Permanent block => breaks the streak (and keeps the DB state clean)
+        if (isPermanentlyBlocked.test(userId)) {
+            if (statsProvider.update(userId, stats.playTime(), 0, null, stats.lastSeenAt()) == null)
+                throw new UserException("Failed to update stats for user ID: " + userId);
+            return;
+        }
+
+        LocalDate today = LocalDate.now(zoneId);
+        LocalDate lastDay = stats.dailyStreakLastDay();
+        int dailyStreak = stats.dailyStreak();
+
+        // Never counted before => start with 1
+        if (lastDay == null) {
+            if (statsProvider.update(userId, stats.playTime(), 1, today, stats.lastSeenAt()) == null)
+                throw new UserException("Failed to update stats for user ID: " + userId);
+            return;
+        }
+
+        // Day already counted => no-op
+        if (lastDay.equals(today)) return;
+
+        // Normal next day => +1
+        if (lastDay.plusDays(1).equals(today)) {
+            dailyStreak++;
+            if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()) == null)
+                throw new UserException("Failed to update stats for user ID: " + userId);
+            return;
+        }
+
+        // Gap (> 1 day): check whether ALL missing days are forgiven.
+        boolean gapFullyForgiven = isGapFullyForgiven(userId, lastDay, today, isForgivenDay);
+
+        if (gapFullyForgiven) {
+            // Streak remains, but only "today" is counted (+1)
+            dailyStreak++;
+        } else {
+            // Real interruption
+            dailyStreak = 1;
+        }
+
+        if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()) == null)
+            throw new UserException("Failed to update stats for user ID: " + userId);
+    }
+
+    /**
+     * Called e.g., by a scheduler (while the user is online) to handle midnight transitions.
+     * This method is intentionally only a wrapper around loginStreak(...), so logic is maintained in one place.
+     */
+    public void checkLoginStreakWhileOnline(int userId,
+                                            @NotNull UserStats stats,
+                                            ZoneId zoneId,
+                                            BiPredicate<Integer, LocalDate> isForgivenDay,
+                                            Predicate<Integer> isPermanentlyBlocked) {
+        if (userId < 1) return;
+        Objects.requireNonNull(stats, "stats must not be null");
+        Objects.requireNonNull(zoneId, "zoneId must not be null");
+        Objects.requireNonNull(isForgivenDay, "isForgivenDay must not be null");
+        Objects.requireNonNull(isPermanentlyBlocked, "isPermanentlyBlocked must not be null");
+
+        // Only relevant condition: "User was active today and has not been counted yet"
+        LocalDate today = LocalDate.now(zoneId);
+        LocalDate lastDay = stats.dailyStreakLastDay();
+        if (lastDay == null || lastDay.isBefore(today)) {
+            loginStreak(userId, zoneId, isForgivenDay, isPermanentlyBlocked);
+        }
+    }
+
+    private boolean isGapFullyForgiven(int userId,
+                                       LocalDate lastDay,
+                                       LocalDate today,
+                                       BiPredicate<Integer, LocalDate> isForgivenDay) {
+        // gap days are: (lastDay+1) .. (today-1)
+        for (LocalDate d = lastDay.plusDays(1); d.isBefore(today); d = d.plusDays(1)) {
+            if (!isForgivenDay.test(userId, d))
+                return false;
+        }
+        return true;
     }
 }
