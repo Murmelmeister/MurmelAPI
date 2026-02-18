@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.color;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -23,10 +24,10 @@ public final class PrefixColorProviderImpl implements PrefixColorProvider {
     private final RefreshType all = RefreshType.PREFIX_COLORS;
     private final RefreshType single = RefreshType.SINGLE_PREFIX_COLOR;
 
-    public PrefixColorProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PrefixColorProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new PrefixColorCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new PrefixColorCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override

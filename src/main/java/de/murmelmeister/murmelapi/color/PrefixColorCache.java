@@ -32,6 +32,7 @@ public class PrefixColorCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -39,8 +40,9 @@ public class PrefixColorCache implements MurmelCache {
     private final LoadingCache<@NotNull String, Optional<PrefixColor>> cacheById;
     private final LoadingCache<@NotNull String, List<PrefixColor>> listCache;
 
-    public PrefixColorCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PrefixColorCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -63,12 +65,17 @@ public class PrefixColorCache implements MurmelCache {
             if (key instanceof PrefixColor color)
                 remove(color);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final PrefixColor color = gson.fromJson(json, PrefixColor.class);
+
+                    if (color == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(color);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single prefix color refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
