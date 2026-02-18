@@ -163,39 +163,39 @@ public final class MurmelAPI {
 
         this.refreshProvider = new RefreshProviderImpl();
 
-        this.settingsProvider = new SettingsProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.settingsProvider = new SettingsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.settingsService = new SettingsService(settingsProvider);
-        this.languageProvider = new LanguageProviderImpl(database, refreshProvider, cacheCapacity);
+        this.languageProvider = new LanguageProviderImpl(database, gson, refreshProvider, cacheCapacity);
         this.messageProvider = new MessageProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.messageService = new MessageService(languageProvider, messageProvider);
-        this.userProvider = new UserProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userStatsProvider = new UserStatsProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userProvider = new UserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userStatsProvider = new UserStatsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPlayTimeProvider = new UserPlayTimeProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userLoginProvider = new UserLoginProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userSessionProvider = new UserSessionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userLoginProvider = new UserLoginProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userSessionProvider = new UserSessionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userService = new UserService(userProvider, userStatsProvider, userPlayTimeProvider, userLoginProvider, userSessionProvider);
-        this.groupProvider = new GroupProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.groupColorProvider = new GroupColorProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userPermissionProvider = new UserPermissionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userParentProvider = new UserParentProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.groupPermissionProvider = new GroupPermissionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.groupParentProvider = new GroupParentProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.groupProvider = new GroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.groupColorProvider = new GroupColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userPermissionProvider = new UserPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userParentProvider = new UserParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.groupPermissionProvider = new GroupPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.groupParentProvider = new GroupParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.permission = new PermissionProvider(database, refreshProvider, userProvider, groupParentProvider, groupPermissionProvider, userParentProvider, userPermissionProvider,
                 cacheCapacity, refreshInterval);
-        this.punishReasonProvider = new PunishmentReasonProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.punishLogProvider = new PunishmentLogProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.punishIpProvider = new PunishmentCurrentIpProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.punishUserProvider = new PunishmentCurrentUserProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishReasonProvider = new PunishmentReasonProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishLogProvider = new PunishmentLogProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishIpProvider = new PunishmentCurrentIpProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishUserProvider = new PunishmentCurrentUserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishmentService = new PunishmentService(punishReasonProvider, punishLogProvider, punishIpProvider, punishUserProvider);
-        this.clanProvider = new ClanProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.clanMemberProvider = new ClanMemberProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.clanGroupProvider = new ClanGroupProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.clanParentProvider = new ClanParentProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.clanPermissionProvider = new ClanPermissionProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.prefixColorProvider = new PrefixColorProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userPrefixColorProvider = new UserPrefixColorProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.inventoryTypeProvider = new InventoryTypeProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userInventoryProvider = new UserInventoryProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanProvider = new ClanProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanMemberProvider = new ClanMemberProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanGroupProvider = new ClanGroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanParentProvider = new ClanParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanPermissionProvider = new ClanPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.prefixColorProvider = new PrefixColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userPrefixColorProvider = new UserPrefixColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.inventoryTypeProvider = new InventoryTypeProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userInventoryProvider = new UserInventoryProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     public void connect(HikariConfig config) {
@@ -224,7 +224,6 @@ public final class MurmelAPI {
     }
 
     public void disconnect() {
-        //closeCaches();
         try {
             refreshProvider.close();
         } catch (Exception e) {
