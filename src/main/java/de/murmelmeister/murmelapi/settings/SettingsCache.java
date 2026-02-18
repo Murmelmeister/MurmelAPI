@@ -32,6 +32,7 @@ public class SettingsCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -39,8 +40,9 @@ public class SettingsCache implements MurmelCache {
     private final LoadingCache<@NotNull String, Optional<Settings>> cache;
     private final LoadingCache<@NotNull String, List<Settings>> listCache;
 
-    public SettingsCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public SettingsCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -63,12 +65,17 @@ public class SettingsCache implements MurmelCache {
             if (key instanceof Settings settings)
                 remove(settings);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final Settings settings = gson.fromJson(json, Settings.class);
+
+                    if (settings == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(settings);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single setting refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }

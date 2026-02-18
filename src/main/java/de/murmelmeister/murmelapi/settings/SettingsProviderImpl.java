@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.settings;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
@@ -23,10 +24,10 @@ public final class SettingsProviderImpl implements SettingsProvider {
     private final RefreshType all = RefreshType.SETTINGS;
     private final RefreshType single = RefreshType.SINGLE_SETTING;
 
-    public SettingsProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public SettingsProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new SettingsCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new SettingsCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
