@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.language;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -32,10 +33,10 @@ public final class LanguageProviderImpl implements LanguageProvider {
     private final RefreshType all = RefreshType.LANGUAGES;
     private final RefreshType single = RefreshType.SINGLE_LANGUAGE;
 
-    public LanguageProviderImpl(Database database, RefreshProvider refreshProvider, long cacheCapacity) {
+    public LanguageProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, long cacheCapacity) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new LanguageCache(database, refreshProvider, TABLE_NAME, cacheCapacity);
+        this.cache = new LanguageCache(database, gson, refreshProvider, TABLE_NAME, cacheCapacity);
     }
 
     @Override

@@ -35,6 +35,7 @@ public class LanguageCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
 
@@ -42,8 +43,9 @@ public class LanguageCache implements MurmelCache {
     private final LoadingCache<@NotNull String, Optional<Integer>> codeToId;
     private final LoadingCache<@NotNull String, List<Language>> listCache;
 
-    public LanguageCache(Database database, RefreshProvider refreshProvider, String tableName, long cacheCapacity) {
+    public LanguageCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, long cacheCapacity) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.cacheById = CacheUtil.buildCache(this::loadById, cacheCapacity);
@@ -66,12 +68,17 @@ public class LanguageCache implements MurmelCache {
             if (key instanceof Language language)
                 remove(language);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final Language language = gson.fromJson(json, Language.class);
+
+                    if (language == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(language);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single language refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
