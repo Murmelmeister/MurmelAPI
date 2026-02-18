@@ -32,6 +32,7 @@ public class InventoryTypeCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -39,8 +40,9 @@ public class InventoryTypeCache implements MurmelCache {
     private final LoadingCache<@NotNull Integer, Optional<InventoryType>> cacheById;
     private final LoadingCache<@NotNull String, List<InventoryType>> listCache;
 
-    public InventoryTypeCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public InventoryTypeCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -63,12 +65,17 @@ public class InventoryTypeCache implements MurmelCache {
             if (key instanceof InventoryType type)
                 remove(type);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final InventoryType type = gson.fromJson(json, InventoryType.class);
+
+                    if (type == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(type);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single inventory type refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
