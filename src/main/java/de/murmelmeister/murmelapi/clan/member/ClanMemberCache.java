@@ -35,6 +35,7 @@ public class ClanMemberCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -43,8 +44,9 @@ public class ClanMemberCache implements MurmelCache {
     private final LoadingCache<@NotNull UUID, List<ClanMember>> cacheByClanId;
     private final LoadingCache<@NotNull String, List<ClanMember>> listCache;
 
-    public ClanMemberCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public ClanMemberCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -68,12 +70,17 @@ public class ClanMemberCache implements MurmelCache {
             if (key instanceof Member member)
                 remove(member);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final Member member = gson.fromJson(json, Member.class);
+
+                    if (member == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(member);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.error("Failed to parse Member from JSON: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
