@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.user.permission;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -31,10 +32,10 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
     private final RefreshType all = RefreshType.USER_PERMISSIONS;
     private final RefreshType single = RefreshType.SINGLE_USER_PERMISSION;
 
-    public UserPermissionProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserPermissionProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new UserPermissionCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new UserPermissionCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
