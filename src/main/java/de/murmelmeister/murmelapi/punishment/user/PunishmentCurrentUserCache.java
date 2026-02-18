@@ -32,6 +32,7 @@ public class PunishmentCurrentUserCache implements MurmelCache {
     private static final String ALL_KEY = "ALL";
 
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -39,8 +40,9 @@ public class PunishmentCurrentUserCache implements MurmelCache {
     private final LoadingCache<@NotNull UserTypeKey, Optional<PunishmentCurrentUser>> cache;
     private final LoadingCache<@NotNull String, List<PunishmentCurrentUser>> listCache;
 
-    public PunishmentCurrentUserCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentCurrentUserCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
@@ -63,12 +65,17 @@ public class PunishmentCurrentUserCache implements MurmelCache {
             if (key instanceof UserTypeKey userTypeKey)
                 remove(userTypeKey);
             else if (key instanceof String json) {
-                final Gson gson = new Gson();
                 try {
                     final UserTypeKey userTypeKey = gson.fromJson(json, UserTypeKey.class);
+
+                    if (userTypeKey == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
                     remove(userTypeKey);
                 } catch (JsonSyntaxException e) {
-                    LOGGER.warn("Failed to parse JSON for single punishment user refresh: {}", json, e);
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }

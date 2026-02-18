@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.punishment.user;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -22,10 +23,10 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
     private final RefreshType all = RefreshType.PUNISHMENT_USERS;
     private final RefreshType single = RefreshType.SINGLE_PUNISHMENT_USER;
 
-    public PunishmentCurrentUserProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentCurrentUserProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new PunishmentCurrentUserCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new PunishmentCurrentUserCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
