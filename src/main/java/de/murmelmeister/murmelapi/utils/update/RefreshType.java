@@ -35,6 +35,9 @@ public enum RefreshType {
     INVENTORY_TYPES("inventory_types"),
     USER_INVENTORIES("user_inventories"),
     USER_STATS("user_stats"),
+    MAINTENANCES("maintenances"),
+    MAINTENANCE_WHITELISTS("maintenance_whitelists"),
+    USER_MAINTENANCES("user_maintenances"),
     SINGLE_USER("single_user"),
     SINGLE_USER_LOGIN("single_user_login"),
     SINGLE_USER_SESSION("single_user_session"),
@@ -61,8 +64,10 @@ public enum RefreshType {
     SINGLE_USER_PREFIX_COLOR("single_user_prefix_color"),
     SINGLE_INVENTORY_TYPE("single_inventory_type"),
     SINGLE_USER_INVENTORY("single_user_inventory"),
-    SINGLE_USER_STAT("single_user_stat")
-    ;
+    SINGLE_USER_STAT("single_user_stat"),
+    SINGLE_MAINTENANCE("single_maintenance"),
+    SINGLE_MAINTENANCE_WHITELIST("single_maintenance_whitelist"),
+    SINGLE_USER_MAINTENANCE("single_user_maintenance");
     private static final RefreshType[] VALUES = values();
 
     private final String name;
