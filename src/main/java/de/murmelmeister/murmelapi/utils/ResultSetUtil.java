@@ -14,6 +14,9 @@ import de.murmelmeister.murmelapi.group.permission.GroupPermission;
 import de.murmelmeister.murmelapi.inventory.InventoryType;
 import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.message.Message;
+import de.murmelmeister.murmelapi.maintenance.Maintenance;
+import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
+import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIp;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -23,6 +26,7 @@ import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.color.UserPrefixColor;
 import de.murmelmeister.murmelapi.user.inventory.UserInventory;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
+import de.murmelmeister.murmelapi.user.maintenance.UserMaintenance;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.session.UserSession;
@@ -68,7 +72,7 @@ public final class ResultSetUtil {
     public static @NotNull ResultSetProcessor<User> user() {
         return resultSet -> {
             int id = resultSet.getInt("id");
-            UUID mojangId = resultSet.getString("mojang_id") != null ? UUID.fromString(resultSet.getString("mojang_id")) : null;
+            UUID mojangId = UUID.fromString(resultSet.getString("mojang_id"));
             String username = resultSet.getString("username");
             LocalDateTime firstJoin = resultSet.getObject("first_login") != null ? resultSet.getTimestamp("first_login").toLocalDateTime() : null;
             boolean isSystemUser = resultSet.getBoolean("system_user");
@@ -385,6 +389,53 @@ public final class ResultSetUtil {
             LocalDate lastDay = result.getDate("daily_streak_last_day") != null ? result.getDate("daily_streak_last_day").toLocalDate() : null;
             LocalDateTime lastSeen = result.getTimestamp("last_seen_at") != null ? result.getTimestamp("last_seen_at").toLocalDateTime() : null;
             return new UserStats(userId, playTime, dailyStreak, lastDay, lastSeen);
+        };
+    }
+
+    public static @NotNull ResultSetProcessor<Maintenance> maintenance() {
+        return result -> {
+            int id = result.getInt("id");
+            String title = result.getString("title");
+            String reason = result.getString("reason");
+            MaintenanceType status = MaintenanceType.valueOf(result.getString("status"));
+            LocalDateTime startAt = result.getTimestamp("start_at").toLocalDateTime();
+            LocalDateTime endAt = result.getTimestamp("end_at").toLocalDateTime();
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            int createdBy = result.getInt("created_by");
+            LocalDateTime changedAt = result.getTimestamp("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
+            Integer changedBy = result.getInt("changed_by");
+            return new Maintenance(id, title, reason, status, startAt, endAt, createdAt, createdBy, changedAt, changedBy);
+        };
+    }
+
+    public static @NotNull ResultSetProcessor<MaintenanceWhitelist> maintenanceWhitelist() {
+        return result -> {
+            int id = result.getInt("id");
+            int maintenanceId = result.getInt("maintenance_id");
+            int userId = result.getInt("user_id");
+            LocalDateTime startAt = result.getTimestamp("start_at") != null ? result.getTimestamp("start_at").toLocalDateTime() : null;
+            LocalDateTime endAt = result.getTimestamp("end_at") != null ? result.getTimestamp("end_at").toLocalDateTime() : null;
+            String note = result.getString("note");
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            int createdBy = result.getInt("created_by");
+            LocalDateTime changedAt = result.getTimestamp("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
+            Integer changedBy = result.getInt("changed_by");
+            return new MaintenanceWhitelist(id, maintenanceId, userId, startAt, endAt, note, createdAt, createdBy, changedAt, changedBy);
+        };
+    }
+
+    public static @NotNull ResultSetProcessor<UserMaintenance> userMaintenance() {
+        return result -> {
+            int id = result.getInt("id");
+            int userId = result.getInt("user_id");
+            LocalDateTime startAt = result.getTimestamp("start_at").toLocalDateTime();
+            LocalDateTime endAt = result.getTimestamp("end_at").toLocalDateTime();
+            String reason = result.getString("reason");
+            LocalDateTime createdAt = result.getTimestamp("created_at").toLocalDateTime();
+            int createdBy = result.getInt("created_by");
+            LocalDateTime changedAt = result.getTimestamp("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
+            Integer changedBy = result.getInt("changed_by");
+            return new UserMaintenance(id, userId, startAt, endAt, reason, createdAt, createdBy, changedAt, changedBy);
         };
     }
 }
