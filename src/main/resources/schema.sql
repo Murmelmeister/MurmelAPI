@@ -357,7 +357,7 @@ CREATE TABLE IF NOT EXISTS user_inventory (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS maintenance_windows (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    id INT NOT NULL AUTO_INCREMENT,
     title VARCHAR(64) NULL,
     reason VARCHAR(255) NULL,
     status ENUM('PLANNED','ACTIVE','ENDED','CANCELED') NOT NULL DEFAULT 'PLANNED',
@@ -379,8 +379,8 @@ CREATE TABLE IF NOT EXISTS maintenance_windows (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS maintenance_whitelist (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    maintenance_id BIGINT UNSIGNED NOT NULL,
+    id INT NOT NULL AUTO_INCREMENT,
+    maintenance_id INT NOT NULL,
     user_id INT NOT NULL,
 
     start_at DATETIME NULL,
@@ -413,7 +413,7 @@ CREATE TABLE IF NOT EXISTS maintenance_whitelist (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_maintenance_windows (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
 
     start_at DATETIME NOT NULL,
