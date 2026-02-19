@@ -404,7 +404,6 @@ CREATE TABLE IF NOT EXISTS maintenance_whitelist (
         (start_at IS NOT NULL AND (end_at IS NULL OR end_at > start_at))
     ),
 
-    FOREIGN KEY (maintenance_id) REFERENCES maintenance_windows(id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (created_by) REFERENCES users(id),
     FOREIGN KEY (changed_by) REFERENCES users(id),
