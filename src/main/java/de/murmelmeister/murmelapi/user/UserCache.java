@@ -25,7 +25,7 @@ import java.util.UUID;
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
 public class UserCache implements MurmelCache {
-    private final Logger LOGGER = LoggerFactory.getLogger(UserCache.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserCache.class);
 
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
