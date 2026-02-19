@@ -366,12 +366,14 @@ CREATE TABLE IF NOT EXISTS maintenance_windows (
 
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     created_by INT NOT NULL,
-    updated_at DATETIME NULL,
-    updated_by INT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
 
     PRIMARY KEY (id),
     CONSTRAINT chk_maintenance_window_range CHECK (end_at > start_at),
 
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id),
     INDEX idx_mw_status_time (status, start_at, end_at),
     INDEX idx_mw_time (start_at, end_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -388,8 +390,8 @@ CREATE TABLE IF NOT EXISTS maintenance_whitelist (
 
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     created_by INT NOT NULL,
-    updated_at DATETIME NULL,
-    updated_by INT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
 
     PRIMARY KEY (id),
 
@@ -402,12 +404,16 @@ CREATE TABLE IF NOT EXISTS maintenance_whitelist (
         (start_at IS NOT NULL AND (end_at IS NULL OR end_at > start_at))
     ),
 
+    FOREIGN KEY (maintenance_id) REFERENCES maintenance_windows(id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id),
     INDEX idx_mwh_maintenance_user (maintenance_id, user_id),
     INDEX idx_mwh_user_time (user_id, start_at, end_at),
     INDEX idx_mwh_maintenance_time (maintenance_id, start_at, end_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS user_excuse_windows (
+CREATE TABLE IF NOT EXISTS user_maintenance_windows (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
 
@@ -418,12 +424,15 @@ CREATE TABLE IF NOT EXISTS user_excuse_windows (
 
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     created_by INT NOT NULL,
-    updated_at DATETIME NULL,
-    updated_by INT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
 
     PRIMARY KEY (id),
     CONSTRAINT chk_uew_range CHECK (end_at > start_at),
 
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id),
     INDEX idx_uew_user_time (user_id, start_at, end_at),
     INDEX idx_uew_time (start_at, end_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
