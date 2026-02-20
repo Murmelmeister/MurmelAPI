@@ -2,11 +2,13 @@ package de.murmelmeister.murmelapi.user.stats;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.Nullable;
 
+import java.sql.Types;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -42,13 +44,17 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
         if (userId < 1) return null;
 
         @Language("MariaDB")
-        String sql = "INSERT INTO %s (id) VALUES (?)".formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> stmt.setInt(1, userId));
-        if (row < 1) return null;
+        String sql = """
+                INSERT INTO %s (id)
+                VALUES (?)
+                RETURNING id, play_time, daily_streak, daily_streak_last_day, last_seen_at
+                """.formatted(TABLE_NAME);
+        UserStats userStats = database.query(sql, null, ResultSetUtil.userStats(),
+                stmt -> stmt.setInt(1, userId));
 
-        UserStats newStats = new UserStats(userId, 0, 0, null, null);
-        refreshProvider.fireSingle(single, newStats);
-        return newStats;
+        if (userStats == null) return null;
+        refreshProvider.fireSingle(single, userStats);
+        return userStats;
     }
 
     @Override
@@ -81,18 +87,19 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
             return existing; // No update needed
 
         @Language("MariaDB")
-        String updateSql = """
+        String sql = """
                 UPDATE %s SET
                     play_time = ?,
                     daily_streak = ?,
                     daily_streak_last_day = ?,
                     last_seen_at = ?
-                WHERE id = ?""".formatted(TABLE_NAME);
-        int row = database.update(updateSql, stmt -> {
+                WHERE id = ?
+                """.formatted(TABLE_NAME);
+        int row = database.update(sql, stmt -> {
             stmt.setInt(1, playTime);
             stmt.setInt(2, dailyStreak);
-            stmt.setObject(3, lastDay);
-            stmt.setObject(4, lastSeen);
+            stmt.setObject(3, lastDay, Types.DATE);
+            stmt.setObject(4, lastSeen, Types.TIMESTAMP);
             stmt.setInt(5, userId);
         });
         if (row < 1) return null;
