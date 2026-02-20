@@ -179,7 +179,7 @@ public final class MurmelAPI {
         this.settingsProvider = new SettingsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.settingsService = new SettingsService(settingsProvider);
         this.languageProvider = new LanguageProviderImpl(database, gson, refreshProvider, cacheCapacity);
-        this.messageProvider = new MessageProviderImpl(database, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.messageProvider = new MessageProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.messageService = new MessageService(languageProvider, messageProvider);
         this.userProvider = new UserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userStatsProvider = new UserStatsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
