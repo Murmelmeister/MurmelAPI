@@ -1,5 +1,6 @@
 package de.murmelmeister.murmelapi.language.message;
 
+import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -7,6 +8,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
 import java.util.*;
@@ -20,10 +22,10 @@ public final class MessageProviderImpl implements MessageProvider {
     private final RefreshType all = RefreshType.MESSAGES;
     private final RefreshType single = RefreshType.SINGLE_MESSAGE;
 
-    public MessageProviderImpl(Database database, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public MessageProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new MessageCache(database, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new MessageCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -42,7 +44,7 @@ public final class MessageProviderImpl implements MessageProvider {
     }
 
     @Override
-    public @Nullable List<Message> getAllMessages(int languageId) {
+    public @NotNull @Unmodifiable List<Message> getAllMessages(int languageId) {
         return cache.getByLanguage(languageId);
     }
 
@@ -65,7 +67,7 @@ public final class MessageProviderImpl implements MessageProvider {
         if (id < 1) return null;
 
         Message msg = new Message(id, normalizedTagId, languageId, message);
-        refreshProvider.fireSingle(single, msg.id());
+        refreshProvider.fireSingle(single, new MessageCache.MessageKey(msg.languageId(), msg.tagId()));
         return msg;
     }
 
@@ -73,13 +75,16 @@ public final class MessageProviderImpl implements MessageProvider {
     public int delete(int id) {
         if (id < 1) return 0;
 
+        Message existing = cache.getById(id);
+        if (existing == null) return 0;
+
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setInt(1, id));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, new MessageCache.MessageKey(existing.languageId(), existing.tagId()));
         return row;
     }
 
@@ -96,7 +101,7 @@ public final class MessageProviderImpl implements MessageProvider {
         });
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, new MessageCache.TagKey(normalizedTagId, languageId));
+        refreshProvider.fireSingle(single, new MessageCache.MessageKey(languageId, normalizedTagId));
         return row;
     }
 
@@ -110,7 +115,7 @@ public final class MessageProviderImpl implements MessageProvider {
                 stmt -> stmt.setInt(1, languageId));
         if (row < 1) return 0;
 
-        refreshProvider.fireSingle(single, new MessageCache.LanguageKey(languageId));
+        refreshProvider.fireSingle(single, new MessageCache.MessageKey(languageId, null));
         return row;
     }
 
@@ -143,7 +148,7 @@ public final class MessageProviderImpl implements MessageProvider {
                 .languageId(languageId)
                 .message(message)
                 .build();
-        refreshProvider.fireSingle(single, id);
+        refreshProvider.fireSingle(single, new MessageCache.MessageKey(msg.languageId(), msg.tagId()));
         return msg;
     }
 
