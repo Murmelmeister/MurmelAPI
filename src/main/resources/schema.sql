@@ -356,7 +356,7 @@ CREATE TABLE IF NOT EXISTS user_inventory (
     FOREIGN KEY (inventory_id) REFERENCES inventory_type(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS maintenance_windows (
+CREATE TABLE IF NOT EXISTS maintenances (
     id INT NOT NULL AUTO_INCREMENT,
     title VARCHAR(64) NULL,
     reason VARCHAR(255) NULL,
@@ -396,7 +396,7 @@ CREATE TABLE IF NOT EXISTS maintenance_whitelist (
     PRIMARY KEY (id),
 
     CONSTRAINT fk_mwh_maintenance
-        FOREIGN KEY (maintenance_id) REFERENCES maintenance_windows(id)
+        FOREIGN KEY (maintenance_id) REFERENCES maintenances(id)
             ON DELETE CASCADE ON UPDATE CASCADE,
 
     CONSTRAINT chk_mwh_range CHECK (
@@ -412,7 +412,7 @@ CREATE TABLE IF NOT EXISTS maintenance_whitelist (
     INDEX idx_mwh_maintenance_time (maintenance_id, start_at, end_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS user_maintenance_windows (
+CREATE TABLE IF NOT EXISTS user_excuses (
     id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
 
