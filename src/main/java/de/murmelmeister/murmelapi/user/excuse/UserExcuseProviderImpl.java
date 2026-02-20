@@ -13,8 +13,8 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
     private final Database database;
     private final RefreshProvider refreshProvider;
     private final UserExcuseCache cache;
-    private final RefreshType all = RefreshType.USER_MAINTENANCES;
-    private final RefreshType single = RefreshType.SINGLE_USER_MAINTENANCE;
+    private final RefreshType all = RefreshType.USER_EXCUSES;
+    private final RefreshType single = RefreshType.SINGLE_USER_EXCUSE;
 
     public UserExcuseProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
