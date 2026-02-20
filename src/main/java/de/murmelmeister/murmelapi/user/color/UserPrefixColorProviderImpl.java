@@ -2,14 +2,15 @@ package de.murmelmeister.murmelapi.user.color;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 
 public final class UserPrefixColorProviderImpl implements UserPrefixColorProvider {
@@ -38,7 +39,7 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
     }
 
     @Override
-    public @NotNull List<UserPrefixColor> findAll() {
+    public @NotNull @Unmodifiable List<UserPrefixColor> findAll() {
         return cache.getAll();
     }
 
@@ -50,24 +51,15 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
         String sql = """
                 INSERT INTO %s (user_id, color_id, active)
                 VALUES (?, ?, ?)
+                RETURNING user_id, color_id, active, created_at
                 """.formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> {
+        UserPrefixColor color = database.query(sql, null, ResultSetUtil.userPrefixColor(), stmt -> {
             stmt.setInt(1, userId);
             stmt.setString(2, colorId);
             stmt.setBoolean(3, active);
         });
-        if (row < 1) return null;
 
-        @Language("MariaDB")
-        String selectSql = "SELECT created_at FROM %s WHERE user_id = ? AND color_id = ?".formatted(TABLE_NAME);
-        LocalDateTime createdAt = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(), stmt -> {
-                    stmt.setInt(1, userId);
-                    stmt.setString(2, colorId);
-                });
-        if (createdAt == null) return null;
-
-        UserPrefixColor color = new UserPrefixColor(userId, colorId, active, createdAt);
+        if (color == null) return null;
         refreshProvider.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
         return color;
     }

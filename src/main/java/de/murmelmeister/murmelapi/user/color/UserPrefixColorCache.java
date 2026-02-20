@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +107,7 @@ public class UserPrefixColorCache implements MurmelCache {
         return optColor != null && optColor.isPresent() ? optColor.orElse(null) : null;
     }
 
-    public @NotNull List<UserPrefixColor> getAll() {
+    public @NotNull @Unmodifiable List<UserPrefixColor> getAll() {
         List<UserPrefixColor> colors = listCache.get(ALL_KEY);
         if (colors == null || colors.isEmpty())
             return Collections.emptyList();

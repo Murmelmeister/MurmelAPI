@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.user.color;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
@@ -10,7 +11,9 @@ public interface UserPrefixColorProvider {
 
     @Nullable UserPrefixColor findById(int userId, @NotNull String colorId);
 
-    @NotNull List<UserPrefixColor> findAll();
+    @NotNull
+    @Unmodifiable
+    List<UserPrefixColor> findAll();
 
     @Nullable UserPrefixColor create(int userId, @NotNull String colorId, boolean active);
 
