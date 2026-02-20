@@ -90,17 +90,30 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
                     reason = ?,
                     changed_by = ?
                 WHERE id = ?
-                RETURNING id, user_id, start_at, end_at, reason, created_at, created_by, changed_at, changed_by
                 """.formatted(TABLE_NAME);
-        UserExcuse updated = database.query(sql, null, ResultSetUtil.userExcuse(), stmt -> {
+        int row = database.update(sql, stmt -> {
             stmt.setTimestamp(1, Timestamp.valueOf(startAt));
             stmt.setTimestamp(2, Timestamp.valueOf(endAt));
             stmt.setString(3, reason);
             stmt.setInt(4, changedBy);
             stmt.setInt(5, id);
         });
+        if (row < 1) return null;
 
-        if (updated == null) return null;
+        String selectSql = "SELECT changed_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
+        LocalDateTime changedAt = database.query(selectSql, null,
+                resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
+                stmt -> {
+                    stmt.setInt(1, id);
+                });
+
+        UserExcuse updated = UserExcuse.builder(existing)
+                .startAt(startAt)
+                .endAt(endAt)
+                .reason(reason)
+                .changedAt(changedAt)
+                .changedBy(changedBy)
+                .build();
         refreshProvider.fireSingle(single, updated);
         return updated;
     }
