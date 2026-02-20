@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,26 +60,30 @@ public class UserSessionCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.USER_SESSIONS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
-        else if (RefreshType.SINGLE_USER_SESSION.getName().equalsIgnoreCase(cacheName)) {
+            return;
+        }
+
+        if (RefreshType.SINGLE_USER_SESSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (key instanceof UserSession session)
                 remove(session);
-             else if (key instanceof String json) {
-                 try {
-                     final UserSession session = gson.fromJson(json, UserSession.class);
+            else if (key instanceof String json) {
+                try {
+                    final UserSession session = gson.fromJson(json, UserSession.class);
 
-                     if (session == null) {
-                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
-                         return;
-                     }
+                    if (session == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
 
-                     remove(session);
-                 } catch (JsonSyntaxException e) {
-                     LOGGER.error("Failed to parse JSON for single refresh: {}", json, e);
-                 }
+                    remove(session);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.error("Failed to parse JSON for single refresh: {}", json, e);
+                }
             }
         }
     }
@@ -119,6 +124,13 @@ public class UserSessionCache implements MurmelCache {
         return optSession != null && optSession.isPresent() ? optSession.orElse(null) : null;
     }
 
+    public @NotNull @Unmodifiable List<UserSession> getAll() {
+        List<UserSession> sessions = listCache.get(ALL_KEY);
+        if (sessions == null || sessions.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(sessions);
+    }
+
     public void remove(@NotNull UserSession session) {
         cacheById.invalidate(session.id());
         cacheByUserId.invalidate(session.userId());
@@ -129,12 +141,5 @@ public class UserSessionCache implements MurmelCache {
         cacheById.invalidateAll();
         cacheByUserId.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<UserSession> getCachedSessions() {
-        List<UserSession> sessions = listCache.get(ALL_KEY);
-        if (sessions == null || sessions.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(sessions);
     }
 }

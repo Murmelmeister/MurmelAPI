@@ -47,7 +47,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
 
     @Override
     public @NotNull @Unmodifiable List<UserSession> findAll() {
-        return cache.getCachedSessions();
+        return cache.getAll();
     }
 
     @Override
