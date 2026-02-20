@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,9 +109,7 @@ public class UserParentCache implements MurmelCache {
         UserParent userParent = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userParent(),
                 stmt -> {
                     stmt.setInt(1, key.userId());
-                    if (key.parentId() != null)
-                        stmt.setInt(2, key.parentId());
-                    else stmt.setNull(2, Types.INTEGER);
+                    stmt.setObject(2, key.parentId(), Types.INTEGER);
                 });
 
         return Optional.ofNullable(userParent);
@@ -121,8 +120,18 @@ public class UserParentCache implements MurmelCache {
         return optParent != null && optParent.isPresent() ? optParent.orElse(null) : null;
     }
 
-    public @Nullable List<UserParent> getParents(int userId) {
-        return cacheByUserId.get(userId);
+    public @NotNull @Unmodifiable List<UserParent> getParents(int userId) {
+        List<UserParent> parents = cacheByUserId.get(userId);
+        if (parents == null || parents.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(parents);
+    }
+
+    public @NotNull @Unmodifiable List<UserParent> getAll() {
+        List<UserParent> parents = listCache.get(ALL_KEY);
+        if (parents == null || parents.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(parents);
     }
 
     public void remove(@NotNull ParentKey key) {
@@ -140,13 +149,6 @@ public class UserParentCache implements MurmelCache {
         cacheByKey.invalidateAll();
         cacheByUserId.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<UserParent> getCachedParents() {
-        List<UserParent> parents = listCache.get(ALL_KEY);
-        if (parents == null || parents.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(parents);
     }
 
     public record ParentKey(int userId, @Nullable Integer parentId) {

@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user.parent;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
@@ -19,7 +21,8 @@ public sealed interface UserParentProvider permits UserParentProviderImpl {
 
     @Nullable UserParent getParent(int userId, int parentId);
 
-    @Nullable List<UserParent> getParents(int userId);
+    @NotNull @Unmodifiable
+    List<UserParent> getParents(int userId);
 
     @Nullable UserParent add(int userId, int parentId, long duration, int createdBy);
 
