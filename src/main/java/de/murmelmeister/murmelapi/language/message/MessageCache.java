@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.language.message;
 
 import com.github.benmanes.caffeine.cache.LoadingCache;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
@@ -11,17 +13,22 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * MessageCache is a thread-safe cache for storing messages by their ID and tag.
  * It allows for quick retrieval and management of messages based on their unique identifiers.
  */
 public class MessageCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(MessageCache.class);
+
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
@@ -31,10 +38,8 @@ public class MessageCache implements MurmelCache {
     @Language("MariaDB")
     private static final String SELECT_BY_TAG = "SELECT * FROM %s WHERE tag_id = ? AND language_id = ?";
 
-    private static final Pattern LANGUAGE_KEY_PATTERN = Pattern.compile("^LanguageKey\\[languageId=(\\d+)]$");
-    private static final Pattern TAG_KEY_PATTERN = Pattern.compile("^TagKey\\[tagId=(\\w+), languageId=(\\d+)]$");
-
     private final Database database;
+    private final Gson gson;
     private final RefreshProvider refreshProvider;
     private final String tableName;
     private final Long fetchLimit;
@@ -43,20 +48,22 @@ public class MessageCache implements MurmelCache {
     private final LoadingCache<@NotNull TagKey, Optional<Message>> cacheByTag;
     private final LoadingCache<@NotNull LanguageKey, List<Message>> cacheByLanguage;
 
-    public MessageCache(Database database, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public MessageCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
+        this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
         this.cacheByTag = CacheUtil.buildCacheRefresh(this::loadByTag, cacheCapacity, refreshInterval);
-        this.cacheByLanguage = CacheUtil.buildCacheRefresh(key -> loadByLanguage(key.languageId()), cacheCapacity, refreshInterval);
+        this.cacheByLanguage = CacheUtil.buildCacheRefresh(this::loadByLanguage, cacheCapacity, refreshInterval);
         this.refreshProvider.register(this);
     }
 
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.MESSAGES.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -65,26 +72,20 @@ public class MessageCache implements MurmelCache {
 
         if (RefreshType.SINGLE_MESSAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (!(key instanceof String)) {
-                if (key instanceof Integer id)
-                    remove(id);
-                else if (key instanceof TagKey(String tagId, int languageId))
-                    removeByTag(tagId, languageId);
-                else if (key instanceof LanguageKey(int languageId))
-                    removeByLanguage(languageId);
-            } else {
-                Matcher languageMatcher = LANGUAGE_KEY_PATTERN.matcher((String) key);
-                Matcher tagMatcher = TAG_KEY_PATTERN.matcher((String) key);
-                if (languageMatcher.matches()) {
-                    int languageId = Integer.parseInt(languageMatcher.group(1));
-                    removeByLanguage(languageId);
-                } else if (tagMatcher.matches()) {
-                    String tagId = tagMatcher.group(1);
-                    int languageId = Integer.parseInt(tagMatcher.group(2));
-                    removeByTag(tagId, languageId);
-                } else {
-                    int id = Integer.parseInt((String) key);
-                    remove(id);
+            if (key instanceof MessageKey messageKey)
+                remove(messageKey);
+            else if (key instanceof String json) {
+                try {
+                    final MessageKey messageKey = gson.fromJson(json, MessageKey.class);
+
+                    if (messageKey == null) {
+                        LOGGER.warn("Failed to parse JSON for single to null: {}", json);
+                        return;
+                    }
+
+                    remove(messageKey);
+                } catch (JsonSyntaxException e) {
+                    LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
             }
         }
@@ -101,10 +102,10 @@ public class MessageCache implements MurmelCache {
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.message());
     }
 
-    private @NotNull List<Message> loadByLanguage(int languageId) {
+    private @NotNull List<Message> loadByLanguage(LanguageKey key) {
         String sql = SELECT_BY_LANGUAGE.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.message(),
-                stmt -> stmt.setInt(1, languageId));
+                stmt -> stmt.setInt(1, key.languageId()));
     }
 
     private @NotNull Optional<Message> loadByTag(TagKey key) {
@@ -136,53 +137,17 @@ public class MessageCache implements MurmelCache {
         return optMessage != null && optMessage.isPresent() ? optMessage.orElse(null) : null;
     }
 
-    public @Nullable List<Message> getByLanguage(int languageId) {
-        return cacheByLanguage.get(new LanguageKey(languageId));
+    public @NotNull @Unmodifiable List<Message> getByLanguage(int languageId) {
+        List<Message> messages = cacheByLanguage.get(new LanguageKey(languageId));
+        if (messages == null || messages.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(messages);
     }
 
-    public void put(@Nullable Message message) {
-        if (message == null) return;
-        cacheById.put(message.id(), Optional.of(message));
-        cacheByTag.put(new TagKey(message.tagId(), message.languageId()), Optional.of(message));
-        CacheUtil.put(cacheByLanguage, new LanguageKey(message.languageId()), message,
-                v -> v.id() == message.id());
-    }
-
-    public void remove(int id) {
-        Optional<Message> optMessage = cacheById.getIfPresent(id);
-        cacheById.invalidate(id);
-
-        if (optMessage != null && optMessage.isPresent()) {
-            Message message = optMessage.get();
-            cacheByTag.invalidate(new TagKey(message.tagId(), message.languageId()));
-            CacheUtil.remove(cacheByLanguage, new LanguageKey(message.languageId()),
-                    v -> v.id() == message.id());
-        }
-    }
-
-    public void removeByTag(@NotNull String tag, int languageId) {
-        TagKey key = new TagKey(tag, languageId);
-        Optional<Message> optMessage = cacheByTag.getIfPresent(key);
-        cacheByTag.invalidate(key);
-
-        if (optMessage != null && optMessage.isPresent()) {
-            Message message = optMessage.get();
-            cacheById.invalidate(message.id());
-            CacheUtil.remove(cacheByLanguage, new LanguageKey(languageId),
-                    v -> v.id() == message.id());
-        }
-    }
-
-    public void removeByLanguage(int languageId) {
-        LanguageKey langKey = new LanguageKey(languageId);
-        List<Message> removed = cacheByLanguage.getIfPresent(langKey);
-        if (removed != null) {
-            removed.forEach(message -> {
-                cacheById.invalidate(message.id());
-                cacheByTag.invalidate(new TagKey(message.tagId(), message.languageId()));
-            });
-            cacheByLanguage.invalidate(langKey);
-        }
+    public void remove(@NotNull MessageKey messageKey) {
+        cacheById.invalidate(messageKey.languageId());
+        if (messageKey.tagId() != null) cacheByTag.invalidate(new TagKey(messageKey.tagId(), messageKey.languageId()));
+        cacheByLanguage.invalidate(new LanguageKey(messageKey.languageId()));
     }
 
     public void clear() {
@@ -191,9 +156,12 @@ public class MessageCache implements MurmelCache {
         cacheByLanguage.invalidateAll();
     }
 
-    protected record TagKey(@NotNull String tagId, int languageId) {
+    public record MessageKey(int languageId, @Nullable String tagId) {
     }
 
-    protected record LanguageKey(int languageId) {
+    private record TagKey(@NotNull String tagId, int languageId) {
+    }
+
+    private record LanguageKey(int languageId) {
     }
 }
