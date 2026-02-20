@@ -1,4 +1,4 @@
-package de.murmelmeister.murmelapi.user.maintenance;
+package de.murmelmeister.murmelapi.user.excuse;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-public record UserMaintenance(
+public record UserExcuse(
         int id,
         int userId,
         @NotNull LocalDateTime startAt,
@@ -17,7 +17,7 @@ public record UserMaintenance(
         @Nullable LocalDateTime changedAt,
         @Nullable Integer changedBy
 ) {
-    public UserMaintenance {
+    public UserExcuse {
         Objects.requireNonNull(startAt, "startAt must not be null");
         Objects.requireNonNull(endAt, "endAt must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
@@ -25,8 +25,8 @@ public record UserMaintenance(
             throw new IllegalArgumentException("reason cannot be longer than 255 characters");
     }
 
-    public static @NotNull Builder builder(@NotNull UserMaintenance userMaintenance) {
-        return new Builder(userMaintenance);
+    public static @NotNull Builder builder(@NotNull UserExcuse userExcuse) {
+        return new Builder(userExcuse);
     }
 
     public static class Builder {
@@ -41,16 +41,16 @@ public record UserMaintenance(
         private LocalDateTime changedAt;
         private Integer changedBy;
 
-        public Builder(@NotNull UserMaintenance userMaintenance) {
-            this.id = userMaintenance.id();
-            this.userId = userMaintenance.userId();
-            this.startAt = userMaintenance.startAt();
-            this.endAt = userMaintenance.endAt();
-            this.reason = userMaintenance.reason();
-            this.createdAt = userMaintenance.createdAt();
-            this.createdBy = userMaintenance.createdBy();
-            this.changedAt = userMaintenance.changedAt();
-            this.changedBy = userMaintenance.changedBy();
+        public Builder(@NotNull UserExcuse userExcuse) {
+            this.id = userExcuse.id();
+            this.userId = userExcuse.userId();
+            this.startAt = userExcuse.startAt();
+            this.endAt = userExcuse.endAt();
+            this.reason = userExcuse.reason();
+            this.createdAt = userExcuse.createdAt();
+            this.createdBy = userExcuse.createdBy();
+            this.changedAt = userExcuse.changedAt();
+            this.changedBy = userExcuse.changedBy();
         }
 
         public Builder startAt(@NotNull LocalDateTime startAt) {
@@ -78,8 +78,8 @@ public record UserMaintenance(
             return this;
         }
 
-        public @NotNull UserMaintenance build() {
-            return new UserMaintenance(id, userId, startAt, endAt, reason, createdAt, createdBy, changedAt, changedBy);
+        public @NotNull UserExcuse build() {
+            return new UserExcuse(id, userId, startAt, endAt, reason, createdAt, createdBy, changedAt, changedBy);
         }
     }
 }

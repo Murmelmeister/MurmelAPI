@@ -1,4 +1,4 @@
-package de.murmelmeister.murmelapi.user.maintenance;
+package de.murmelmeister.murmelapi.user.excuse;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
@@ -11,8 +11,8 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 
-public class UserMaintenanceCache implements MurmelCache {
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserMaintenanceCache.class);
+public class UserExcuseCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserExcuseCache.class);
 
     private final Database database;
     private final Gson gson;
@@ -20,7 +20,7 @@ public class UserMaintenanceCache implements MurmelCache {
     private final String tableName;
     private final Long fetchLimit;
 
-    public UserMaintenanceCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserExcuseCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.gson = gson;
         this.refreshProvider = refreshProvider;

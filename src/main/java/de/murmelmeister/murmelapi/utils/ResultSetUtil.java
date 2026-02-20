@@ -26,7 +26,7 @@ import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.color.UserPrefixColor;
 import de.murmelmeister.murmelapi.user.inventory.UserInventory;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
-import de.murmelmeister.murmelapi.user.maintenance.UserMaintenance;
+import de.murmelmeister.murmelapi.user.excuse.UserExcuse;
 import de.murmelmeister.murmelapi.user.parent.UserParent;
 import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.session.UserSession;
@@ -424,7 +424,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<UserMaintenance> userMaintenance() {
+    public static @NotNull ResultSetProcessor<UserExcuse> userExcuse() {
         return result -> {
             int id = result.getInt("id");
             int userId = result.getInt("user_id");
@@ -435,7 +435,7 @@ public final class ResultSetUtil {
             int createdBy = result.getInt("created_by");
             LocalDateTime changedAt = result.getTimestamp("changed_at") != null ? result.getTimestamp("changed_at").toLocalDateTime() : null;
             Integer changedBy = result.getInt("changed_by");
-            return new UserMaintenance(id, userId, startAt, endAt, reason, createdAt, createdBy, changedAt, changedBy);
+            return new UserExcuse(id, userId, startAt, endAt, reason, createdAt, createdBy, changedAt, changedBy);
         };
     }
 }
