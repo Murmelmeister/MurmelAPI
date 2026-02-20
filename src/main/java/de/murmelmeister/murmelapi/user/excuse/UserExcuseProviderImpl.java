@@ -107,6 +107,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
                 stmt -> {
                     stmt.setInt(1, id);
                 });
+        if (changedAt == null) return null;
 
         UserExcuse updated = UserExcuse.builder(existing)
                 .startAt(startAt)
