@@ -2,20 +2,25 @@ package de.murmelmeister.murmelapi.user.session;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 public final class UserSessionProviderImpl implements UserSessionProvider {
     private static final String TABLE_NAME = "user_session";
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserSessionProviderImpl.class);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -45,7 +50,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
-    public @NotNull List<UserSession> findAll() {
+    public @NotNull @Unmodifiable List<UserSession> findAll() {
         return cache.getCachedSessions();
     }
 
@@ -53,29 +58,25 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     public @Nullable UserSession create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
         if (userId < 1) return null;
 
+        long now = System.nanoTime();
         UUID sessionId = UUID.randomUUID();
         @Language("MariaDB")
-        String insertSql = """
+        String sql = """
                 INSERT INTO %s (id, user_id, ip_address, client_brand, protocol_version)
                 VALUES (?, ?, ?, ?, ?)
+                RETURNING id, user_id, login_time, ip_address, client_brand, protocol_version
                 """.formatted(TABLE_NAME);
-        int row = database.update(insertSql, stmt -> {
+        UserSession session = database.query(sql, null, ResultSetUtil.userSession(), stmt -> {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
             stmt.setString(3, inetAddress.getHostAddress());
             stmt.setString(4, clientBrand);
             stmt.setInt(5, protocolVersion);
         });
-        if (row < 1) return null;
+        double timeNano = TimeUnit.NANOSECONDS.convert(System.nanoTime() - now, TimeUnit.MILLISECONDS);
+        LOGGER.info("Session creation took {} ms", timeNano);
 
-        @Language("MariaDB")
-        String selectSql = "SELECT login_time FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        LocalDateTime loginTime = database.query(selectSql, null, resultSet ->
-                        resultSet.getTimestamp("login_time").toLocalDateTime(),
-                stmt -> stmt.setString(1, sessionId.toString()));
-        if (loginTime == null) return null;
-
-        UserSession session = new UserSession(sessionId, userId, loginTime, inetAddress, clientBrand, protocolVersion);
+        if (session == null) return null;
         refreshProvider.fireSingle(single, session);
         return session;
     }
