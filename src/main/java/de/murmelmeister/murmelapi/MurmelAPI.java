@@ -33,6 +33,10 @@ import de.murmelmeister.murmelapi.language.message.MessageProvider;
 import de.murmelmeister.murmelapi.language.message.MessageProviderImpl;
 import de.murmelmeister.murmelapi.language.message.MessageService;
 import de.murmelmeister.murmelapi.language.message.MurmelMessage;
+import de.murmelmeister.murmelapi.maintenance.MaintenanceProvider;
+import de.murmelmeister.murmelapi.maintenance.MaintenanceProviderImpl;
+import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelistProvider;
+import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelistProviderImpl;
 import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.permission.PermissionProvider;
 import de.murmelmeister.murmelapi.punishment.PunishmentService;
@@ -52,6 +56,8 @@ import de.murmelmeister.murmelapi.user.UserProviderImpl;
 import de.murmelmeister.murmelapi.user.UserService;
 import de.murmelmeister.murmelapi.user.color.UserPrefixColorProvider;
 import de.murmelmeister.murmelapi.user.color.UserPrefixColorProviderImpl;
+import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
+import de.murmelmeister.murmelapi.user.excuse.UserExcuseProviderImpl;
 import de.murmelmeister.murmelapi.user.inventory.UserInventoryProvider;
 import de.murmelmeister.murmelapi.user.inventory.UserInventoryProviderImpl;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
@@ -116,6 +122,7 @@ public final class MurmelAPI {
     private final UserStatsProvider userStatsProvider;
     private final UserLoginProvider userLoginProvider;
     private final UserSessionProvider userSessionProvider;
+    private final UserExcuseProvider userExcuseProvider;
     private final UserService userService;
 
     private final GroupProvider groupProvider;
@@ -144,6 +151,9 @@ public final class MurmelAPI {
 
     private final InventoryTypeProvider inventoryTypeProvider;
     private final UserInventoryProvider userInventoryProvider;
+
+    private final MaintenanceProvider maintenanceProvider;
+    private final MaintenanceWhitelistProvider maintenanceWhitelistProvider;
 
     public MurmelAPI() {
         this(null, 10_000, Duration.ofMinutes(30));
@@ -175,6 +185,7 @@ public final class MurmelAPI {
         this.userStatsProvider = new UserStatsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userLoginProvider = new UserLoginProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userSessionProvider = new UserSessionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userExcuseProvider = new UserExcuseProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userService = new UserService(userProvider, userStatsProvider, userLoginProvider, userSessionProvider);
         this.groupProvider = new GroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupColorProvider = new GroupColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -198,6 +209,8 @@ public final class MurmelAPI {
         this.userPrefixColorProvider = new UserPrefixColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.inventoryTypeProvider = new InventoryTypeProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userInventoryProvider = new UserInventoryProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.maintenanceProvider = new MaintenanceProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.maintenanceWhitelistProvider = new MaintenanceWhitelistProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     public void connect(HikariConfig config) {
@@ -353,6 +366,10 @@ public final class MurmelAPI {
         return userSessionProvider;
     }
 
+    public UserExcuseProvider getUserExcuseProvider() {
+        return userExcuseProvider;
+    }
+
     public UserService getUserService() {
         return userService;
     }
@@ -439,5 +456,13 @@ public final class MurmelAPI {
 
     public UserInventoryProvider getUserInventoryProvider() {
         return userInventoryProvider;
+    }
+
+    public MaintenanceProvider getMaintenanceProvider() {
+        return maintenanceProvider;
+    }
+
+    public MaintenanceWhitelistProvider getMaintenanceWhitelistProvider() {
+        return maintenanceWhitelistProvider;
     }
 }
