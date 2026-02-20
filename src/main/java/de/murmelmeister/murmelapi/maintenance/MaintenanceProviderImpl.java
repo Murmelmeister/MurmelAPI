@@ -8,7 +8,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import java.time.Duration;
 
 public final class MaintenanceProviderImpl implements MaintenanceProvider {
-    private static final String TABLE_NAME = "maintenance_windows";
+    private static final String TABLE_NAME = "maintenances";
 
     private final Database database;
     private final RefreshProvider refreshProvider;
