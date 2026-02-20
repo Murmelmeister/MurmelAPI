@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,10 +65,14 @@ public class UserLoginCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.USER_LOGINS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName))
+                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
-        else if (RefreshType.SINGLE_USER_LOGIN.getName().equalsIgnoreCase(cacheName)) {
+            return;
+        }
+
+        if (RefreshType.SINGLE_USER_LOGIN.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (key instanceof UserLogin login)
                 remove(login);
@@ -124,15 +129,26 @@ public class UserLoginCache implements MurmelCache {
         return optLogin != null && optLogin.isPresent() ? optLogin.orElse(null) : null;
     }
 
-    public @NotNull List<UserLogin> getByUserId(int userId) {
+    public @NotNull @Unmodifiable List<UserLogin> getByUserId(int userId) {
         List<UserLogin> list = cacheByUserId.get(userId);
-        return list != null ? List.copyOf(list) : Collections.emptyList();
+        if (list == null || list.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(list);
     }
 
-    public @NotNull List<UserLogin> getByIpAddress(@Nullable InetAddress inetAddress) {
+    public @NotNull @Unmodifiable List<UserLogin> getByIpAddress(@Nullable InetAddress inetAddress) {
         if (inetAddress == null) return Collections.emptyList();
         List<UserLogin> list = cacheByIpAddress.get(inetAddress);
-        return list != null ? List.copyOf(list) : Collections.emptyList();
+        if (list == null || list.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(list);
+    }
+
+    public @NotNull @Unmodifiable List<UserLogin> getAll() {
+        List<UserLogin> logins = listCache.get(ALL_KEY);
+        if (logins == null || logins.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(logins);
     }
 
     public void remove(@NotNull UserLogin login) {
@@ -147,12 +163,5 @@ public class UserLoginCache implements MurmelCache {
         cacheByUserId.invalidateAll();
         cacheByIpAddress.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<UserLogin> getCachedLogins() {
-        List<UserLogin> logins = listCache.get(ALL_KEY);
-        if (logins == null || logins.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(logins);
     }
 }

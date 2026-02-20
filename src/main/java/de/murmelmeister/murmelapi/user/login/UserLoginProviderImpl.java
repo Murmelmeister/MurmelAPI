@@ -3,11 +3,13 @@ package de.murmelmeister.murmelapi.user.login;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.user.session.UserSession;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.net.InetAddress;
 import java.sql.Timestamp;
@@ -42,18 +44,18 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public @NotNull List<UserLogin> findByUserId(int userId) {
+    public @NotNull @Unmodifiable List<UserLogin> findByUserId(int userId) {
         return cache.getByUserId(userId);
     }
 
     @Override
-    public @NotNull List<UserLogin> findByIpAddress(@Nullable InetAddress inetAddress) {
+    public @NotNull @Unmodifiable List<UserLogin> findByIpAddress(@Nullable InetAddress inetAddress) {
         return cache.getByIpAddress(inetAddress);
     }
 
     @Override
-    public @NotNull List<UserLogin> findAll() {
-        return cache.getCachedLogins();
+    public @NotNull @Unmodifiable List<UserLogin> findAll() {
+        return cache.getAll();
     }
 
     @Override
@@ -62,11 +64,12 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
             return null;
 
         @Language("MariaDB")
-        String insertSql = """
+        String sql = """
                 INSERT INTO %s (id, user_id, login_time, ip_address, client_brand, protocol_version)
                 VALUES (?, ?, ?, ?, ?, ?)
+                RETURNING id, user_id, login_time, logout_time, ip_address, client_brand, protocol_version
                 """.formatted(TABLE_NAME);
-        int row = database.update(insertSql, stmt -> {
+        UserLogin login = database.query(sql, null, ResultSetUtil.userLogin(), stmt -> {
             stmt.setString(1, sessionId.toString());
             stmt.setInt(2, userId);
             stmt.setTimestamp(3, Timestamp.valueOf(loginTime));
@@ -74,16 +77,8 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
             stmt.setString(5, clientBrand);
             stmt.setInt(6, protocolVersion);
         });
-        if (row < 1) return null;
 
-        @Language("MariaDB")
-        String selectSql = "SELECT logout_time FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        LocalDateTime logoutTime = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("logout_time").toLocalDateTime(),
-                stmt -> stmt.setString(1, sessionId.toString()));
-        if (logoutTime == null) return null;
-
-        UserLogin login = new UserLogin(sessionId, userId, loginTime, logoutTime, inetAddress, clientBrand, protocolVersion);
+        if (login == null) return null;
         refreshProvider.fireSingle(single, login);
         return login;
     }

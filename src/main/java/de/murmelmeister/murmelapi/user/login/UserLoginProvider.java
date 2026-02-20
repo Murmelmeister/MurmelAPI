@@ -3,6 +3,7 @@ package de.murmelmeister.murmelapi.user.login;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.net.InetAddress;
 import java.time.LocalDateTime;
@@ -14,11 +15,17 @@ public interface UserLoginProvider {
 
     @Nullable UserLogin findById(@Nullable UUID id);
 
-    @NotNull List<UserLogin> findByUserId(int userId);
+    @NotNull
+    @Unmodifiable
+    List<UserLogin> findByUserId(int userId);
 
-    @NotNull List<UserLogin> findByIpAddress(@Nullable InetAddress inetAddress);
+    @NotNull
+    @Unmodifiable
+    List<UserLogin> findByIpAddress(@Nullable InetAddress inetAddress);
 
-    @NotNull List<UserLogin> findAll();
+    @NotNull
+    @Unmodifiable
+    List<UserLogin> findAll();
 
     @Nullable UserLogin create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion);
 
