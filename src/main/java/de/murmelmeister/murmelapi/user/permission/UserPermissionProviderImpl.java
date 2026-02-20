@@ -3,13 +3,16 @@ package de.murmelmeister.murmelapi.user.permission;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -49,7 +52,7 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
     }
 
     @Override
-    public @Nullable List<UserPermission> getPermissions(int userId) {
+    public @NotNull @Unmodifiable List<UserPermission> getPermissions(int userId) {
         return cache.getPermissions(userId);
     }
 
@@ -61,29 +64,19 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
 
         LocalDateTime expiresAt = duration == -1 ? null : LocalDateTime.now().plusSeconds(duration);
         @Language("MariaDB")
-        String insertSql = """
+        String sql = """
                 INSERT INTO %s (user_id, permission, expires_at, created_by)
                 VALUES (?, ?, ?, ?)
+                RETURNING user_id, permission, expires_at, created_by, created_at, changed_by, changed_at
                 """.formatted(TABLE_NAME);
-        int row = database.update(insertSql, stmt -> {
+        UserPermission userPermission = database.query(sql, null, ResultSetUtil.userPermission(), stmt -> {
             stmt.setInt(1, userId);
             stmt.setString(2, normalizedPermission);
-            stmt.setTimestamp(3, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
+            stmt.setObject(3, expiresAt, Types.TIMESTAMP);
             stmt.setInt(4, createdBy);
         });
-        if (row < 1) return null;
 
-        @Language("MariaDB")
-        String selectSql = "SELECT created_at FROM %s WHERE user_id = ? AND permission = ?".formatted(TABLE_NAME);
-        LocalDateTime createdAt = database.query(selectSql, null, resultSet ->
-                        resultSet.getTimestamp("created_at").toLocalDateTime(),
-                stmt -> {
-                    stmt.setInt(1, userId);
-                    stmt.setString(2, normalizedPermission);
-                });
-        if (createdAt == null) return null;
-
-        UserPermission userPermission = new UserPermission(userId, normalizedPermission, expiresAt, createdBy, createdAt, null, null);
+        if (userPermission == null) return null;
         refreshProvider.fireSingle(single, new UserPermissionCache.PermissionKey(userId, normalizedPermission));
         return userPermission;
     }
@@ -164,7 +157,7 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
     @Override
     public int loadExpired() {
         // Get all expired permissions from the cache
-        Set<UserPermissionCache.PermissionKey> expiredPermissions = cache.getCachedPermissions().stream()
+        Set<UserPermissionCache.PermissionKey> expiredPermissions = cache.getAll().stream()
                 .filter(UserPermission::isExpired)
                 .map(permission -> new UserPermissionCache.PermissionKey(permission.userId(), permission.permission()))
                 .collect(Collectors.toSet());

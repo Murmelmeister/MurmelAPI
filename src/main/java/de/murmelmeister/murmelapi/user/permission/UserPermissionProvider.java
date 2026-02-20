@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.user.permission;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
@@ -15,7 +16,8 @@ public interface UserPermissionProvider {
 
     @Nullable UserPermission getPermission(int userId, @NotNull String permission);
 
-    @Nullable List<UserPermission> getPermissions(int userId);
+    @NotNull @Unmodifiable
+    List<UserPermission> getPermissions(int userId);
 
     @Nullable UserPermission add(int userId, @NotNull String permission, long duration, int createdBy);
 

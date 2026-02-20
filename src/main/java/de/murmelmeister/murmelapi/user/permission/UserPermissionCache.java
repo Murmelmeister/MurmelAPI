@@ -13,10 +13,10 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Types;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
@@ -59,6 +59,7 @@ public class UserPermissionCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.USER_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -108,8 +109,7 @@ public class UserPermissionCache implements MurmelCache {
         UserPermission userPermission = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userPermission(),
                 stmt -> {
                     stmt.setInt(1, key.userId());
-                    if (key.permission() != null) stmt.setString(2, key.permission());
-                    else stmt.setNull(2, Types.VARCHAR);
+                    stmt.setString(2, key.permission());
                 });
 
         return Optional.ofNullable(userPermission);
@@ -120,8 +120,18 @@ public class UserPermissionCache implements MurmelCache {
         return optPermission != null && optPermission.isPresent() ? optPermission.orElse(null) : null;
     }
 
-    public @Nullable List<UserPermission> getPermissions(int userId) {
-        return cacheByUserId.get(userId);
+    public @NotNull @Unmodifiable List<UserPermission> getPermissions(int userId) {
+        List<UserPermission> permissions = cacheByUserId.get(userId);
+        if (permissions == null || permissions.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(permissions);
+    }
+
+    public @NotNull @Unmodifiable List<UserPermission> getAll() {
+        List<UserPermission> permissions = listCache.get(ALL_KEY);
+        if (permissions == null || permissions.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(permissions);
     }
 
     public void remove(@NotNull PermissionKey key) {
@@ -139,13 +149,6 @@ public class UserPermissionCache implements MurmelCache {
         cacheByKey.invalidateAll();
         cacheByUserId.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<UserPermission> getCachedPermissions() {
-        List<UserPermission> permissions = listCache.get(ALL_KEY);
-        if (permissions == null || permissions.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(permissions);
     }
 
     public record PermissionKey(int userId, @Nullable String permission) {
