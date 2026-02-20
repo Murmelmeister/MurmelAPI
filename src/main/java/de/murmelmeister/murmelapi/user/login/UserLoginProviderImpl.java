@@ -57,7 +57,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public UserLogin create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, String clientBrand, int protocolVersion) {
+    public @Nullable UserLogin create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
         if (userId < 1)
             return null;
 
