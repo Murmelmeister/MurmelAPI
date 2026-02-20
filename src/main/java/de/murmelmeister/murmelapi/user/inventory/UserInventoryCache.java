@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +55,7 @@ public class UserInventoryCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.USER_INVENTORIES.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -107,7 +109,7 @@ public class UserInventoryCache implements MurmelCache {
         return optInv != null && optInv.isPresent() ? optInv.orElse(null) : null;
     }
 
-    public @NotNull List<UserInventory> getAll() {
+    public @NotNull @Unmodifiable List<UserInventory> getAll() {
         List<UserInventory> inventories = listCache.get(ALL_KEY);
         if (inventories == null || inventories.isEmpty())
             return Collections.emptyList();

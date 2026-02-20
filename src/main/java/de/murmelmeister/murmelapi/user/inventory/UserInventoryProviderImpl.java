@@ -2,11 +2,13 @@ package de.murmelmeister.murmelapi.user.inventory;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
 import java.util.List;
@@ -38,7 +40,7 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
     }
 
     @Override
-    public @NotNull List<UserInventory> findAll() {
+    public @NotNull @Unmodifiable List<UserInventory> findAll() {
         return cache.getAll();
     }
 
@@ -50,15 +52,15 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
         String sql = """
                 INSERT INTO %s (user_id, inventory_id, inventory_value)
                 VALUES (?, ?, ?)
+                RETURNING user_id, inventory_id, inventory_value
                 """.formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> {
+        UserInventory inventory = database.query(sql, null, ResultSetUtil.userInventory(), stmt -> {
             stmt.setInt(1, userId);
             stmt.setInt(2, inventoryId);
             stmt.setString(3, value);
         });
-        if (row < 1) return null;
 
-        UserInventory inventory = new UserInventory(userId, inventoryId, value);
+        if (inventory == null) return null;
         refreshProvider.fireSingle(single, new UserInventoryCache.InventoryKey(userId, inventoryId));
         return inventory;
     }

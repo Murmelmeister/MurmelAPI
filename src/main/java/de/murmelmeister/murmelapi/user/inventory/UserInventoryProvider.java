@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.user.inventory;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
@@ -10,7 +11,9 @@ public interface UserInventoryProvider {
 
     @Nullable UserInventory findById(int userId, int inventoryId);
 
-    @NotNull List<UserInventory> findAll();
+    @NotNull
+    @Unmodifiable
+    List<UserInventory> findAll();
 
     @Nullable UserInventory create(int userId, int inventoryId, @NotNull String value);
 
