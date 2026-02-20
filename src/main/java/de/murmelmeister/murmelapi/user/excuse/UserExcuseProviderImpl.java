@@ -100,6 +100,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
         });
         if (row < 1) return null;
 
+        @Language("MariaDB")
         String selectSql = "SELECT changed_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
