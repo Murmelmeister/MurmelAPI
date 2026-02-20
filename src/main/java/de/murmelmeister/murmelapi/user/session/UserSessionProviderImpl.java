@@ -50,7 +50,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
-    public UserSession create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
+    public @Nullable UserSession create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
         if (userId < 1) return null;
 
         UUID sessionId = UUID.randomUUID();
