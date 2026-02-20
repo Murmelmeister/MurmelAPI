@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.user;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,11 +22,12 @@ public interface UserProvider {
 
     @Nullable User findByUsername(@Nullable String username);
 
-    @NotNull List<User> findAll();
+    @NotNull @Unmodifiable
+    List<User> findAll();
 
-    @NotNull List<UUID> findMojangIds();
+    @NotNull @Unmodifiable List<UUID> findMojangIds();
 
-    @NotNull List<String> findUsernames();
+    @NotNull @Unmodifiable List<String> findUsernames();
 
     @Nullable User create(@NotNull UUID uuid, @NotNull String username);
 

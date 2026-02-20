@@ -3,13 +3,15 @@ package de.murmelmeister.murmelapi.user;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
-import java.sql.Timestamp;
+import java.sql.Types;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -56,19 +58,19 @@ public final class UserProviderImpl implements UserProvider {
     }
 
     @Override
-    public @NotNull List<User> findAll() {
-        return cache.getCachedUsers();
+    public @NotNull @Unmodifiable List<User> findAll() {
+        return cache.getAll();
     }
 
     @Override
-    public @NotNull List<UUID> findMojangIds() {
+    public @NotNull @Unmodifiable List<UUID> findMojangIds() {
         return findAll().stream()
                 .map(User::mojangId)
                 .toList();
     }
 
     @Override
-    public @NotNull List<String> findUsernames() {
+    public @NotNull @Unmodifiable List<String> findUsernames() {
         return findAll().stream()
                 .map(User::username)
                 .toList();
@@ -83,16 +85,16 @@ public final class UserProviderImpl implements UserProvider {
         String sql = """
                 INSERT INTO %s (mojang_id, username)
                 VALUES (?, ?)
+                RETURNING id, mojang_id, username, first_login, system_user, debug_user, debug_enabled, language_id
                 """.formatted(TABLE_NAME);
-        int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> {
+        User user = database.query(sql, null, ResultSetUtil.user(), stmt -> {
             stmt.setString(1, uuid.toString());
             stmt.setString(2, normalizedUsername);
         });
-        if (id < 1) return null;
 
-        User newUser = new User(id, uuid, normalizedUsername, null, false, false, false, 1);
-        refreshProvider.fireSingle(single, newUser);
-        return newUser;
+        if (user == null) return null;
+        refreshProvider.fireSingle(single, user);
+        return user;
     }
 
     @Override
@@ -139,7 +141,7 @@ public final class UserProviderImpl implements UserProvider {
                 """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setString(1, normalizedUsername);
-            stmt.setTimestamp(2, firstLogin != null ? Timestamp.valueOf(firstLogin) : null);
+            stmt.setObject(2, firstLogin, Types.TIMESTAMP);
             stmt.setBoolean(3, debugUser);
             stmt.setBoolean(4, debugEnabled);
             stmt.setInt(5, languageId);

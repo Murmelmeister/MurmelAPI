@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,6 +148,13 @@ public class UserCache implements MurmelCache {
         return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
     }
 
+    public @NotNull @Unmodifiable List<User> getAll() {
+        List<User> users = listCache.get(ALL_KEY);
+        if (users == null || users.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(users);
+    }
+
     public void remove(@NotNull User user) {
         cacheById.invalidate(user.id());
         cacheByUUID.invalidate(user.mojangId());
@@ -159,13 +167,6 @@ public class UserCache implements MurmelCache {
         cacheByUUID.invalidateAll();
         cacheByName.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<User> getCachedUsers() {
-        List<User> users = listCache.get(ALL_KEY);
-        if (users == null || users.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(users);
     }
 
     private boolean isBlocked(@Nullable User user) {
