@@ -9,18 +9,14 @@ import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 public final class UserSessionProviderImpl implements UserSessionProvider {
     private static final String TABLE_NAME = "user_session";
-    private static final Logger LOGGER = LoggerFactory.getLogger(UserSessionProviderImpl.class);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -58,7 +54,6 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     public @Nullable UserSession create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
         if (userId < 1) return null;
 
-        long now = System.nanoTime();
         UUID sessionId = UUID.randomUUID();
         @Language("MariaDB")
         String sql = """
@@ -73,8 +68,6 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
             stmt.setString(4, clientBrand);
             stmt.setInt(5, protocolVersion);
         });
-        double timeNano = TimeUnit.NANOSECONDS.convert(System.nanoTime() - now, TimeUnit.MILLISECONDS);
-        LOGGER.info("Session creation took {} ms", timeNano);
 
         if (session == null) return null;
         refreshProvider.fireSingle(single, session);
