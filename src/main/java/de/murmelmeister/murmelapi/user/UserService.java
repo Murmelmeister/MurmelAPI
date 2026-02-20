@@ -2,6 +2,12 @@ package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
 import de.murmelmeister.murmelapi.exceptions.user.UserSessionException;
+import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
+import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProvider;
+import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUser;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
+import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
 import de.murmelmeister.murmelapi.user.session.UserSession;
@@ -25,13 +31,19 @@ public record UserService(
         @NotNull UserProvider userProvider,
         @NotNull UserStatsProvider statsProvider,
         @NotNull UserLoginProvider loginProvider,
-        @NotNull UserSessionProvider sessionProvider
+        @NotNull UserSessionProvider sessionProvider,
+        @NotNull UserExcuseProvider userExcuseProvider,
+        @NotNull PunishmentCurrentUserProvider punishUserProvider,
+        @NotNull PunishmentLogProvider punishLogProvider
 ) {
     public UserService {
         Objects.requireNonNull(userProvider, "userProvider must not be null");
         Objects.requireNonNull(statsProvider, "statsProvider must not be null");
         Objects.requireNonNull(loginProvider, "loginProvider must not be null");
         Objects.requireNonNull(sessionProvider, "sessionProvider must not be null");
+        Objects.requireNonNull(userExcuseProvider, "userExcuseProvider must not be null");
+        Objects.requireNonNull(punishUserProvider, "punishUserProvider must not be null");
+        Objects.requireNonNull(punishLogProvider, "punishLogProvider must not be null");
     }
 
     public void startSession(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
@@ -65,8 +77,8 @@ public record UserService(
         loginStreak(
                 userId,
                 ZoneId.systemDefault(),
-                (ignoredUserId, ignoredDay) -> false,
-                ignoredUserId -> false
+                this::isExcusedOnDay,
+                this::isPermanentlyBlocked
         );
     }
 
@@ -77,8 +89,8 @@ public record UserService(
                 userId,
                 stats,
                 ZoneId.systemDefault(),
-                (ignoredUserId, ignoredDay) -> false,
-                ignoredUserId -> false
+                this::isExcusedOnDay,
+                this::isPermanentlyBlocked
         );
     }
 
@@ -236,5 +248,23 @@ public record UserService(
                 return false;
         }
         return true;
+    }
+
+    private boolean isExcusedOnDay(int userId, @NotNull LocalDate day) {
+        if (userId < 1) return false;
+        LocalDateTime dayStart = day.atStartOfDay();
+        LocalDateTime nextDayStart = day.plusDays(1).atStartOfDay();
+
+        return userExcuseProvider.findByUserId(userId).stream()
+                .anyMatch(excuse -> excuse.startAt().isBefore(nextDayStart) && !excuse.endAt().isBefore(dayStart));
+    }
+
+    private boolean isPermanentlyBlocked(int userId) {
+        if (userId < 1) return false;
+        PunishmentCurrentUser punishUser = punishUserProvider.getPunishedUser(userId, PunishmentType.BAN.getId());
+        if (punishUser == null) return false;
+
+        PunishmentLog punishmentLog = punishLogProvider.getLog(punishUser.logId());
+        return punishmentLog != null && punishmentLog.isPermanent();
     }
 }
