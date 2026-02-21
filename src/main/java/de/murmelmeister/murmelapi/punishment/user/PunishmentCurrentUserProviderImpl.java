@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.punishment.user;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -36,7 +37,7 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
 
     @Override
     public @NotNull @Unmodifiable List<Integer> getAllPunishedUserIds(int typeId) {
-        return cache.getCachedPunishUsers().stream()
+        return cache.getAll().stream()
                 .filter(punish -> punish.typeId() == typeId)
                 .map(PunishmentCurrentUser::userId)
                 .toList();
@@ -56,15 +57,15 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
         String sql = """
                 INSERT INTO %s (user_id, type_id, log_id)
                 VALUES (?, ?, ?)
+                RETURNING user_id, type_id, log_id
                 """.formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> {
+        PunishmentCurrentUser punish = database.query(sql, null, ResultSetUtil.punishmentCurrentUser(), stmt -> {
             stmt.setInt(1, userId);
             stmt.setInt(2, typeId);
             stmt.setString(3, logId.toString());
         });
-        if (row < 1) return null;
 
-        PunishmentCurrentUser punish = new PunishmentCurrentUser(userId, typeId, logId);
+        if (punish == null) return null;
         refreshProvider.fireSingle(single, new PunishmentCurrentUserCache.UserTypeKey(userId, typeId));
         return punish;
     }
@@ -80,7 +81,7 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
             stmt.setInt(1, userId);
             stmt.setInt(2, typeId);
         });
-        if (row < 1) return 0;
+        if (row != 1) return 0;
 
         refreshProvider.fireSingle(single, new PunishmentCurrentUserCache.UserTypeKey(userId, typeId));
         return row;
@@ -97,13 +98,17 @@ public final class PunishmentCurrentUserProviderImpl implements PunishmentCurren
             return existing; // No change needed
 
         @Language("MariaDB")
-        String sql = "UPDATE %s SET log_id = ? WHERE user_id = ? AND type_id = ?".formatted(TABLE_NAME);
+        String sql = """
+                UPDATE %s
+                SET log_id = ?
+                WHERE user_id = ? AND type_id = ?
+                """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setString(1, logId.toString());
             stmt.setInt(2, userId);
             stmt.setInt(3, typeId);
         });
-        if (row < 1) return null;
+        if (row != 1) return null;
 
         PunishmentCurrentUser punish = PunishmentCurrentUser.builder(existing)
                 .logId(logId)

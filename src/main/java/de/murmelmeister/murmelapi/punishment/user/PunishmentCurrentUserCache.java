@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +55,7 @@ public class PunishmentCurrentUserCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.PUNISHMENT_USERS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -108,6 +110,13 @@ public class PunishmentCurrentUserCache implements MurmelCache {
         return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
     }
 
+    public @NotNull @Unmodifiable List<PunishmentCurrentUser> getAll() {
+        List<PunishmentCurrentUser> users = listCache.get(ALL_KEY);
+        if (users == null || users.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(users);
+    }
+
     public void remove(@NotNull UserTypeKey key) {
         cache.invalidate(key);
         CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.typeId() == key.typeId());
@@ -116,13 +125,6 @@ public class PunishmentCurrentUserCache implements MurmelCache {
     public void clear() {
         cache.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<PunishmentCurrentUser> getCachedPunishUsers() {
-        List<PunishmentCurrentUser> users = listCache.get(ALL_KEY);
-        if (users == null || users.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(users);
     }
 
     public record UserTypeKey(int userId, int typeId) {
