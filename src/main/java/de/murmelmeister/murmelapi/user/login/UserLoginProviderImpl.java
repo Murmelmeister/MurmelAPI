@@ -77,6 +77,8 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
         Objects.requireNonNull(loginTime, "loginTime cannot be null");
         Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
+        if (clientBrand != null && clientBrand.length() > 50)
+            throw new IllegalArgumentException("clientBrand cannot be longer than 50 characters");
 
         UserLogin login = MurmelExceptionWrapper.dbWrap(
                 "Failed to create UserLogin (sessionId=" + sessionId + ")",
@@ -104,15 +106,15 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public int delete(@NotNull UUID id) {
-        Objects.requireNonNull(id, "id cannot be null");
+    public int delete(@NotNull UUID sessionId) {
+        Objects.requireNonNull(sessionId, "sessionId cannot be null");
 
-        UserLogin existing = cache.getById(id);
+        UserLogin existing = cache.getById(sessionId);
         if (existing == null) return 0;
 
         int row = MurmelExceptionWrapper.dbWrap(
-                "Failed to delete (id=" + id + ")",
-                () -> database.update(DELETE_SQL, stmt -> stmt.setString(1, id.toString())),
+                "Failed to delete (sessionId=" + sessionId + ")",
+                () -> database.update(DELETE_SQL, stmt -> stmt.setString(1, sessionId.toString())),
                 UserException::new
         );
 

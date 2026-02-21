@@ -34,5 +34,7 @@ public record UserLogin(
         Objects.requireNonNull(loginTime, "Login time cannot be null");
         Objects.requireNonNull(logoutTime, "Logout time cannot be null");
         Objects.requireNonNull(inetAddress, "IP address cannot be null");
+        if (clientBrand != null && clientBrand.length() > 50)
+            throw new IllegalArgumentException("Client brand cannot be longer than 50 characters");
     }
 }
