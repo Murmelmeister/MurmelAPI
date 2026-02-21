@@ -205,7 +205,7 @@ public final class ResultSetUtil {
         return resultSet -> {
             UUID id = UUID.fromString(resultSet.getString("id"));
             PunishmentLog.Action action = PunishmentLog.Action.valueOf(resultSet.getString("action"));
-            Integer userId = resultSet.getObject("user_id", Integer.class);
+            UUID userId = resultSet.getObject("user_id", UUID.class);
             String ipAddress = resultSet.getString("ip_address");
             InetAddress inetAddress;
             try {

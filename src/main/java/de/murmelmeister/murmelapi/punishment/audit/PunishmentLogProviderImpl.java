@@ -2,24 +2,47 @@ package de.murmelmeister.murmelapi.punishment.audit;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentException;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.net.InetAddress;
 import java.sql.Types;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
 public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
     private static final String TABLE_NAME = "punishment_logs";
+
+    @Language("MariaDB")
+    private static final String SQL = """
+            INSERT INTO %s (
+                id,
+                action,
+                user_id,
+                ip_address,
+                reason_id,
+                reason_type_id,
+                reason_text,
+                reason_duration,
+                reason_auto_flag_ip,
+                reason_auto_punish,
+                created_by
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            RETURNING id, action, user_id, ip_address, reason_id, reason_type_id, reason_text, reason_duration, reason_auto_flag_ip, reason_auto_punish, created_by, created_at
+            """.formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -39,146 +62,95 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
     }
 
     @Override
-    public @Nullable PunishmentLog getLog(@Nullable UUID logId) {
+    public @Nullable PunishmentLog findLog(@Nullable UUID logId) {
         return cache.getById(logId);
     }
 
     @Override
-    public @Nullable List<PunishmentLog> getLogsByUserId(int userId) {
+    public @NotNull @Unmodifiable List<PunishmentLog> findLogs(@NotNull UUID userId) {
         return cache.getByUser(userId);
     }
 
     @Override
-    public @Nullable List<PunishmentLog> getLogsByIpAddress(@NotNull InetAddress inetAddress) {
+    public @NotNull @Unmodifiable List<PunishmentLog> findLogs(@NotNull InetAddress inetAddress) {
         return cache.getByIp(inetAddress);
     }
 
     @Override
-    public @NotNull List<PunishmentLog> getLogs() {
-        return cache.getCachedPunishLogs();
+    public @NotNull @Unmodifiable List<PunishmentLog> findLogs() {
+        return cache.getAll();
     }
 
-    private @Nullable PunishmentLog insertAndLoadLog(@NotNull PunishmentLog.Action action, @Nullable Integer userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
-        if ((userId != null && userId < 1) || createdBy < CONSOLE_USER_ID)
-            return null;
+    private @Nullable PunishmentLog createLog(@NotNull PunishmentLog.Action action, @Nullable UUID userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
+        Objects.requireNonNull(action, "action cannot be null");
+        Objects.requireNonNull(reason, "reason cannot be null");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
 
         UUID logId = UUID.randomUUID();
-        @Language("MariaDB")
-        String insertSql = """
-                INSERT INTO %s (
-                    id,
-                    action,
-                    user_id,
-                    ip_address,
-                    reason_id,
-                    reason_type_id,
-                    reason_text,
-                    reason_duration,
-                    reason_auto_flag_ip,
-                    reason_auto_punish,
-                    created_by
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""".formatted(TABLE_NAME);
-        int row = database.update(insertSql, stmt -> {
-            stmt.setString(1, logId.toString());
-            stmt.setString(2, action.name());
-            stmt.setInt(3, userId == null ? Types.NULL : userId);
-            stmt.setString(4, inetAddress == null ? null : inetAddress.getHostAddress());
-            stmt.setInt(5, reason.id());
-            stmt.setInt(6, reason.typeId());
-            stmt.setString(7, reason.reasonText());
-            stmt.setLong(8, reason.durationSecs() == null ? Types.NULL : reason.durationSecs());
-            stmt.setBoolean(9, reason.autoFlagIp());
-            stmt.setBoolean(10, reason.autoPunish());
-        });
-        if (row < 1) return null;
-
-        @Language("MariaDB")
-        String selectSql = "SELECT created_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        LocalDateTime createdAt = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
-                stmt -> stmt.setString(1, logId.toString()));
-        if (createdAt == null) return null;
-
-        return new PunishmentLog(logId, action, userId, inetAddress, reason.id(),
-                reason.typeId(), reason.reasonText(), reason.durationSecs(),
-                reason.autoFlagIp(), reason.autoPunish(), createdBy, createdAt);
+        return MurmelExceptionWrapper.dbWrap(
+                "Failed to create or modify PunishmentLog (logId=" + logId + ")",
+                () -> database.query(SQL, null, ResultSetUtil.punishmentLog(), stmt -> {
+                    stmt.setString(1, logId.toString());
+                    stmt.setString(2, action.name());
+                    stmt.setString(3, userId == null ? null : userId.toString());
+                    stmt.setString(4, inetAddress == null ? null : inetAddress.getHostAddress());
+                    stmt.setInt(5, reason.id());
+                    stmt.setInt(6, reason.typeId());
+                    stmt.setString(7, reason.reasonText());
+                    stmt.setObject(8, reason.durationSecs(), Types.BIGINT);
+                    stmt.setBoolean(9, reason.autoFlagIp());
+                    stmt.setBoolean(10, reason.autoPunish());
+                }),
+                PunishmentException::new
+        );
     }
 
     @Override
-    public @Nullable PunishmentLog create(@Nullable Integer userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
-        if ((userId != null && userId < 1) || createdBy < CONSOLE_USER_ID)
-            return null;
-
+    public @Nullable PunishmentLog create(@Nullable UUID userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
         PunishmentLog.Action action = PunishmentLog.Action.CREATED;
-        PunishmentLog log = insertAndLoadLog(action, userId, inetAddress, reason, createdBy);
-        if (log == null) return null;
+        PunishmentLog log = createLog(action, userId, inetAddress, reason, createdBy);
 
+        if (log == null) return null;
         refreshProvider.fireSingle(single, log);
         return log;
     }
 
     @Override
-    public @Nullable PunishmentLog modify(@Nullable Integer userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
-        if ((userId != null && userId < 1) || createdBy < CONSOLE_USER_ID)
-            return null;
-
+    public @Nullable PunishmentLog modify(@Nullable UUID userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
         PunishmentLog.Action action = PunishmentLog.Action.MODIFIED;
-        PunishmentLog log = insertAndLoadLog(action, userId, inetAddress, reason, createdBy);
-        if (log == null) return null;
+        PunishmentLog log = createLog(action, userId, inetAddress, reason, createdBy);
 
+        if (log == null) return null;
         refreshProvider.fireSingle(single, log);
         return log;
     }
 
     @Override
-    public @Nullable PunishmentLog revoke(@Nullable Integer userId, @Nullable InetAddress inetAddress, @NotNull PunishmentLog log, int createdBy) {
-        if ((userId != null && userId < 1) || createdBy < CONSOLE_USER_ID)
-            return null;
+    public @Nullable PunishmentLog revoke(@Nullable UUID userId, @Nullable InetAddress inetAddress, @NotNull PunishmentLog log, int createdBy) {
+        Objects.requireNonNull(log, "log cannot be null");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
 
         UUID logId = UUID.randomUUID();
         PunishmentLog.Action action = PunishmentLog.Action.REVOKED;
-        @Language("MariaDB")
-        String insertSql = """
-                INSERT INTO %s (
-                    id,
-                    action,
-                    user_id,
-                    ip_address,
-                    reason_id,
-                    reason_type_id,
-                    reason_text,
-                    reason_duration,
-                    reason_auto_flag_ip,
-                    reason_auto_punish,
-                    created_by
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """.formatted(TABLE_NAME);
-        int row = database.update(insertSql, stmt -> {
-            stmt.setString(1, logId.toString());
-            stmt.setString(2, action.name());
-            stmt.setInt(3, userId == null ? Types.NULL : userId);
-            stmt.setString(4, inetAddress == null ? null : inetAddress.getHostAddress());
-            stmt.setInt(5, log.reasonId() == null ? Types.NULL : log.reasonId());
-            stmt.setInt(6, log.reasonTypeId());
-            stmt.setString(7, log.reasonText());
-            stmt.setLong(8, log.reasonDuration() == null ? Types.NULL : log.reasonDuration());
-            stmt.setBoolean(9, log.reasonAutoFlagIp());
-            stmt.setBoolean(10, log.reasonAutoPunish());
-        });
-        if (row < 1) return null;
 
-        @Language("MariaDB")
-        String selectSql = "SELECT created_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        LocalDateTime createdAt = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
-                stmt -> stmt.setString(1, logId.toString()));
-        if (createdAt == null) return null;
+        PunishmentLog newLog = MurmelExceptionWrapper.dbWrap(
+                "Failed to revoke PunishmentLog (logId=" + logId + ")",
+                () -> database.query(SQL, null, ResultSetUtil.punishmentLog(), stmt -> {
+                    stmt.setString(1, logId.toString());
+                    stmt.setString(2, action.name());
+                    stmt.setString(3, userId == null ? null : userId.toString());
+                    stmt.setString(4, inetAddress == null ? null : inetAddress.getHostAddress());
+                    stmt.setInt(5, log.reasonId() == null ? Types.NULL : log.reasonId());
+                    stmt.setInt(6, log.reasonTypeId());
+                    stmt.setString(7, log.reasonText());
+                    stmt.setLong(8, log.reasonDuration() == null ? Types.NULL : log.reasonDuration());
+                    stmt.setBoolean(9, log.reasonAutoFlagIp());
+                    stmt.setBoolean(10, log.reasonAutoPunish());
+                }),
+                PunishmentException::new
+        );
 
-        PunishmentLog newLog = new PunishmentLog(logId, action, userId, inetAddress, log.reasonId(),
-                log.reasonTypeId(), log.reasonText(), log.reasonDuration(),
-                log.reasonAutoFlagIp(), log.reasonAutoPunish(), createdBy, createdAt);
+        if (newLog == null) return null;
         refreshProvider.fireSingle(single, newLog);
         return newLog;
     }

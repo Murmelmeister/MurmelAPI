@@ -18,7 +18,7 @@ import java.util.UUID;
 public record PunishmentLog(
         @NotNull UUID id,
         @NotNull Action action,
-        @Nullable Integer userId,
+        @Nullable UUID userId,
         @Nullable InetAddress inetAddress,
         @Nullable Integer reasonId,
         int reasonTypeId,
@@ -30,7 +30,7 @@ public record PunishmentLog(
         @NotNull LocalDateTime createdAt
 ) {
     public PunishmentLog {
-        Objects.requireNonNull(id, "Log ID cannot be null");
+        Objects.requireNonNull(id, "logId cannot be null");
         Objects.requireNonNull(action, "action cannot be null");
         Objects.requireNonNull(reasonText, "reasonText cannot be null");
         Objects.requireNonNull(createdAt, "createdAt cannot be null");

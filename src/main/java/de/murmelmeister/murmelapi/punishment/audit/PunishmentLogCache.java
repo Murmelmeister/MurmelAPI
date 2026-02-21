@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +45,7 @@ public class PunishmentLogCache implements MurmelCache {
     private final Long fetchLimit;
 
     private final LoadingCache<@NotNull UUID, Optional<PunishmentLog>> cacheById;
-    private final LoadingCache<@NotNull Integer, List<PunishmentLog>> cacheByUser;
+    private final LoadingCache<@NotNull UUID, List<PunishmentLog>> cacheByUser;
     private final LoadingCache<@NotNull InetAddress, List<PunishmentLog>> cacheByIp;
     private final LoadingCache<@NotNull String, List<PunishmentLog>> listCache;
 
@@ -64,6 +65,7 @@ public class PunishmentLogCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.PUNISHMENT_LOGS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -103,11 +105,11 @@ public class PunishmentLogCache implements MurmelCache {
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog());
     }
 
-    private @NotNull List<PunishmentLog> loadByUserId(int userId) {
+    private @NotNull List<PunishmentLog> loadByUserId(UUID userId) {
         // Note: IDK if this is the best order, but it makes sense to have the latest logs first
         String sql = SELECT_BY_USER_ID.formatted(tableName);
         return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentLog(),
-                stmt -> stmt.setInt(1, userId));
+                stmt -> stmt.setString(1, userId.toString()));
     }
 
     private @NotNull List<PunishmentLog> loadByIpAddress(InetAddress inetAddress) {
@@ -131,18 +133,31 @@ public class PunishmentLogCache implements MurmelCache {
         return optLog != null && optLog.isPresent() ? optLog.orElse(null) : null;
     }
 
-    public @Nullable List<PunishmentLog> getByUser(int userId) {
-        return cacheByUser.get(userId);
+    public @NotNull @Unmodifiable List<PunishmentLog> getByUser(@NotNull UUID userId) {
+        List<PunishmentLog> logs = cacheByUser.get(userId);
+        if (logs == null || logs.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(logs);
     }
 
-    public @Nullable List<PunishmentLog> getByIp(@NotNull InetAddress inetAddress) {
-        return cacheByIp.get(inetAddress);
+    public @NotNull @Unmodifiable List<PunishmentLog> getByIp(@NotNull InetAddress inetAddress) {
+        List<PunishmentLog> logs = cacheByIp.get(inetAddress);
+        if (logs == null || logs.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(logs);
+    }
+
+    public @NotNull @Unmodifiable List<PunishmentLog> getAll() {
+        List<PunishmentLog> logs = listCache.get(ALL_KEY);
+        if (logs == null || logs.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(logs);
     }
 
     public void remove(@NotNull PunishmentLog log) {
         cacheById.invalidate(log.id());
-        if (log.userId() != null) CacheUtil.remove(cacheByUser, log.userId(), v -> v.id().equals(log.id()));
-        if (log.inetAddress() != null) CacheUtil.remove(cacheByIp, log.inetAddress(), v -> v.id().equals(log.id()));
+        if (log.userId() != null) cacheByUser.invalidate(log.userId());
+        if (log.inetAddress() != null) cacheByIp.invalidate(log.inetAddress());
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(log.id()));
     }
 
@@ -151,12 +166,5 @@ public class PunishmentLogCache implements MurmelCache {
         cacheByUser.invalidateAll();
         cacheByIp.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<PunishmentLog> getCachedPunishLogs() {
-        List<PunishmentLog> logs = listCache.get(ALL_KEY);
-        if (logs == null || logs.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(logs);
     }
 }
