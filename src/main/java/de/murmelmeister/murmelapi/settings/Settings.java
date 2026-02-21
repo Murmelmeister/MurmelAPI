@@ -14,6 +14,7 @@ public record Settings(
         Objects.requireNonNull(tagId, "tagId must not be null");
         Objects.requireNonNull(json, "json must not be null");
         Objects.requireNonNull(updatedAt, "updatedAt must not be null");
+        if (tagId.length() > 100) throw new IllegalArgumentException("tagId cannot be longer than 100 characters");
     }
 
     public static @NotNull Builder builder(@NotNull Settings settings) {
