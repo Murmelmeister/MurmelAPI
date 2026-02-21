@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.user.inventory;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.user.UserException;
+import de.murmelmeister.murmelapi.exceptions.user.UserInventoryException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -77,7 +77,7 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
                     stmt.setInt(2, inventoryId);
                     stmt.setString(3, value);
                 }),
-                UserException::new
+                UserInventoryException::new
         );
 
         if (inventory == null) return null;
@@ -96,7 +96,7 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
                     stmt.setInt(1, userId);
                     stmt.setInt(2, inventoryId);
                 }),
-                UserException::new
+                UserInventoryException::new
         );
 
         if (row != 1) return 0;
@@ -123,7 +123,7 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
                     stmt.setInt(2, userId);
                     stmt.setInt(3, inventoryId);
                 }),
-                UserException::new
+                UserInventoryException::new
         );
         if (row != 1) return null;
 

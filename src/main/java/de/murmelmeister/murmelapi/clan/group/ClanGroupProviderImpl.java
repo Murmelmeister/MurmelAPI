@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.clan.ClanException;
+import de.murmelmeister.murmelapi.exceptions.clan.ClanGroupException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -110,7 +110,7 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
                     stmt.setInt(4, priority);
                     stmt.setInt(5, createdBy);
                 }),
-                ClanException::new
+                ClanGroupException::new
         );
 
         if (clanGroup == null) return null;
@@ -129,7 +129,7 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
                     stmt.setString(1, clanId.toString());
                     stmt.setString(2, groupId.toString());
                 }),
-                ClanException::new
+                ClanGroupException::new
         );
 
         if (row != 1) return 0;
@@ -164,7 +164,7 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
                     stmt.setString(5, clanId.toString());
                     stmt.setString(6, groupId.toString());
                 }),
-                ClanException::new
+                ClanGroupException::new
         );
         if (row != 1) return null;
 
@@ -176,7 +176,7 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
                             stmt.setString(1, clanId.toString());
                             stmt.setString(2, groupId.toString());
                         }),
-                ClanException::new
+                ClanGroupException::new
         );
         if (changedAt == null) return null;
 
@@ -218,7 +218,7 @@ public final class ClanGroupProviderImpl implements ClanGroupProvider {
                     stmt.setInt(5, executorId);
                     stmt.setInt(6, executorId);
                 }),
-                ClanException::new
+                ClanGroupException::new
         );
 
         if (saved == null) return null;

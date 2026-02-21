@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.clan.member;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.clan.ClanException;
+import de.murmelmeister.murmelapi.exceptions.clan.ClanMemberException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -86,7 +86,7 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
                     stmt.setInt(2, userId);
                     stmt.setString(3, groupId.toString());
                 }),
-                ClanException::new
+                ClanMemberException::new
         );
 
         if (member == null) return null;
@@ -105,7 +105,7 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
                     stmt.setString(1, clanId.toString());
                     stmt.setInt(2, userId);
                 }),
-                ClanException::new
+                ClanMemberException::new
         );
 
         if (row != 1) return 0;
@@ -131,7 +131,7 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
                     stmt.setString(2, clanId.toString());
                     stmt.setInt(3, userId);
                 }),
-                ClanException::new
+                ClanMemberException::new
         );
         if (row != 1) return null;
 
@@ -159,7 +159,7 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
                     stmt.setInt(2, userId);
                     stmt.setString(3, groupId.toString());
                 }),
-                ClanException::new
+                ClanMemberException::new
         );
 
         if (saved == null) return null;

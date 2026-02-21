@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.punishment.reason;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentException;
+import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentReasonException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -109,7 +109,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
                     stmt.setBoolean(6, autoPunish);
                     stmt.setInt(7, createdBy);
                 }),
-                PunishmentException::new
+                PunishmentReasonException::new
         );
 
         if (reason == null) return null;
@@ -127,7 +127,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete PunishmentReason (id=" + id + ")",
                 () -> database.update(DELETE_SQL, stmt -> stmt.setInt(1, id)),
-                PunishmentException::new
+                PunishmentReasonException::new
         );
 
         if (row != 1) return 0;
@@ -166,7 +166,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
                     stmt.setInt(6, changedBy);
                     stmt.setInt(7, id);
                 }),
-                PunishmentException::new
+                PunishmentReasonException::new
         );
         if (row != 1) return null;
 
@@ -175,7 +175,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
                 () -> database.query(UPDATE_SELECT_SQL, null,
                         result -> result.getTimestamp("changed_at").toLocalDateTime(),
                         stmt -> stmt.setInt(1, id)),
-                PunishmentException::new
+                PunishmentReasonException::new
         );
         if (changedAt == null) return null;
 
@@ -224,7 +224,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
                     stmt.setInt(7, executorId);
                     stmt.setInt(8, executorId);
                 }),
-                PunishmentException::new
+                PunishmentReasonException::new
         );
 
         if (saved == null) return null;

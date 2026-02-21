@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.user.color;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.user.UserException;
+import de.murmelmeister.murmelapi.exceptions.user.UserPrefixColorException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -77,7 +77,7 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
                     stmt.setString(2, colorId);
                     stmt.setBoolean(3, active);
                 }),
-                UserException::new
+                UserPrefixColorException::new
         );
 
         if (color == null) return null;
@@ -98,7 +98,7 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
                     stmt.setInt(1, userId);
                     stmt.setString(2, colorId);
                 }),
-                UserException::new
+                UserPrefixColorException::new
         );
 
         if (row != 1) return 0;
@@ -125,7 +125,7 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
                     stmt.setInt(2, userId);
                     stmt.setString(3, colorId);
                 }),
-                UserException::new
+                UserPrefixColorException::new
         );
         if (row != 1) return null;
 

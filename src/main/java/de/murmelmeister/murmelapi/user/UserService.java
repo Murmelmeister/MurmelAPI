@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
+import de.murmelmeister.murmelapi.exceptions.user.UserSessionException;
+import de.murmelmeister.murmelapi.exceptions.user.UserStatsException;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProvider;
 import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
@@ -46,33 +48,34 @@ public record UserService(
     }
 
     public void startSession(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
+        Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
         if (userId < 1)
-            throw new IllegalArgumentException("Invalid parameters for session handling");
+            throw new IllegalArgumentException("User ID must be >= 1");
 
         UserSession session = sessionProvider.findByUserId(userId);
         if (session != null) {
             loginProvider.create(session);
             if (sessionProvider.delete(session.id()) < 1)
-                throw new UserException("Failed to delete existing session for user ID: " + userId);
+                throw new UserSessionException("Failed to delete existing session for userId: " + userId);
         }
         sessionProvider.create(userId, inetAddress, clientBrand, protocolVersion);
     }
 
     public void closeSession(int userId) {
         if (userId < 1)
-            throw new IllegalArgumentException("User ID must be greater than 0");
+            throw new IllegalArgumentException("userId must be >= 1");
 
         UserSession session = sessionProvider.findByUserId(userId);
         if (session != null) {
             loginProvider.create(session);
             if (sessionProvider.delete(session.id()) < 1)
-                throw new UserException("Failed to delete session for user ID: " + userId);
+                throw new UserSessionException("Failed to delete session for userId: " + userId);
         }
     }
 
     public void loginStreak(int userId) {
         if (userId < 1)
-            throw new IllegalArgumentException("User ID must be greater than 0");
+            throw new IllegalArgumentException("userId must be >= 1");
         loginStreak(
                 userId,
                 ZoneId.systemDefault(),
@@ -82,8 +85,9 @@ public record UserService(
     }
 
     public void checkLoginStreakWhileOnline(int userId, @NotNull UserStats stats) {
-        if (userId < 1) return;
         Objects.requireNonNull(stats, "stats must not be null");
+        if (userId < 1) throw new IllegalArgumentException("User ID must be >= 1");
+
         checkLoginStreakWhileOnline(
                 userId,
                 stats,
@@ -94,6 +98,9 @@ public record UserService(
     }
 
     public @NotNull User join(@NotNull UUID uuid, @NotNull String username) {
+        Objects.requireNonNull(uuid, "uuid must not be null");
+        Objects.requireNonNull(username, "username must not be null");
+
         User user = userProvider.findByMojangId(uuid);
         if (user == null) {
             user = userProvider.create(uuid, username);
@@ -106,7 +113,7 @@ public record UserService(
         if (stats == null) {
             stats = statsProvider.create(user.id());
             if (stats == null)
-                throw new UserException("Failed to create stats for user with ID: " + user.id());
+                throw new UserStatsException("Failed to create stats for user with ID: " + user.id());
         }
 
         String currentUsername = user.username();
@@ -123,7 +130,7 @@ public record UserService(
             LocalDate lastSeen = lastLogin != null ? lastLogin.toLocalDate() : LocalDate.now();
 
             if (statsProvider.update(user.id(), stats.playTime(), stats.dailyStreak(), lastSeen, stats.lastSeenAt()) == null)
-                throw new UserException("Failed to update stats for user with ID: " + user.id());
+                throw new UserStatsException("Failed to update stats for user with ID: " + user.id());
         }
 
         return user;
@@ -161,7 +168,7 @@ public record UserService(
                             Predicate<UUID> isPermanentlyBlocked) {
 
         if (userId < 1)
-            throw new IllegalArgumentException("User ID must be greater than 0");
+            throw new IllegalArgumentException("userId must be >= 1");
         Objects.requireNonNull(zoneId, "zoneId must not be null");
         Objects.requireNonNull(isForgivenDay, "isForgivenDay must not be null");
         Objects.requireNonNull(isPermanentlyBlocked, "isPermanentlyBlocked must not be null");
@@ -172,12 +179,12 @@ public record UserService(
 
         UserStats stats = statsProvider.findByUserId(userId);
         if (stats == null)
-            throw new UserException("Stats not found for user ID: " + userId);
+            throw new UserStatsException("Stats not found for user ID: " + userId);
 
         // Permanent block => breaks the streak (and keeps the DB state clean)
         if (isPermanentlyBlocked.test(user.mojangId())) {
             if (statsProvider.update(userId, stats.playTime(), 0, null, stats.lastSeenAt()) == null)
-                throw new UserException("Failed to update stats for user ID: " + userId);
+                throw new UserStatsException("Failed to update stats for user ID: " + userId);
             return;
         }
 
@@ -188,7 +195,7 @@ public record UserService(
         // Never counted before => start with 1
         if (lastDay == null) {
             if (statsProvider.update(userId, stats.playTime(), 1, today, stats.lastSeenAt()) == null)
-                throw new UserException("Failed to update stats for user ID: " + userId);
+                throw new UserStatsException("Failed to update stats for user ID: " + userId);
             return;
         }
 
@@ -199,7 +206,7 @@ public record UserService(
         if (lastDay.plusDays(1).equals(today)) {
             dailyStreak++;
             if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()) == null)
-                throw new UserException("Failed to update stats for user ID: " + userId);
+                throw new UserStatsException("Failed to update stats for user ID: " + userId);
             return;
         }
 
@@ -215,7 +222,7 @@ public record UserService(
         }
 
         if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()) == null)
-            throw new UserException("Failed to update stats for user ID: " + userId);
+            throw new UserStatsException("Failed to update stats for user ID: " + userId);
     }
 
     /**
@@ -227,11 +234,11 @@ public record UserService(
                                             ZoneId zoneId,
                                             BiPredicate<Integer, LocalDate> isForgivenDay,
                                             Predicate<UUID> isPermanentlyBlocked) {
-        if (userId < 1) return;
         Objects.requireNonNull(stats, "stats must not be null");
         Objects.requireNonNull(zoneId, "zoneId must not be null");
         Objects.requireNonNull(isForgivenDay, "isForgivenDay must not be null");
         Objects.requireNonNull(isPermanentlyBlocked, "isPermanentlyBlocked must not be null");
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
 
         // Only relevant condition: "User was active today and has not been counted yet"
         LocalDate today = LocalDate.now(zoneId);

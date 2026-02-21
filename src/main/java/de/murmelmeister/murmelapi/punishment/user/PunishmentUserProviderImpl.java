@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.punishment.user;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentException;
+import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentUserException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -76,7 +76,7 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
                     stmt.setInt(2, typeId);
                     stmt.setString(3, logId.toString());
                 }),
-                PunishmentException::new
+                PunishmentUserException::new
         );
 
         if (punish == null) return null;
@@ -94,7 +94,7 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
                     stmt.setString(1, userId.toString());
                     stmt.setInt(2, typeId);
                 }),
-                PunishmentException::new
+                PunishmentUserException::new
         );
 
         if (row != 1) return 0;
@@ -120,7 +120,7 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
                     stmt.setString(2, userId.toString());
                     stmt.setInt(3, typeId);
                 }),
-                PunishmentException::new
+                PunishmentUserException::new
         );
         if (row != 1) return null;
 

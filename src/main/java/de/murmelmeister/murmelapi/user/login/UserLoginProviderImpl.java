@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.user.login;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.user.UserException;
+import de.murmelmeister.murmelapi.exceptions.user.UserLoginException;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -90,7 +90,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
                     stmt.setString(5, clientBrand);
                     stmt.setInt(6, protocolVersion);
                 }),
-                UserException::new
+                UserLoginException::new
         );
 
         if (login == null) return null;
@@ -115,7 +115,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete (sessionId=" + sessionId + ")",
                 () -> database.update(DELETE_SQL, stmt -> stmt.setString(1, sessionId.toString())),
-                UserException::new
+                UserLoginException::new
         );
 
         if (row != 1) return 0;

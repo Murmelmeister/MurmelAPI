@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.maintenance.whitelist;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.maintenance.MaintenanceException;
+import de.murmelmeister.murmelapi.exceptions.maintenance.MaintenanceWhitelistException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -93,7 +93,7 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
                     stmt.setString(5, note);
                     stmt.setInt(6, createdBy);
                 }),
-                MaintenanceException::new
+                MaintenanceWhitelistException::new
         );
 
         if (whitelist == null) return null;
@@ -109,7 +109,7 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete MaintenanceWhitelist (id=" + id + ")",
                 () -> database.update(DELETE_SQL, stmt -> stmt.setInt(1, id)),
-                MaintenanceException::new
+                MaintenanceWhitelistException::new
         );
 
         if (row < 1) return 0;
@@ -136,7 +136,7 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
                     stmt.setInt(4, changedBy);
                     stmt.setInt(5, id);
                 }),
-                MaintenanceException::new
+                MaintenanceWhitelistException::new
         );
         if (row != 1) return null;
 
@@ -145,7 +145,7 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
                 () -> database.query(UPDATE_SELECT_SQL, null,
                         resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                         stmt -> stmt.setInt(1, id)),
-                MaintenanceException::new
+                MaintenanceWhitelistException::new
         );
         if (changedAt == null) return null;
 

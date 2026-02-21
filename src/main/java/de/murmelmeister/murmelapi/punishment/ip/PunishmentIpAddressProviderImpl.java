@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.punishment.ip;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentException;
+import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentIpAddressException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -77,7 +77,7 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
                     stmt.setInt(2, typeId);
                     stmt.setString(3, logId.toString());
                 }),
-                PunishmentException::new
+                PunishmentIpAddressException::new
         );
 
         if (punish == null) return null;
@@ -95,7 +95,7 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
                     stmt.setString(1, inetAddress.getHostAddress());
                     stmt.setInt(2, typeId);
                 }),
-                PunishmentException::new
+                PunishmentIpAddressException::new
         );
 
         if (row != 1) return 0;
@@ -121,7 +121,7 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
                     stmt.setString(2, inetAddress.getHostAddress());
                     stmt.setInt(3, typeId);
                 }),
-                PunishmentException::new
+                PunishmentIpAddressException::new
         );
         if (row != 1) return null;
 

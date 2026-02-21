@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.user.stats;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.user.UserException;
+import de.murmelmeister.murmelapi.exceptions.user.UserStatsException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -69,7 +69,7 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
                 "Failed to create UserStats (userId=" + userId + ")",
                 () -> database.query(CREATE_SQL, null, ResultSetUtil.userStats(),
                         stmt -> stmt.setInt(1, userId)),
-                UserException::new
+                UserStatsException::new
         );
 
         if (userStats == null) return null;
@@ -87,7 +87,7 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
         int rows = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete UserStats (userId=" + userId + ")",
                 () -> database.update(DELETE_SQL, stmt -> stmt.setInt(1, userId)),
-                UserException::new
+                UserStatsException::new
         );
 
         if (rows != 1) return 0;
@@ -119,7 +119,7 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
                     stmt.setObject(4, lastSeen, Types.TIMESTAMP);
                     stmt.setInt(5, userId);
                 }),
-                UserException::new
+                UserStatsException::new
         );
         if (row != 1) return null;
 

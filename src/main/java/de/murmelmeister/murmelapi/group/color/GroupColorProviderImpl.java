@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.group.color;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.group.GroupException;
+import de.murmelmeister.murmelapi.exceptions.group.GroupColorException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -107,7 +107,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                     stmt.setString(3, value);
                     stmt.setInt(4, createdBy);
                 }),
-                GroupException::new
+                GroupColorException::new
         );
 
         if (groupColor == null) return null;
@@ -126,7 +126,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                     stmt.setInt(1, groupId);
                     stmt.setInt(2, typeId);
                 }),
-                GroupException::new
+                GroupColorException::new
         );
 
         if (row != 1) return 0;
@@ -142,7 +142,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                 "Failed to clear GroupColors (groupId=" + groupId + ")",
                 () -> database.update(CLEAR_SQL,
                         stmt -> stmt.setInt(1, groupId)),
-                GroupException::new
+                GroupColorException::new
         );
 
         if (row < 1) return 0;
@@ -171,7 +171,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                     stmt.setInt(3, groupId);
                     stmt.setInt(4, typeId);
                 }),
-                GroupException::new
+                GroupColorException::new
         );
         if (row != 1) return null;
 
@@ -183,7 +183,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                             stmt.setInt(1, groupId);
                             stmt.setInt(2, typeId);
                         }),
-                GroupException::new
+                GroupColorException::new
         );
         if (changedAt == null) return null;
 
@@ -217,7 +217,7 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                     stmt.setInt(4, executorId);
                     stmt.setInt(5, executorId);
                 }),
-                GroupException::new
+                GroupColorException::new
         );
 
         if (saved == null) return null;

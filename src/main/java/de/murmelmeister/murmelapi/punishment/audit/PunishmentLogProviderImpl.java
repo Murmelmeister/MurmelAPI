@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.punishment.audit;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentException;
+import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentLogException;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -101,7 +101,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
                     stmt.setBoolean(9, reason.autoFlagIp());
                     stmt.setBoolean(10, reason.autoPunish());
                 }),
-                PunishmentException::new
+                PunishmentLogException::new
         );
     }
 
@@ -147,7 +147,7 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
                     stmt.setBoolean(9, log.reasonAutoFlagIp());
                     stmt.setBoolean(10, log.reasonAutoPunish());
                 }),
-                PunishmentException::new
+                PunishmentLogException::new
         );
 
         if (newLog == null) return null;

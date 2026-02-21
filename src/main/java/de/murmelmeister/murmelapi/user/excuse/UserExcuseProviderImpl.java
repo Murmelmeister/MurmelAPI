@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.user.excuse;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.user.UserException;
+import de.murmelmeister.murmelapi.exceptions.user.UserExcuseException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -91,7 +91,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
                     stmt.setString(4, reason);
                     stmt.setInt(5, createdBy);
                 }),
-                UserException::new
+                UserExcuseException::new
         );
 
         if (userExcuse == null) return null;
@@ -124,7 +124,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
                     stmt.setInt(4, changedBy);
                     stmt.setInt(5, id);
                 }),
-                UserException::new
+                UserExcuseException::new
         );
         if (row != 1) return null;
 
@@ -135,7 +135,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
                         stmt -> {
                             stmt.setInt(1, id);
                         }),
-                UserException::new
+                UserExcuseException::new
         );
         if (changedAt == null) return null;
 
