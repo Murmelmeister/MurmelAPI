@@ -75,7 +75,7 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
             stmt.setInt(1, userId);
             stmt.setInt(2, inventoryId);
         });
-        if (row < 1) return 0;
+        if (row != 1) return 0;
 
         refreshProvider.fireSingle(single, new UserInventoryCache.InventoryKey(userId, inventoryId));
         return row;
@@ -91,13 +91,17 @@ public final class UserInventoryProviderImpl implements UserInventoryProvider {
         if (Objects.equals(value, existing.value())) return existing;
 
         @Language("MariaDB")
-        String sql = "UPDATE %s SET inventory_value = ? WHERE user_id = ? AND inventory_id = ?".formatted(TABLE_NAME);
+        String sql = """
+                UPDATE %s
+                SET inventory_value = ?
+                WHERE user_id = ? AND inventory_id = ?
+                """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setString(1, value);
             stmt.setInt(2, userId);
             stmt.setInt(3, inventoryId);
         });
-        if (row < 1) return null;
+        if (row != 1) return null;
 
         UserInventory inventory = UserInventory.builder(existing)
                 .value(value)
