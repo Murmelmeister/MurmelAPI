@@ -6,6 +6,8 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
 public record Group(
         int id,
         @NotNull String groupName,
@@ -20,6 +22,9 @@ public record Group(
         Objects.requireNonNull(groupName, "groupName must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
         if (groupName.length() > 100) throw new IllegalArgumentException("groupName cannot be longer than 100 characters");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (changedBy != null && changedBy < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
     }
 
     public static @NotNull Builder builder(@NotNull Group group) {

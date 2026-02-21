@@ -17,11 +17,12 @@ public record UserSession(
         int protocolVersion
 ) {
     public UserSession {
-        Objects.requireNonNull(id, "Session ID cannot be null");
-        Objects.requireNonNull(loginTime, "Login time cannot be null");
-        Objects.requireNonNull(inetAddress, "IP address cannot be null");
+        Objects.requireNonNull(id, "sessionId cannot be null");
+        Objects.requireNonNull(loginTime, "loginTime cannot be null");
+        Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
         if (clientBrand != null && clientBrand.length() > 50)
-            throw new IllegalArgumentException("Client brand cannot be longer than 50 characters");
+            throw new IllegalArgumentException("clientBrand cannot be longer than 50 characters");
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
     }
 }
 

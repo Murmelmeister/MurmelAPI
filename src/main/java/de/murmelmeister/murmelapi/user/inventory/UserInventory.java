@@ -11,6 +11,7 @@ public record UserInventory(
 ) {
     public UserInventory {
         Objects.requireNonNull(value, "value cannot be null");
+        if (userId < 1) throw new IllegalArgumentException("userId cannot be >= 1");
     }
 
     public static @NotNull Builder builder(@NotNull UserInventory userInventory) {

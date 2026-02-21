@@ -6,6 +6,8 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
 public record UserExcuse(
         int id,
         int userId,
@@ -25,8 +27,9 @@ public record UserExcuse(
         if (startAt.isAfter(endAt)) throw new IllegalArgumentException("startAt cannot be after endAt");
         if (reason != null && reason.length() > 255)
             throw new IllegalArgumentException("reason cannot be longer than 255 characters");
-        if (createdBy < 1) throw new IllegalArgumentException("createdBy must be >= 1");
-        if (changedBy != null && changedBy < 1) throw new IllegalArgumentException("changedBy must be >= 1");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (changedBy != null && changedBy < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
     }
 
     public static @NotNull Builder builder(@NotNull UserExcuse userExcuse) {

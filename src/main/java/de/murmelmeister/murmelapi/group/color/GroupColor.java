@@ -6,6 +6,8 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
 public record GroupColor(
         int groupId,
         int typeId,
@@ -18,6 +20,9 @@ public record GroupColor(
     public GroupColor {
         Objects.requireNonNull(value, "value must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (changedBy != null && changedBy < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
     }
 
     public static @NotNull Builder builder(@NotNull GroupColor groupColor) {

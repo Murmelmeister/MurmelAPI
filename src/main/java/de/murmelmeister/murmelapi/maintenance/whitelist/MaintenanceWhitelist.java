@@ -6,6 +6,8 @@ import org.jetbrains.annotations.Nullable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
 public record MaintenanceWhitelist(
         int id,
         int maintenanceId,
@@ -22,6 +24,9 @@ public record MaintenanceWhitelist(
         Objects.requireNonNull(createdAt, "createdAt must not be null");
         if (note != null && note.length() > 255)
             throw new IllegalArgumentException("note cannot be longer than 255 characters");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (changedBy != null && changedBy < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
     }
 
     public static @NotNull Builder builder(@NotNull MaintenanceWhitelist maintenanceWhitelist) {

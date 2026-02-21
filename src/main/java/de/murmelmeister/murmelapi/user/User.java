@@ -22,6 +22,7 @@ public record User(
         Objects.requireNonNull(username, "username cannot be null");
         if (username.length() > 16)
             throw new IllegalArgumentException("username cannot be longer than 16 characters");
+        if (languageId < 1) throw new IllegalArgumentException("languageId must be >= 1");
     }
 
     public boolean debugMode() {

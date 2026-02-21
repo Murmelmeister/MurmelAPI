@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
 /**
  * Represents a log entry for a punishment action.
  * This class is used to track the history of punishments applied to users.
@@ -34,6 +36,7 @@ public record PunishmentLog(
         Objects.requireNonNull(action, "action cannot be null");
         Objects.requireNonNull(reasonText, "reasonText cannot be null");
         Objects.requireNonNull(createdAt, "createdAt cannot be null");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
     }
 
     public enum Action {

@@ -13,6 +13,12 @@ public record UserStats(
         @Nullable LocalDate dailyStreakLastDay,
         @Nullable LocalDateTime lastSeenAt
 ) {
+    public UserStats {
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
+        if (playTime < 0) throw new IllegalArgumentException("playTime must be >= 0");
+        if (dailyStreak < 0) throw new IllegalArgumentException("dailyStreak must be >= 0");
+    }
+
     public static @NotNull Builder builder(@NotNull UserStats userStats) {
         return new Builder(userStats);
     }

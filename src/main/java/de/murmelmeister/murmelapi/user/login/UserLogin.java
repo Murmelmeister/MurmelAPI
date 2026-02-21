@@ -30,11 +30,12 @@ public record UserLogin(
         int protocolVersion
 ) {
     public UserLogin {
-        Objects.requireNonNull(id, "Login ID cannot be null");
-        Objects.requireNonNull(loginTime, "Login time cannot be null");
-        Objects.requireNonNull(logoutTime, "Logout time cannot be null");
-        Objects.requireNonNull(inetAddress, "IP address cannot be null");
+        Objects.requireNonNull(id, "loginId cannot be null");
+        Objects.requireNonNull(loginTime, "loginTime cannot be null");
+        Objects.requireNonNull(logoutTime, "logoutTime cannot be null");
+        Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
         if (clientBrand != null && clientBrand.length() > 50)
-            throw new IllegalArgumentException("Client brand cannot be longer than 50 characters");
+            throw new IllegalArgumentException("clientBrand cannot be longer than 50 characters");
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
     }
 }
