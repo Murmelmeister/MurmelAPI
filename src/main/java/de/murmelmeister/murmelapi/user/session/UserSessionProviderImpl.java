@@ -67,6 +67,8 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     public @Nullable UserSession create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
         Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
+        if (clientBrand != null && clientBrand.length() > 50)
+            throw new IllegalArgumentException("clientBrand cannot be longer than 50 characters");
 
         UUID sessionId = UUID.randomUUID();
         UserSession session = MurmelExceptionWrapper.dbWrap(
