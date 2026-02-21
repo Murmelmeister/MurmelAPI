@@ -134,13 +134,9 @@ public final class MaintenanceProviderImpl implements MaintenanceProvider {
 
         LocalDateTime changedAt = MurmelExceptionWrapper.dbWrap(
                 "Failed to get changedAt for Maintenance (id=" + id + ")",
-                () -> database.query(UPDATE_SELECT_SQL, null, rs -> {
-                    if (rs.next()) {
-                        Timestamp timestamp = rs.getTimestamp("changed_at");
-                        return timestamp != null ? timestamp.toLocalDateTime() : null;
-                    }
-                    return null;
-                }, stmt -> stmt.setInt(1, id)),
+                () -> database.query(UPDATE_SELECT_SQL, null,
+                        resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
+                        stmt -> stmt.setInt(1, id)),
                 MaintenanceException::new
         );
         if (changedAt == null) return null;
