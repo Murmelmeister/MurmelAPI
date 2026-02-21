@@ -2,6 +2,8 @@ package de.murmelmeister.murmelapi.user.login;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.user.UserException;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -16,10 +18,21 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 public final class UserLoginProviderImpl implements UserLoginProvider {
     private static final String TABLE_NAME = "user_login";
+
+    @Language("MariaDB")
+    private static final String CREATE_SQL = """
+            INSERT INTO %s (id, user_id, login_time, ip_address, client_brand, protocol_version)
+            VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING id, user_id, login_time, logout_time, ip_address, client_brand, protocol_version
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -60,23 +73,23 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
 
     @Override
     public @Nullable UserLogin create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
-        if (userId < 1)
-            return null;
+        Objects.requireNonNull(sessionId, "sessionId cannot be null");
+        Objects.requireNonNull(loginTime, "loginTime cannot be null");
+        Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
 
-        @Language("MariaDB")
-        String sql = """
-                INSERT INTO %s (id, user_id, login_time, ip_address, client_brand, protocol_version)
-                VALUES (?, ?, ?, ?, ?, ?)
-                RETURNING id, user_id, login_time, logout_time, ip_address, client_brand, protocol_version
-                """.formatted(TABLE_NAME);
-        UserLogin login = database.query(sql, null, ResultSetUtil.userLogin(), stmt -> {
-            stmt.setString(1, sessionId.toString());
-            stmt.setInt(2, userId);
-            stmt.setTimestamp(3, Timestamp.valueOf(loginTime));
-            stmt.setString(4, inetAddress.getHostAddress());
-            stmt.setString(5, clientBrand);
-            stmt.setInt(6, protocolVersion);
-        });
+        UserLogin login = MurmelExceptionWrapper.dbWrap(
+                "Failed to create UserLogin (sessionId=" + sessionId + ")",
+                () -> database.query(CREATE_SQL, null, ResultSetUtil.userLogin(), stmt -> {
+                    stmt.setString(1, sessionId.toString());
+                    stmt.setInt(2, userId);
+                    stmt.setTimestamp(3, Timestamp.valueOf(loginTime));
+                    stmt.setString(4, inetAddress.getHostAddress());
+                    stmt.setString(5, clientBrand);
+                    stmt.setInt(6, protocolVersion);
+                }),
+                UserException::new
+        );
 
         if (login == null) return null;
         refreshProvider.fireSingle(single, login);
@@ -85,21 +98,25 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
 
     @Override
     public @Nullable UserLogin create(@NotNull UserSession session) {
+        Objects.requireNonNull(session, "session cannot be null");
         return create(session.id(), session.userId(), session.loginTime(),
                 session.inetAddress(), session.clientBrand(), session.protocolVersion());
     }
 
     @Override
     public int delete(@NotNull UUID id) {
+        Objects.requireNonNull(id, "id cannot be null");
+
         UserLogin existing = cache.getById(id);
         if (existing == null) return 0;
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql,
-                stmt -> stmt.setString(1, id.toString()));
-        if (row != 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete (id=" + id + ")",
+                () -> database.update(DELETE_SQL, stmt -> stmt.setString(1, id.toString())),
+                UserException::new
+        );
 
+        if (row != 1) return 0;
         refreshProvider.fireSingle(single, existing);
         return row;
     }
