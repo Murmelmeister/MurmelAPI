@@ -2,6 +2,8 @@ package de.murmelmeister.murmelapi.user.stats;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.user.UserException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -16,6 +18,26 @@ import java.util.Objects;
 
 public final class UserStatsProviderImpl implements UserStatsProvider {
     private static final String TABLE_NAME = "user_stats";
+
+    @Language("MariaDB")
+    private static final String CREATE_SQL = """
+            INSERT INTO %s (id)
+            VALUES (?)
+            RETURNING id, play_time, daily_streak, daily_streak_last_day, last_seen_at
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String UPDATE_SQL = """
+            UPDATE %s SET
+                play_time = ?,
+                daily_streak = ?,
+                daily_streak_last_day = ?,
+                last_seen_at = ?
+            WHERE id = ?
+            """.formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -41,16 +63,14 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
 
     @Override
     public @Nullable UserStats create(int userId) {
-        if (userId < 1) return null;
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
 
-        @Language("MariaDB")
-        String sql = """
-                INSERT INTO %s (id)
-                VALUES (?)
-                RETURNING id, play_time, daily_streak, daily_streak_last_day, last_seen_at
-                """.formatted(TABLE_NAME);
-        UserStats userStats = database.query(sql, null, ResultSetUtil.userStats(),
-                stmt -> stmt.setInt(1, userId));
+        UserStats userStats = MurmelExceptionWrapper.dbWrap(
+                "Failed to create UserStats (userId=" + userId + ")",
+                () -> database.query(CREATE_SQL, null, ResultSetUtil.userStats(),
+                        stmt -> stmt.setInt(1, userId)),
+                UserException::new
+        );
 
         if (userStats == null) return null;
         refreshProvider.fireSingle(single, userStats);
@@ -59,23 +79,27 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
 
     @Override
     public int delete(int userId) {
-        if (userId < 1) return 0;
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
 
         UserStats existing = cache.getById(userId);
         if (existing == null) return 0;
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        int rows = database.update(sql, stmt -> stmt.setInt(1, userId));
-        if (rows != 1) return 0;
+        int rows = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete UserStats (userId=" + userId + ")",
+                () -> database.update(DELETE_SQL, stmt -> stmt.setInt(1, userId)),
+                UserException::new
+        );
 
+        if (rows != 1) return 0;
         refreshProvider.fireSingle(single, existing);
         return rows;
     }
 
     @Override
     public @Nullable UserStats update(int userId, int playTime, int dailyStreak, @Nullable LocalDate lastDay, @Nullable LocalDateTime lastSeen) {
-        if (userId < 1 || playTime < 0 || dailyStreak < 0) return null;
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
+        if (playTime < 0) throw new IllegalArgumentException("playTime must be >= 0");
+        if (dailyStreak < 0) throw new IllegalArgumentException("dailyStreak must be >= 0");
 
         UserStats existing = cache.getById(userId);
         if (existing == null) return null;
@@ -84,24 +108,19 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
                 && Objects.equals(existing.lastSeenAt(), lastSeen)
                 && existing.playTime() == playTime
                 && existing.dailyStreak() == dailyStreak)
-            return existing; // No update needed
+            return existing;
 
-        @Language("MariaDB")
-        String sql = """
-                UPDATE %s SET
-                    play_time = ?,
-                    daily_streak = ?,
-                    daily_streak_last_day = ?,
-                    last_seen_at = ?
-                WHERE id = ?
-                """.formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> {
-            stmt.setInt(1, playTime);
-            stmt.setInt(2, dailyStreak);
-            stmt.setObject(3, lastDay, Types.DATE);
-            stmt.setObject(4, lastSeen, Types.TIMESTAMP);
-            stmt.setInt(5, userId);
-        });
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to update UserStats (userId=" + userId + ")",
+                () -> database.update(UPDATE_SQL, stmt -> {
+                    stmt.setInt(1, playTime);
+                    stmt.setInt(2, dailyStreak);
+                    stmt.setObject(3, lastDay, Types.DATE);
+                    stmt.setObject(4, lastSeen, Types.TIMESTAMP);
+                    stmt.setInt(5, userId);
+                }),
+                UserException::new
+        );
         if (row != 1) return null;
 
         UserStats updated = UserStats.builder(existing)
