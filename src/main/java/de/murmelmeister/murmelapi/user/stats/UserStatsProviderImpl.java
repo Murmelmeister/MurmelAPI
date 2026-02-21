@@ -67,7 +67,7 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int rows = database.update(sql, stmt -> stmt.setInt(1, userId));
-        if (rows < 1) return 0;
+        if (rows != 1) return 0;
 
         refreshProvider.fireSingle(single, existing);
         return rows;
@@ -102,7 +102,7 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
             stmt.setObject(4, lastSeen, Types.TIMESTAMP);
             stmt.setInt(5, userId);
         });
-        if (row < 1) return null;
+        if (row != 1) return null;
 
         UserStats updated = UserStats.builder(existing)
                 .playTime(playTime)
