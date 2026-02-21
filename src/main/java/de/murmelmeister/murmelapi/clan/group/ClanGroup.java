@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
 public record ClanGroup(
         @NotNull UUID clanId,
         @NotNull UUID groupId,
@@ -23,6 +25,10 @@ public record ClanGroup(
         Objects.requireNonNull(groupId, "groupId must not be null");
         Objects.requireNonNull(groupName, "groupName must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
+        if (groupName.length() > 100) throw new IllegalArgumentException("groupName cannot be longer than 100 characters");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (changedBy != null && changedBy < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
     }
 
     public static @NotNull Builder builder(@NotNull ClanGroup clanGroup) {

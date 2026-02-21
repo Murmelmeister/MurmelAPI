@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +60,7 @@ public class ClanGroupCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.CLAN_GROUPS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -118,12 +120,14 @@ public class ClanGroupCache implements MurmelCache {
         return optGroup != null && optGroup.isPresent() ? optGroup.orElse(null) : null;
     }
 
-    public @Nullable List<ClanGroup> getByClanId(@Nullable UUID clanId) {
-        if (clanId == null) return null;
-        return cacheByClanId.get(clanId);
+    public @NotNull @Unmodifiable List<ClanGroup> getByClanId(@NotNull UUID clanId) {
+        List<ClanGroup> groups = cacheByClanId.get(clanId);
+        if (groups == null || groups.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(groups);
     }
 
-    public @NotNull List<ClanGroup> getAll() {
+    public @NotNull @Unmodifiable List<ClanGroup> getAll() {
         List<ClanGroup> clans = listCache.get(ALL_KEY);
         if (clans == null || clans.isEmpty())
             return Collections.emptyList();
@@ -132,7 +136,7 @@ public class ClanGroupCache implements MurmelCache {
 
     public void remove(@NotNull GroupKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByClanId, key.clanId(), v -> v.clanId().equals(key.clanId()));
+        cacheByClanId.invalidate(key.clanId());
         CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(key.clanId()) && v.groupId().equals(key.groupId()));
     }
 
