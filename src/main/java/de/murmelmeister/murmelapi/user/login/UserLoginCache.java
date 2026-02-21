@@ -153,8 +153,8 @@ public class UserLoginCache implements MurmelCache {
 
     public void remove(@NotNull UserLogin login) {
         cacheById.invalidate(login.id());
-        CacheUtil.remove(cacheByUserId, login.userId(), v -> v.id().equals(login.id()));
-        CacheUtil.remove(cacheByIpAddress, login.inetAddress(), v -> v.id().equals(login.id()));
+        cacheByUserId.invalidate(login.userId());
+        cacheByIpAddress.invalidate(login.inetAddress());
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(login.id()));
     }
 

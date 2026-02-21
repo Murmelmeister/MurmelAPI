@@ -31,5 +31,5 @@ public interface UserLoginProvider {
 
     @Nullable UserLogin create(@NotNull UserSession session);
 
-    int delete(@Nullable UUID id);
+    int delete(@NotNull UUID id);
 }

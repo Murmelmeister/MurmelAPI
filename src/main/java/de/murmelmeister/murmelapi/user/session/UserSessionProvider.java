@@ -20,5 +20,5 @@ public interface UserSessionProvider {
 
     @Nullable UserSession create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion);
 
-    int delete(@Nullable UUID sessionId);
+    int delete(@NotNull UUID sessionId);
 }

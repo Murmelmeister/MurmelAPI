@@ -75,9 +75,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
-    public int delete(@Nullable UUID sessionId) {
-        if (sessionId == null) return 0;
-
+    public int delete(@NotNull UUID sessionId) {
         UserSession existing = findById(sessionId);
         if (existing == null) return 0;
 

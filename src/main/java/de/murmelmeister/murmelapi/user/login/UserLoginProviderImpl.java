@@ -90,9 +90,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public int delete(@Nullable UUID id) {
-        if (id == null) return 0;
-
+    public int delete(@NotNull UUID id) {
         UserLogin existing = cache.getById(id);
         if (existing == null) return 0;
 
@@ -100,7 +98,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setString(1, id.toString()));
-        if (row < 1) return 0;
+        if (row != 1) return 0;
 
         refreshProvider.fireSingle(single, existing);
         return row;
