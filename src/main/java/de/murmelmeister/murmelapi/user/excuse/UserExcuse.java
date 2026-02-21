@@ -21,6 +21,7 @@ public record UserExcuse(
         Objects.requireNonNull(startAt, "startAt must not be null");
         Objects.requireNonNull(endAt, "endAt must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
+        if (startAt.isAfter(endAt)) throw new IllegalArgumentException("startAt cannot be after endAt");
         if (reason != null && reason.length() > 255)
             throw new IllegalArgumentException("reason cannot be longer than 255 characters");
     }
