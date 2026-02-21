@@ -98,7 +98,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
             stmt.setInt(4, changedBy);
             stmt.setInt(5, id);
         });
-        if (row < 1) return null;
+        if (row != 1) return null;
 
         @Language("MariaDB")
         String selectSql = "SELECT changed_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
