@@ -158,7 +158,7 @@ public final class UserProviderImpl implements UserProvider {
                 debugUser == existing.debugUser() &&
                 debugEnabled == existing.debugEnabled() &&
                 languageId == existing.languageId())
-            return existing; // No changes, return existing user
+            return existing;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to update User (id=" + userId + ")",
