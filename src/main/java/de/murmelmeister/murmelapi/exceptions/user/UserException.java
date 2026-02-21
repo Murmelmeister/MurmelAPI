@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.exceptions.user;
 
-public class UserException extends RuntimeException {
+import de.murmelmeister.murmelapi.exceptions.MurmelException;
+
+public class UserException extends MurmelException {
     public UserException(String message) {
         super(message);
     }
