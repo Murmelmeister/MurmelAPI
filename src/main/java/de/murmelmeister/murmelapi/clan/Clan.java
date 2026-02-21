@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
 public record Clan(
         @NotNull UUID id,
         @NotNull String name,
@@ -15,13 +17,23 @@ public record Clan(
         @Nullable String description,
         int ownerId,
         int createdBy,
-        @Nullable LocalDateTime createdAt,
+        @NotNull LocalDateTime createdAt,
         @Nullable Integer changedBy,
         @Nullable LocalDateTime changedAt
 ) {
     public Clan {
         Objects.requireNonNull(id, "id must not be null");
         Objects.requireNonNull(name, "name must not be null");
+        Objects.requireNonNull(createdAt, "createdAt must not be null");
+        if (name.length() > 100) throw new IllegalArgumentException("name cannot be longer than 100 characters");
+        if (tag != null && tag.length() > 25)
+            throw new IllegalArgumentException("tag cannot be longer than 25 characters");
+        if (sign != null && sign.length() > 25)
+            throw new IllegalArgumentException("sign cannot be longer than 25 characters");
+        if (ownerId < CONSOLE_USER_ID) throw new IllegalArgumentException("ownerId must be >= " + CONSOLE_USER_ID);
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (changedBy != null && changedBy < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
     }
 
     public static @NotNull Builder builder(@NotNull Clan clan) {

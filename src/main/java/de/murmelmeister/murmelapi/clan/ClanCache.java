@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +64,7 @@ public class ClanCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.CLANS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -143,6 +145,13 @@ public class ClanCache implements MurmelCache {
         return optClan != null && optClan.isPresent() ? optClan.orElse(null) : null;
     }
 
+    public @NotNull @Unmodifiable List<Clan> getAll() {
+        List<Clan> clans = listCache.get(ALL_KEY);
+        if (clans == null || clans.isEmpty())
+            return Collections.emptyList();
+        return clans;
+    }
+
     public void remove(@NotNull Clan clan) {
         cacheById.invalidate(clan.id());
         cacheByName.invalidate(clan.name());
@@ -155,12 +164,5 @@ public class ClanCache implements MurmelCache {
         cacheByName.invalidateAll();
         cacheByOwner.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<Clan> getAll() {
-        List<Clan> clans = listCache.get(ALL_KEY);
-        if (clans == null || clans.isEmpty())
-            return Collections.emptyList();
-        return clans;
     }
 }
