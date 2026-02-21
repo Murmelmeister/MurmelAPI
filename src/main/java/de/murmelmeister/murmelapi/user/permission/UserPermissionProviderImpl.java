@@ -92,7 +92,7 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
             stmt.setInt(1, userId);
             stmt.setString(2, normalizedPermission);
         });
-        if (row < 1) return 0;
+        if (row != 1) return 0;
 
         refreshProvider.fireSingle(single, new UserPermissionCache.PermissionKey(userId, normalizedPermission));
         return row;
@@ -126,17 +126,26 @@ public final class UserPermissionProviderImpl implements UserPermissionProvider 
             return existing; // No changes, return existing
 
         @Language("MariaDB")
-        String updateSql = "UPDATE %s SET expires_at = ?, changed_by = ? WHERE user_id = ? AND permission = ?".formatted(TABLE_NAME);
+        String updateSql = """
+                UPDATE %s
+                SET expires_at = ?,
+                    changed_by = ?
+                WHERE user_id = ? AND permission = ?
+                """.formatted(TABLE_NAME);
         int row = database.update(updateSql, stmt -> {
             stmt.setTimestamp(1, expiresAt == null ? null : Timestamp.valueOf(expiresAt));
             stmt.setInt(2, changedBy);
             stmt.setInt(3, userId);
             stmt.setString(4, normalizedPermission);
         });
-        if (row < 1) return null;
+        if (row != 1) return null;
 
         @Language("MariaDB")
-        String selectSql = "SELECT changed_at FROM %s WHERE user_id = ? AND permission = ?".formatted(TABLE_NAME);
+        String selectSql = """
+                SELECT changed_at
+                FROM %s
+                WHERE user_id = ? AND permission = ?
+                """.formatted(TABLE_NAME);
         LocalDateTime changedAt = database.query(selectSql, null,
                 resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
                 stmt -> {
