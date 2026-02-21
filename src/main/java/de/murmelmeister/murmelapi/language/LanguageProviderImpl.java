@@ -2,11 +2,14 @@ package de.murmelmeister.murmelapi.language;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.language.LanguageException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 import java.util.Objects;
@@ -26,6 +29,27 @@ import static de.murmelmeister.murmelapi.MurmelAPI.GERMAN_CODE;
  */
 public final class LanguageProviderImpl implements LanguageProvider {
     private static final String TABLE_NAME = "languages";
+
+    @org.intellij.lang.annotations.Language("MariaDB")
+    private static final String CREATE_SQL = """
+            INSERT INTO %s (code)
+            VALUES (?)
+            RETURNING id, code
+            """.formatted(TABLE_NAME);
+
+    @org.intellij.lang.annotations.Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
+
+    @org.intellij.lang.annotations.Language("MariaDB")
+    private static final String UPDATE_SQL = "UPDATE %s SET code = ? WHERE id = ?".formatted(TABLE_NAME);
+
+    @org.intellij.lang.annotations.Language("MariaDB")
+    private static final String UPSERT_SQL = """
+            INSERT INTO %s (code)
+            VALUES (?)
+            ON DUPLICATE KEY UPDATE code = VALUES(code)
+            RETURNING id, code
+            """.formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -50,71 +74,73 @@ public final class LanguageProviderImpl implements LanguageProvider {
     }
 
     @Override
-    public @Nullable Language findByCode(String code) {
-        String normalized = normalize(code);
-        return normalized != null ? cache.getByCode(normalized) : null;
+    public @Nullable Language findByCode(@Nullable String code) {
+        return cache.getByCode(code);
     }
 
     @Override
-    public @NotNull List<Language> findAll() {
-        return cache.getCachedLanguages();
+    public @NotNull @Unmodifiable List<Language> findAll() {
+        return cache.getAll();
     }
 
     @Override
     public @Nullable Language create(@NotNull String code) {
-        String normalized = normalize(code);
-        if (normalized == null) return null;
+        Objects.requireNonNull(code, "code cannot be null");
+        if (code.isBlank()) throw new IllegalArgumentException("code must not be blank");
 
-        @org.intellij.lang.annotations.Language("MariaDB")
-        String sql = "INSERT INTO %s (code) VALUES (?)".formatted(TABLE_NAME);
-        int id = (int) database.updateAndGetGeneratedKeys(sql,
-                stmt -> stmt.setString(1, normalized));
-        if (id < 1) return null;
+        Language language = MurmelExceptionWrapper.dbWrap(
+                "Failed to create Language (code=" + code + ")",
+                () -> database.query(CREATE_SQL, null, ResultSetUtil.language(), stmt -> stmt.setString(1, code)),
+                LanguageException::new
+        );
 
-        Language language = new Language(id, normalized);
+        if (language == null) return null;
         refreshProvider.fireSingle(single, language);
         return language;
     }
 
     @Override
     public int delete(int id) {
-        if (id < 1 || id == 1 || id == 2) return 0;
+        if (id < 1) throw new IllegalArgumentException("id must be >= 1");
+        if (id == 1 || id == 2) throw new IllegalArgumentException("id must not be 1 or 2");
+
         Language existing = cache.getById(id);
         if (existing == null) return 0;
 
-        @org.intellij.lang.annotations.Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql,
-                stmt -> stmt.setInt(1, id));
-        if (row < 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete Language (id=" + id + ")",
+                () -> database.update(DELETE_SQL, stmt -> stmt.setInt(1, id)),
+                LanguageException::new
+        );
 
+        if (row != 1) return 0;
         refreshProvider.fireSingle(single, existing);
         return row;
     }
 
     @Override
     public @Nullable Language update(int id, @NotNull String code) {
-        if (id < 1) return null;
-        String normalized = normalize(code);
-        if (normalized == null) return null;
-        if ((id == 1 && !ENGLISH_CODE.equals(normalized))
-                || (id == 2 && !GERMAN_CODE.equals(normalized))) {
-            return null;
-        }
+        if (id < 1) throw new IllegalArgumentException("id must be >= 1");
+        if (code.isBlank()) throw new IllegalArgumentException("code must not be blank");
+        if ((id == 1 && !ENGLISH_CODE.equals(code))
+                || (id == 2 && !GERMAN_CODE.equals(code)))
+            throw new IllegalArgumentException("code must not be changed for id 1 or 2");
 
         Language existing = cache.getById(id);
         if (existing == null) return null;
 
-        if (Objects.equals(normalized, existing.code()))
-            return existing; // No changes, return existing
+        if (Objects.equals(code, existing.code()))
+            return existing;
 
-        @org.intellij.lang.annotations.Language("MariaDB")
-        String sql = "UPDATE %s SET code = ? WHERE id = ?".formatted(TABLE_NAME);
-        int rows = database.update(sql, stmt -> {
-            stmt.setString(1, normalized);
-            stmt.setInt(2, id);
-        });
-        if (rows < 1) return null;
+        int rows = MurmelExceptionWrapper.dbWrap(
+                "Failed to update Language (id=" + id + ", code=" + code + ")",
+                () -> database.update(UPDATE_SQL, stmt -> {
+                    stmt.setString(1, code);
+                    stmt.setInt(2, id);
+                }),
+                LanguageException::new
+        );
+        if (rows != 1) return null;
 
         Language language = Language.builder(existing)
                 .code(code)
@@ -125,28 +151,23 @@ public final class LanguageProviderImpl implements LanguageProvider {
 
     @Override
     public @Nullable Language upsert(@NotNull Language language) {
+        Objects.requireNonNull(language, "language cannot be null");
+
         Language existing = cache.getById(language.id());
         if (existing != null
                 && Objects.equals(language.id(), existing.id())
                 && Objects.equals(language.code(), existing.code()))
             return existing;
 
-        @org.intellij.lang.annotations.Language("MariaDB")
-        String sql = """
-                INSERT INTO %s (code)
-                VALUES (?)
-                ON DUPLICATE KEY UPDATE code = VALUES(code)
-                RETURNING id, code
-                """.formatted(TABLE_NAME);
-        Language saved = database.query(sql, null, ResultSetUtil.language(), stmt -> stmt.setString(1, language.code()));
+        Language saved = MurmelExceptionWrapper.dbWrap(
+                "Failed to upsert Language (id=" + language.id() + ", code=" + language.code() + ")",
+                () -> database.query(UPSERT_SQL, null, ResultSetUtil.language(), stmt -> stmt.setString(1, language.code())),
+                LanguageException::new
+        );
+
         if (saved == null) return null;
         refreshProvider.fireSingle(single, saved);
         return saved;
     }
 
-    private String normalize(String code) {
-        if (code == null) return null;
-        if (code.isBlank()) return null;
-        return code;
-    }
 }

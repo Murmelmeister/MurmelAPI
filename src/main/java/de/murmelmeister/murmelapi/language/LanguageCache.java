@@ -12,6 +12,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,6 +58,7 @@ public class LanguageCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.LANGUAGES.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -123,6 +125,13 @@ public class LanguageCache implements MurmelCache {
         return optId != null && optId.isPresent() ? getById(optId.get()) : null;
     }
 
+    public @NotNull @Unmodifiable List<Language> getAll() {
+        List<Language> languages = listCache.get(ALL_KEY);
+        if (languages == null || languages.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(languages);
+    }
+
     public void remove(@NotNull Language language) {
         cacheById.invalidate(language.id());
         codeToId.invalidate(toKey(language.code()));
@@ -133,13 +142,6 @@ public class LanguageCache implements MurmelCache {
         cacheById.invalidateAll();
         codeToId.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<Language> getCachedLanguages() {
-        List<Language> languages = listCache.get(ALL_KEY);
-        if (languages == null || languages.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(languages);
     }
 
     private static @NotNull String toKey(@NotNull String code) {

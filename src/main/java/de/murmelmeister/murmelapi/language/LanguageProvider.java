@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.language;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
@@ -12,7 +13,9 @@ public interface LanguageProvider {
 
     @Nullable Language findByCode(@Nullable String code);
 
-    @NotNull List<Language> findAll();
+    @NotNull
+    @Unmodifiable
+    List<Language> findAll();
 
     @Nullable Language create(@NotNull String code);
 
