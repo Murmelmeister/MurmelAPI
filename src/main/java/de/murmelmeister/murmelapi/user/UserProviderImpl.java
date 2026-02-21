@@ -3,6 +3,8 @@ package de.murmelmeister.murmelapi.user;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.user.UserException;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -24,6 +26,27 @@ import java.util.UUID;
  */
 public final class UserProviderImpl implements UserProvider {
     private static final String TABLE_NAME = "users";
+
+    @Language("MariaDB")
+    private static final String CREATE_SQL = """
+            INSERT INTO %s (mojang_id, username)
+            VALUES (?, ?)
+            RETURNING id, mojang_id, username, first_login, system_user, debug_user, debug_enabled, language_id
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String UPDATE_SQL = """
+            UPDATE %s
+            SET username = ?,
+                first_login = ?,
+                debug_user = ?,
+                debug_enabled = ?,
+                language_id = ?
+            WHERE id = ?
+            """.formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -78,19 +101,21 @@ public final class UserProviderImpl implements UserProvider {
 
     @Override
     public @Nullable User create(@NotNull UUID uuid, @NotNull String username) {
-        String normalizedUsername = StringUtil.normalize(username);
-        if (normalizedUsername == null) return null;
+        Objects.requireNonNull(uuid, "uuid must not be null");
+        Objects.requireNonNull(username, "username must not be null");
 
-        @Language("MariaDB")
-        String sql = """
-                INSERT INTO %s (mojang_id, username)
-                VALUES (?, ?)
-                RETURNING id, mojang_id, username, first_login, system_user, debug_user, debug_enabled, language_id
-                """.formatted(TABLE_NAME);
-        User user = database.query(sql, null, ResultSetUtil.user(), stmt -> {
-            stmt.setString(1, uuid.toString());
-            stmt.setString(2, normalizedUsername);
-        });
+        String normalizedUsername = StringUtil.normalize(username);
+        if (normalizedUsername == null || normalizedUsername.isBlank())
+            throw new IllegalArgumentException("username must not be blank");
+
+        User user = MurmelExceptionWrapper.dbWrap(
+                "Failed to create User (uuid=" + uuid + ")",
+                () -> database.query(CREATE_SQL, null, ResultSetUtil.user(), stmt -> {
+                    stmt.setString(1, uuid.toString());
+                    stmt.setString(2, normalizedUsername);
+                }),
+                UserException::new
+        );
 
         if (user == null) return null;
         refreshProvider.fireSingle(single, user);
@@ -99,25 +124,31 @@ public final class UserProviderImpl implements UserProvider {
 
     @Override
     public int delete(int userId) {
-        if (userId < 1) return 0;
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
 
         User existing = cache.getById(userId);
         if (existing == null) return 0;
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> stmt.setInt(1, userId));
-        if (row != 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete User (id=" + userId + ")",
+                () -> database.update(DELETE_SQL, stmt -> stmt.setInt(1, userId)),
+                UserException::new
+        );
 
+        if (row != 1) return 0;
         refreshProvider.fireSingle(single, existing);
         return row;
     }
 
     @Override
     public @Nullable User update(int userId, @NotNull String username, @Nullable LocalDateTime firstLogin, boolean debugUser, boolean debugEnabled, int languageId) {
+        Objects.requireNonNull(username, "username must not be null");
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
+        if (languageId < 1) throw new IllegalArgumentException("languageId must be >= 1");
+
         String normalizedUsername = StringUtil.normalize(username);
-        if (userId < 1 || normalizedUsername == null || languageId < 1)
-            return null;
+        if (normalizedUsername == null || normalizedUsername.isBlank())
+            throw new IllegalArgumentException("username must not be blank");
 
         User existing = cache.getById(userId);
         if (existing == null) return null;
@@ -129,24 +160,18 @@ public final class UserProviderImpl implements UserProvider {
                 languageId == existing.languageId())
             return existing; // No changes, return existing user
 
-        @Language("MariaDB")
-        String sql = """
-                UPDATE %s
-                SET username = ?,
-                    first_login = ?,
-                    debug_user = ?,
-                    debug_enabled = ?,
-                    language_id = ?
-                WHERE id = ?
-                """.formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> {
-            stmt.setString(1, normalizedUsername);
-            stmt.setObject(2, firstLogin, Types.TIMESTAMP);
-            stmt.setBoolean(3, debugUser);
-            stmt.setBoolean(4, debugEnabled);
-            stmt.setInt(5, languageId);
-            stmt.setInt(6, userId);
-        });
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to update User (id=" + userId + ")",
+                () -> database.update(UPDATE_SQL, stmt -> {
+                    stmt.setString(1, normalizedUsername);
+                    stmt.setObject(2, firstLogin, Types.TIMESTAMP);
+                    stmt.setBoolean(3, debugUser);
+                    stmt.setBoolean(4, debugEnabled);
+                    stmt.setInt(5, languageId);
+                    stmt.setInt(6, userId);
+                }),
+                UserException::new
+        );
         if (row != 1) return null;
 
         User user = User.builder(existing)
