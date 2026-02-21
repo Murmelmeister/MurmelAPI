@@ -18,7 +18,7 @@ import de.murmelmeister.murmelapi.maintenance.Maintenance;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
-import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIp;
+import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.settings.Settings;
@@ -243,7 +243,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<PunishmentCurrentIp> punishmentCurrentIp() {
+    public static @NotNull ResultSetProcessor<PunishmentIpAddress> punishmentIpAddress() {
         return resultSet -> {
             String ipAddress = resultSet.getString("ip_address");
             InetAddress inetAddress;
@@ -254,7 +254,7 @@ public final class ResultSetUtil {
             }
             int typeId = resultSet.getInt("type_id");
             UUID logId = UUID.fromString(resultSet.getString("log_id"));
-            return new PunishmentCurrentIp(inetAddress, typeId, logId);
+            return new PunishmentIpAddress(inetAddress, typeId, logId);
         };
     }
 

@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.time.Duration;
@@ -22,11 +23,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class PunishmentCurrentIpCache implements MurmelCache {
-    private static final Logger LOGGER = org.slf4j.LoggerFactory.getLogger(PunishmentCurrentIpCache.class);
+public class PunishmentIpAddressCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(PunishmentIpAddressCache.class);
 
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
+    @Language("MariaDB")
+    private static final String SELECT_BY_TYPE_ID = "SELECT * FROM %s WHERE type_id = ?";
     @Language("MariaDB")
     private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE ip_address = ? AND type_id = ?";
 
@@ -38,16 +41,18 @@ public class PunishmentCurrentIpCache implements MurmelCache {
     private final String tableName;
     private final Long fetchLimit;
 
-    private final LoadingCache<@NotNull IpTypeKey, Optional<PunishmentCurrentIp>> cache;
-    private final LoadingCache<@NotNull String, List<PunishmentCurrentIp>> listCache;
+    private final LoadingCache<@NotNull PunishKey, Optional<PunishmentIpAddress>> cacheByKey;
+    private final LoadingCache<@NotNull Integer, List<PunishmentIpAddress>> cacheByType;
+    private final LoadingCache<@NotNull String, List<PunishmentIpAddress>> listCache;
 
-    public PunishmentCurrentIpCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentIpAddressCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.gson = gson;
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cache = CacheUtil.buildCacheRefresh(this::loadFromDatabase, cacheCapacity, refreshInterval);
+        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadFromDatabase, cacheCapacity, refreshInterval);
+        this.cacheByType = CacheUtil.buildCacheRefresh(this::loadByType, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         this.refreshProvider.register(this);
     }
@@ -64,18 +69,18 @@ public class PunishmentCurrentIpCache implements MurmelCache {
 
         if (RefreshType.SINGLE_PUNISHMENT_IP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof IpTypeKey ipTypeKey)
-                remove(ipTypeKey);
+            if (key instanceof PunishKey punishKey)
+                remove(punishKey);
             else if (key instanceof String json) {
                 try {
-                    final IpTypeKey ipTypeKey = gson.fromJson(json, IpTypeKey.class);
+                    final PunishKey punishKey = gson.fromJson(json, PunishKey.class);
 
-                    if (ipTypeKey == null) {
+                    if (punishKey == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
                         return;
                     }
 
-                    remove(ipTypeKey);
+                    remove(punishKey);
                 } catch (JsonSyntaxException e) {
                     LOGGER.warn("Failed to parse JSON for single refresh: {}", json, e);
                 }
@@ -89,44 +94,59 @@ public class PunishmentCurrentIpCache implements MurmelCache {
         clear();
     }
 
-    private @NotNull List<PunishmentCurrentIp> loadAllFromDatabase() {
+    private @NotNull List<PunishmentIpAddress> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentCurrentIp());
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentIpAddress());
     }
 
-    private @NotNull Optional<PunishmentCurrentIp> loadFromDatabase(IpTypeKey key) {
+    private @NotNull List<PunishmentIpAddress> loadByType(int typeId) {
+        String sql = SELECT_BY_TYPE_ID.formatted(tableName);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentIpAddress(),
+                stmt -> stmt.setInt(1, typeId));
+    }
+
+    private @NotNull Optional<PunishmentIpAddress> loadFromDatabase(PunishKey key) {
         String sql = SELECT_BY_KEY.formatted(tableName);
-        PunishmentCurrentIp punishmentCurrentIp = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentCurrentIp(),
+        PunishmentIpAddress punishmentIpAddress = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentIpAddress(),
                 stmt -> {
                     stmt.setString(1, key.inetAddress().getHostAddress());
                     stmt.setInt(2, key.typeId());
                 });
 
-        return Optional.ofNullable(punishmentCurrentIp);
+        return Optional.ofNullable(punishmentIpAddress);
     }
 
-    public @Nullable PunishmentCurrentIp get(@NotNull InetAddress inetAddress, int typeId) {
-        Optional<PunishmentCurrentIp> optIp = cache.get(new IpTypeKey(inetAddress, typeId));
+    public @Nullable PunishmentIpAddress get(@NotNull InetAddress inetAddress, int typeId) {
+        Optional<PunishmentIpAddress> optIp = cacheByKey.get(new PunishKey(inetAddress, typeId));
         return optIp != null && optIp.isPresent() ? optIp.orElse(null) : null;
     }
 
-    public @NotNull @Unmodifiable List<PunishmentCurrentIp> getAll() {
-        List<PunishmentCurrentIp> ips = listCache.get(ALL_KEY);
+    public @NotNull @Unmodifiable List<PunishmentIpAddress> getByTypeId(int typeId) {
+        List<PunishmentIpAddress> ips = cacheByType.get(typeId);
         if (ips == null || ips.isEmpty())
             return Collections.emptyList();
         return List.copyOf(ips);
     }
 
-    public void remove(@NotNull IpTypeKey key) {
-        cache.invalidate(key);
+    public @NotNull @Unmodifiable List<PunishmentIpAddress> getAll() {
+        List<PunishmentIpAddress> ips = listCache.get(ALL_KEY);
+        if (ips == null || ips.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(ips);
+    }
+
+    public void remove(@NotNull PunishKey key) {
+        cacheByKey.invalidate(key);
+        cacheByType.invalidate(key.typeId());
         CacheUtil.remove(listCache, ALL_KEY, v -> v.inetAddress().equals(key.inetAddress()) && v.typeId() == key.typeId());
     }
 
     public void clear() {
-        cache.invalidateAll();
+        cacheByKey.invalidateAll();
+        cacheByType.invalidateAll();
         listCache.invalidateAll();
     }
 
-    public record IpTypeKey(@NotNull InetAddress inetAddress, int typeId) {
+    public record PunishKey(@NotNull InetAddress inetAddress, int typeId) {
     }
 }

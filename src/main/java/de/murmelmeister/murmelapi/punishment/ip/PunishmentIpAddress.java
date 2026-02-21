@@ -6,17 +6,17 @@ import java.net.InetAddress;
 import java.util.Objects;
 import java.util.UUID;
 
-public record PunishmentCurrentIp(
+public record PunishmentIpAddress(
         @NotNull InetAddress inetAddress,
         int typeId,
         @NotNull UUID logId
 ) {
-    public PunishmentCurrentIp {
+    public PunishmentIpAddress {
         Objects.requireNonNull(inetAddress, "inetAddress must not be null");
         Objects.requireNonNull(logId, "logId must not be null");
     }
 
-    public static @NotNull Builder builder(@NotNull PunishmentCurrentIp currentIp) {
+    public static @NotNull Builder builder(@NotNull PunishmentIpAddress currentIp) {
         return new Builder(currentIp);
     }
 
@@ -26,7 +26,7 @@ public record PunishmentCurrentIp(
 
         private UUID logId;
 
-        private Builder(@NotNull PunishmentCurrentIp currentIp) {
+        private Builder(@NotNull PunishmentIpAddress currentIp) {
             this.inetAddress = currentIp.inetAddress();
             this.typeId = currentIp.typeId();
             this.logId = currentIp.logId();
@@ -37,8 +37,8 @@ public record PunishmentCurrentIp(
             return this;
         }
 
-        public @NotNull PunishmentCurrentIp build() {
-            return new PunishmentCurrentIp(inetAddress, typeId, logId);
+        public @NotNull PunishmentIpAddress build() {
+            return new PunishmentIpAddress(inetAddress, typeId, logId);
         }
     }
 }
