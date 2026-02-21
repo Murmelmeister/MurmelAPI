@@ -7,6 +7,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Objects;
+
 import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
 
 /**
@@ -30,6 +32,8 @@ public final class MessageService {
     }
 
     public @Nullable String getMessage(@NotNull String key, int languageId) {
+        Objects.requireNonNull(key, "key cannot be null");
+
         Language language = languageProvider.findById(languageId);
         if (language != null) {
             Message message = messageProvider.get(key, language.id());
@@ -50,6 +54,9 @@ public final class MessageService {
     }
 
     public @Nullable String getMessage(@NotNull String key, @NotNull String code) {
+        Objects.requireNonNull(key, "key cannot be null");
+        Objects.requireNonNull(code, "code cannot be null");
+
         Language language = languageProvider.findByCode(code);
         if (language != null) {
             Message message = messageProvider.get(key, language.id());

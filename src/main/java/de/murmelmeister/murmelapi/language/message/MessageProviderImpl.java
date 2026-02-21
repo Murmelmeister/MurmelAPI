@@ -3,6 +3,9 @@ package de.murmelmeister.murmelapi.language.message;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.language.MessageException;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -15,6 +18,25 @@ import java.util.*;
 
 public final class MessageProviderImpl implements MessageProvider {
     private static final String TABLE_NAME = "messages";
+
+    @Language("MariaDB")
+    private static final String CREATE_SQL = """
+            INSERT INTO %s (tag_id, language_id, message)
+            VALUES (?, ?, ?)
+            RETURNING id, tag_id, language_id, message
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_TAG_SQL = "DELETE FROM %s WHERE tag_id = ? AND language_id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_LANGUAGE_SQL = "DELETE FROM %s WHERE language_id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String UPDATE_SQL = "UPDATE %s SET tag_id = ?, language_id = ?, message = ? WHERE id = ?".formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -50,80 +72,88 @@ public final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public @Nullable Message create(@NotNull String tagId, int languageId, @NotNull String message) {
+        Objects.requireNonNull(tagId, "tagId cannot be null");
+        Objects.requireNonNull(message, "message cannot be null");
         String normalizedTagId = StringUtil.normalize(tagId);
-        if (normalizedTagId == null || languageId < 1 || message.isBlank())
-            return null;
+        if (normalizedTagId == null || normalizedTagId.isBlank())
+            throw new IllegalArgumentException("tagId cannot be blank");
+        if (message.isBlank()) throw new IllegalArgumentException("message cannot be blank");
 
-        @Language("MariaDB")
-        String sql = """
-                INSERT INTO %s (tag_id, language_id, message)
-                VALUES (?, ?, ?)
-                """.formatted(TABLE_NAME);
-        int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> {
-            stmt.setString(1, normalizedTagId);
-            stmt.setInt(2, languageId);
-            stmt.setString(3, message);
-        });
-        if (id < 1) return null;
+        Message msg = MurmelExceptionWrapper.dbWrap(
+                "Failed to create Message (tagId=" + normalizedTagId + ", languageId=" + languageId + ")",
+                () -> database.query(CREATE_SQL, null, ResultSetUtil.message(), stmt -> {
+                    stmt.setString(1, normalizedTagId);
+                    stmt.setInt(2, languageId);
+                    stmt.setString(3, message);
+                }),
+                MessageException::new
+        );
 
-        Message msg = new Message(id, normalizedTagId, languageId, message);
+        if (msg == null) return null;
         refreshProvider.fireSingle(single, new MessageCache.MessageKey(msg.languageId(), msg.tagId()));
         return msg;
     }
 
     @Override
     public int delete(int id) {
-        if (id < 1) return 0;
-
         Message existing = cache.getById(id);
         if (existing == null) return 0;
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql,
-                stmt -> stmt.setInt(1, id));
-        if (row < 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete Message (id=" + id + ")",
+                () -> database.update(DELETE_SQL, stmt -> {
+                    stmt.setInt(1, id);
+                }),
+                MessageException::new
+        );
 
+        if (row != 1) return 0;
         refreshProvider.fireSingle(single, new MessageCache.MessageKey(existing.languageId(), existing.tagId()));
         return row;
     }
 
     @Override
     public int delete(@NotNull String tagId, int languageId) {
+        Objects.requireNonNull(tagId, "tagId cannot be null");
         String normalizedTagId = StringUtil.normalize(tagId);
-        if (normalizedTagId == null || languageId < 1) return 0;
+        if (normalizedTagId == null || normalizedTagId.isBlank())
+            throw new IllegalArgumentException("tagId cannot be blank");
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE tag_id = ? AND language_id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> {
-            stmt.setString(1, normalizedTagId);
-            stmt.setInt(2, languageId);
-        });
-        if (row < 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete Message (tagId=" + normalizedTagId + ", languageId=" + languageId + ")",
+                () -> database.update(DELETE_TAG_SQL, stmt -> {
+                    stmt.setString(1, normalizedTagId);
+                    stmt.setInt(2, languageId);
+                }),
+                MessageException::new
+        );
 
+        if (row != 1) return 0;
         refreshProvider.fireSingle(single, new MessageCache.MessageKey(languageId, normalizedTagId));
         return row;
     }
 
     @Override
     public int deleteAll(int languageId) {
-        if (languageId < 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete all Messages for language (id=" + languageId + ")",
+                () -> database.update(DELETE_LANGUAGE_SQL, stmt -> stmt.setInt(1, languageId)),
+                MessageException::new
+        );
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE language_id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql,
-                stmt -> stmt.setInt(1, languageId));
         if (row < 1) return 0;
-
         refreshProvider.fireSingle(single, new MessageCache.MessageKey(languageId, null));
         return row;
     }
 
     @Override
     public @Nullable Message update(int id, @NotNull String tagId, int languageId, @NotNull String message) {
+        Objects.requireNonNull(tagId, "tagId cannot be null");
+        Objects.requireNonNull(message, "message cannot be null");
         String normalizedTagId = StringUtil.normalize(tagId);
-        if (id < 1 || normalizedTagId == null || languageId < 1 || message.isBlank())
-            return null;
+        if (normalizedTagId == null || normalizedTagId.isBlank())
+            throw new IllegalArgumentException("tagId cannot be blank");
+        if (message.isBlank()) throw new IllegalArgumentException("message cannot be blank");
 
         Message existing = cache.getById(id);
         if (existing == null) return null;
@@ -131,16 +161,18 @@ public final class MessageProviderImpl implements MessageProvider {
         if (Objects.equals(normalizedTagId, existing.tagId()) &&
                 languageId == existing.languageId() &&
                 Objects.equals(message, existing.message()))
-            return existing; // No changes, return existing
+            return existing;
 
-        @Language("MariaDB")
-        String sql = "UPDATE %s SET tag_id = ?, language_id = ?, message = ? WHERE id = ?".formatted(TABLE_NAME);
-        int rows = database.update(sql, stmt -> {
-            stmt.setString(1, normalizedTagId);
-            stmt.setInt(2, languageId);
-            stmt.setString(3, message);
-            stmt.setInt(4, id);
-        });
+        int rows = MurmelExceptionWrapper.dbWrap(
+                "Failed to update Message (id=" + id + ", tagId=" + normalizedTagId + ", languageId=" + languageId + ")",
+                () -> database.update(UPDATE_SQL, stmt -> {
+                    stmt.setString(1, normalizedTagId);
+                    stmt.setInt(2, languageId);
+                    stmt.setString(3, message);
+                    stmt.setInt(4, id);
+                }),
+                MessageException::new
+        );
         if (rows < 1) return null;
 
         Message msg = Message.builder(existing)
@@ -190,8 +222,9 @@ public final class MessageProviderImpl implements MessageProvider {
         return upsertInternal(properties, true);
     }
 
-    private int[] upsertInternal(Properties properties, boolean fireCache) {
-        if (properties == null || properties.isEmpty())
+    private int @NotNull [] upsertInternal(@NotNull Properties properties, boolean fireCache) {
+        Objects.requireNonNull(properties, "properties cannot be null");
+        if (properties.isEmpty())
             throw new IllegalArgumentException("Missing properties file");
 
         String language = properties.getProperty("language.id");

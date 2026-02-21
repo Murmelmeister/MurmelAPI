@@ -17,6 +17,7 @@ public record Message(
     public Message {
         Objects.requireNonNull(tagId, "tagId must not be null");
         Objects.requireNonNull(message, "message must not be null");
+        if (tagId.length() > 255) throw new IllegalArgumentException("tagId cannot be longer than 255 characters");
     }
 
     public static @NotNull Builder builder(@NotNull Message message) {

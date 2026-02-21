@@ -30,8 +30,6 @@ public class MessageCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageCache.class);
 
     @Language("MariaDB")
-    private static final String SELECT_ALL = "SELECT * FROM %s";
-    @Language("MariaDB")
     private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE id = ?";
     @Language("MariaDB")
     private static final String SELECT_BY_LANGUAGE = "SELECT * FROM %s WHERE language_id = ?";
@@ -95,11 +93,6 @@ public class MessageCache implements MurmelCache {
     public void close() {
         refreshProvider.unregister(this);
         clear();
-    }
-
-    private @NotNull List<Message> loadAllFromDatabase() {
-        String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.message());
     }
 
     private @NotNull List<Message> loadByLanguage(LanguageKey key) {
