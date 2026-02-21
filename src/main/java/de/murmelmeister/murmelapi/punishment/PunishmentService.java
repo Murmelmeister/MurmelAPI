@@ -3,12 +3,12 @@ package de.murmelmeister.murmelapi.punishment;
 import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentException;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProvider;
-import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIp;
-import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIpProvider;
+import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
+import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddressProvider;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
-import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUser;
-import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
@@ -18,8 +18,8 @@ import java.util.UUID;
 public record PunishmentService(
         @NotNull PunishmentReasonProvider reasonProvider,
         @NotNull PunishmentLogProvider logProvider,
-        @NotNull PunishmentCurrentIpProvider ipProvider,
-        @NotNull PunishmentCurrentUserProvider userProvider
+        @NotNull PunishmentIpAddressProvider ipProvider,
+        @NotNull PunishmentUserProvider userProvider
 ) {
     public PunishmentService {
         Objects.requireNonNull(reasonProvider, "reasonProvider must not be null");
@@ -28,58 +28,58 @@ public record PunishmentService(
         Objects.requireNonNull(userProvider, "userProvider must not be null");
     }
 
-    public int punishedUser(int userId, int reasonId, int createdBy) {
-        PunishmentReason reason = reasonProvider.getReason(reasonId);
+    public int punishedUser(@NotNull UUID userId, int reasonId, int createdBy) {
+        PunishmentReason reason = reasonProvider.findReason(reasonId);
         PunishmentLog log = reason == null ? null : logProvider.create(userId, null, reason, createdBy);
         if (log == null)
             throw new PunishmentException("Failed to create punishment log for user: " + userId + " with reason: " + reasonId);
 
-        PunishmentCurrentUser punish = userProvider.create(userId, log.reasonTypeId(), log.id());
+        PunishmentUser punish = userProvider.create(userId, log.reasonTypeId(), log.id());
         if (punish == null)
             throw new PunishmentException("Failed to create punishment user: " + userId + " with reason: " + reasonId);
         return 2; // Note: 1 for log creation, 1 for user creation
     }
 
-    public int updatedPunishedUser(int userId, int reasonId, int createdBy) {
-        PunishmentReason reason = reasonProvider.getReason(reasonId);
+    public int updatedPunishedUser(@NotNull UUID userId, int reasonId, int createdBy) {
+        PunishmentReason reason = reasonProvider.findReason(reasonId);
         PunishmentLog log = reason == null ? null : logProvider.modify(userId, null, reason, createdBy);
         if (log == null)
             throw new PunishmentException("Failed to update punishment log for user: " + userId + " with reason: " + reasonId);
 
-        PunishmentCurrentUser punish = userProvider.getPunishedUser(userId, log.reasonTypeId());
-        PunishmentCurrentUser updated = punish == null ? null : userProvider.update(punish.userId(), punish.typeId(), log.id());
+        PunishmentUser punish = userProvider.findPunishedUser(userId, log.reasonTypeId());
+        PunishmentUser updated = punish == null ? null : userProvider.update(punish.userId(), punish.typeId(), log.id());
         if (updated == null)
             throw new PunishmentException("Failed to update punishment user: " + userId + " with reason: " + reasonId);
         return 2; // Note: 1 for log creation, 1 for user update
     }
 
     public int punishedIp(@NotNull InetAddress inetAddress, int reasonId, int createdBy) {
-        PunishmentReason reason = reasonProvider.getReason(reasonId);
+        PunishmentReason reason = reasonProvider.findReason(reasonId);
         PunishmentLog log = reason == null ? null : logProvider.create(null, inetAddress, reason, createdBy);
         if (log == null)
             throw new PunishmentException("Failed to create punishment log for IP: " + inetAddress.getHostAddress() + " with reason: " + reasonId);
 
-        PunishmentCurrentIp punish = ipProvider.create(inetAddress, log.reasonTypeId(), log.id());
+        PunishmentIpAddress punish = ipProvider.create(inetAddress, log.reasonTypeId(), log.id());
         if (punish == null)
             throw new PunishmentException("Failed to create punishment IP: " + inetAddress.getHostAddress() + " with reason: " + reasonId);
         return 2; // Note: 1 for log creation, 1 for IP creation
     }
 
     public int updatedPunishedIp(@NotNull InetAddress inetAddress, int reasonId, int createdBy) {
-        PunishmentReason reason = reasonProvider.getReason(reasonId);
+        PunishmentReason reason = reasonProvider.findReason(reasonId);
         PunishmentLog log = reason == null ? null : logProvider.modify(null, inetAddress, reason, createdBy);
         if (log == null)
             throw new PunishmentException("Failed to update punishment log for IP: " + inetAddress.getHostAddress() + " with reason: " + reasonId);
 
-        PunishmentCurrentIp punish = ipProvider.getPunishedIp(inetAddress, log.reasonTypeId());
-        PunishmentCurrentIp updated = punish == null ? null : ipProvider.update(punish.inetAddress(), punish.typeId(), log.id());
+        PunishmentIpAddress punish = ipProvider.findPunishedIpAddress(inetAddress, log.reasonTypeId());
+        PunishmentIpAddress updated = punish == null ? null : ipProvider.update(punish.inetAddress(), punish.typeId(), log.id());
         if (updated == null)
             throw new PunishmentException("Failed to update punishment IP: " + inetAddress.getHostAddress() + " with reason: " + reasonId);
         return 2; // Note: 1 for log creation, 1 for IP update
     }
 
-    public int unpunishedUser(int userId, int typeId, @NotNull UUID logId, int changedBy) {
-        PunishmentLog currentLog = logProvider.getLog(logId);
+    public int unpunishedUser(@NotNull UUID userId, int typeId, @NotNull UUID logId, int changedBy) {
+        PunishmentLog currentLog = logProvider.findLog(logId);
         if (currentLog == null)
             throw new PunishmentException("Punishment log not found for user: " + userId + " with type: " + typeId);
 
@@ -94,7 +94,7 @@ public record PunishmentService(
     }
 
     public int unpunishedIp(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId, int changedBy) {
-        PunishmentLog currentLog = logProvider.getLog(logId);
+        PunishmentLog currentLog = logProvider.findLog(logId);
         if (currentLog == null)
             throw new PunishmentException("Punishment log not found for IP: " + inetAddress.getHostAddress() + " with type: " + typeId);
 
@@ -108,7 +108,7 @@ public record PunishmentService(
         return row;
     }
 
-    public void autoUnpunishedUser(int userId, int typeId) {
+    public void autoUnpunishedUser(@NotNull UUID userId, int typeId) {
         userProvider.delete(userId, typeId);
     }
 
@@ -116,21 +116,21 @@ public record PunishmentService(
         ipProvider.delete(inetAddress, typeId);
     }
 
-    public boolean isPunishedUser(int userId, int typeId) {
-        return userProvider.getPunishedUser(userId, typeId) != null;
+    public boolean isPunishedUser(@NotNull UUID userId, int typeId) {
+        return userProvider.findPunishedUser(userId, typeId) != null;
     }
 
     public boolean isPunishedIp(@NotNull InetAddress inetAddress, int typeId) {
-        return ipProvider.getPunishedIp(inetAddress, typeId) != null;
+        return ipProvider.findPunishedIpAddress(inetAddress, typeId) != null;
     }
 
     public boolean isExpiredUser(@NotNull UUID logId) {
-        PunishmentLog log = logProvider.getLog(logId);
+        PunishmentLog log = logProvider.findLog(logId);
         return log != null && log.isExpired();
     }
 
     public boolean isExpiredIp(@NotNull UUID logId) {
-        PunishmentLog log = logProvider.getLog(logId);
+        PunishmentLog log = logProvider.findLog(logId);
         return log != null && log.isExpired();
     }
 }
