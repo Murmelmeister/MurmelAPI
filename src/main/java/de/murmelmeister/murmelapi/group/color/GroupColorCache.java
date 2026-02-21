@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +60,7 @@ public class GroupColorCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.GROUP_COLORS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -120,8 +122,18 @@ public class GroupColorCache implements MurmelCache {
         return optColor != null && optColor.isPresent() ? optColor.orElse(null) : null;
     }
 
-    public @Nullable List<GroupColor> getByGroupId(int groupId) {
-        return cacheByGroupId.get(groupId);
+    public @NotNull @Unmodifiable List<GroupColor> getByGroupId(int groupId) {
+        List<GroupColor> colors = cacheByGroupId.get(groupId);
+        if (colors == null || colors.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(colors);
+    }
+
+    public @NotNull @Unmodifiable List<GroupColor> getAll() {
+        List<GroupColor> colors = listCache.get(ALL_KEY);
+        if (colors == null || colors.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(colors);
     }
 
     public void remove(@NotNull ColorKey key) {
@@ -139,13 +151,6 @@ public class GroupColorCache implements MurmelCache {
         cacheByKey.invalidateAll();
         cacheByGroupId.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<GroupColor> getCachedColors() {
-        List<GroupColor> colors = listCache.get(ALL_KEY);
-        if (colors == null || colors.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(colors);
     }
 
     public record ColorKey(int groupId, @Nullable Integer typeId) {

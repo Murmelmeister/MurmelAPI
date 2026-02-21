@@ -2,11 +2,15 @@ package de.murmelmeister.murmelapi.group.color;
 
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.group.GroupException;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -21,6 +25,40 @@ import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
  */
 public final class GroupColorProviderImpl implements GroupColorProvider {
     private static final String TABLE_NAME = "group_color";
+
+    @Language("MariaDB")
+    private static final String CREATE_SQL = """
+            INSERT INTO %s (group_id, type_id, value, created_by)
+            VALUES (?, ?, ?, ?)
+            RETURNING group_id, type_id, value, created_by, created_at, changed_by, changed_at
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String REMOVE_SQL = "DELETE FROM %s WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String CLEAR_SQL = "DELETE FROM %s WHERE group_id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String UPDATE_SQL = """
+            UPDATE %s
+            SET value = ?,
+                changed_by = ?
+            WHERE group_id = ? AND type_id = ?
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String UPDATE_SELECT_SQL = "SELECT changed_at FROM %s WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String UPSERT_SQL = """
+            INSERT INTO %s (group_id, type_id, value, created_by)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                value = VALUES(value),
+                changed_by = ?
+            RETURNING group_id, type_id, value, created_by, created_at, changed_by, changed_at
+            """.formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -40,112 +78,113 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
     }
 
     @Override
-    public @Nullable GroupColor getGroupColor(int groupId, int typeId) {
+    public @Nullable GroupColor findGroupColor(int groupId, int typeId) {
         return cache.get(groupId, typeId);
     }
 
     @Override
-    public @Nullable List<GroupColor> getGroupColors(int groupId) {
+    public @NotNull @Unmodifiable List<GroupColor> findGroupColors(int groupId) {
         return cache.getByGroupId(groupId);
     }
 
     @Override
-    public @NotNull List<GroupColor> getGroupColors() {
-        return cache.getCachedColors();
+    public @NotNull @Unmodifiable List<GroupColor> findGroupColors() {
+        return cache.getAll();
     }
 
     @Override
     public @Nullable GroupColor add(int groupId, int typeId, @NotNull String value, int createdBy) {
-        if (groupId < 1 || typeId < 1 || createdBy < CONSOLE_USER_ID)
-            return null;
+        Objects.requireNonNull(value, "value cannot be null");
+        if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
+        if (typeId < 1) throw new IllegalArgumentException("typeId must be >= 1");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
 
-        @Language("MariaDB")
-        String insertSql = """
-                INSERT INTO %s (group_id, type_id, value, created_by)
-                VALUES (?, ?, ?, ?)
-                """.formatted(TABLE_NAME);
-        int row = database.update(insertSql, stmt -> {
-            stmt.setInt(1, groupId);
-            stmt.setInt(2, typeId);
-            stmt.setString(3, value);
-            stmt.setInt(4, createdBy);
-        });
-        if (row < 1) return null;
-
-        @Language("MariaDB")
-        String selectSql = "SELECT created_at FROM %s WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
-        LocalDateTime createdAt = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
-                stmt -> {
+        GroupColor groupColor = MurmelExceptionWrapper.dbWrap(
+                "Failed to create GroupColor (groupId=" + groupId + ", typeId=" + typeId + ")",
+                () -> database.query(CREATE_SQL, null, ResultSetUtil.groupColor(), stmt -> {
                     stmt.setInt(1, groupId);
                     stmt.setInt(2, typeId);
-                });
-        if (createdAt == null) return null;
+                    stmt.setString(3, value);
+                    stmt.setInt(4, createdBy);
+                }),
+                GroupException::new
+        );
 
-        GroupColor groupColor = new GroupColor(groupId, typeId, value, createdBy, createdAt, null, null);
+        if (groupColor == null) return null;
         refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         return groupColor;
     }
 
     @Override
     public int remove(int groupId, int typeId) {
-        if (groupId < 1 || typeId < 1) return 0;
+        if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
+        if (typeId < 1) throw new IllegalArgumentException("typeId must be >= 1");
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> {
-            stmt.setInt(1, groupId);
-            stmt.setInt(2, typeId);
-        });
-        if (row < 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to remove GroupColor (groupId=" + groupId + ", typeId=" + typeId + ")",
+                () -> database.update(REMOVE_SQL, stmt -> {
+                    stmt.setInt(1, groupId);
+                    stmt.setInt(2, typeId);
+                }),
+                GroupException::new
+        );
 
+        if (row != 1) return 0;
         refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         return row;
     }
 
     @Override
     public int clear(int groupId) {
-        if (groupId < 1) return 0;
+        if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE group_id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql,
-                stmt -> stmt.setInt(1, groupId));
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to clear GroupColors (groupId=" + groupId + ")",
+                () -> database.update(CLEAR_SQL,
+                        stmt -> stmt.setInt(1, groupId)),
+                GroupException::new
+        );
+
         if (row < 1) return 0;
-
         refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, null));
         return row;
     }
 
     @Override
     public @Nullable GroupColor update(int groupId, int typeId, @NotNull String value, int changedBy) {
-        if (groupId < 1 || typeId < 1 || changedBy < CONSOLE_USER_ID)
-            return null;
+        Objects.requireNonNull(value, "value cannot be null");
+        if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
+        if (typeId < 1) throw new IllegalArgumentException("typeId must be >= 1");
+        if (changedBy < CONSOLE_USER_ID) throw new IllegalArgumentException("changedBy must be >= " + CONSOLE_USER_ID);
 
         GroupColor existing = cache.get(groupId, typeId);
         if (existing == null) return null;
 
         if (Objects.equals(value, existing.value()))
-            return existing; // No changes, return existing
+            return existing;
 
-        @Language("MariaDB")
-        String updateSql = "UPDATE %s SET value = ?, changed_by = ? WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
-        int row = database.update(updateSql, stmt -> {
-            stmt.setString(1, value);
-            stmt.setInt(2, changedBy);
-            stmt.setInt(3, groupId);
-            stmt.setInt(4, typeId);
-        });
-        if (row < 1) return null;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to update GroupColor (groupId=" + groupId + ", typeId=" + typeId + ")",
+                () -> database.update(UPDATE_SQL, stmt -> {
+                    stmt.setString(1, value);
+                    stmt.setInt(2, changedBy);
+                    stmt.setInt(3, groupId);
+                    stmt.setInt(4, typeId);
+                }),
+                GroupException::new
+        );
+        if (row != 1) return null;
 
-        @Language("MariaDB")
-        String selectSql = "SELECT changed_at FROM %s WHERE group_id = ? AND type_id = ?".formatted(TABLE_NAME);
-        LocalDateTime changedAt = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
-                stmt -> {
-                    stmt.setInt(1, groupId);
-                    stmt.setInt(2, typeId);
-                });
+        LocalDateTime changedAt = MurmelExceptionWrapper.dbWrap(
+                "Failed to retrieve changed_at for GroupColor (groupId=" + groupId + ", typeId=" + typeId + ")",
+                () -> database.query(UPDATE_SELECT_SQL, null,
+                        resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
+                        stmt -> {
+                            stmt.setInt(1, groupId);
+                            stmt.setInt(2, typeId);
+                        }),
+                GroupException::new
+        );
         if (changedAt == null) return null;
 
         GroupColor groupColor = GroupColor.builder(existing)
@@ -155,5 +194,39 @@ public final class GroupColorProviderImpl implements GroupColorProvider {
                 .build();
         refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
         return groupColor;
+    }
+
+    @Override
+    public @Nullable GroupColor upsert(int groupId, int typeId, @NotNull String value, int executorId) {
+        Objects.requireNonNull(value, "value cannot be null");
+        if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
+        if (typeId < 1) throw new IllegalArgumentException("typeId must be >= 1");
+        if (executorId < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("executorId must be >= " + CONSOLE_USER_ID);
+
+        GroupColor existing = cache.get(groupId, typeId);
+        if (existing != null && Objects.equals(value, existing.value()))
+            return existing;
+
+        GroupColor saved = MurmelExceptionWrapper.dbWrap(
+                "Failed to upsert GroupColor (groupId=" + groupId + ", typeId=" + typeId + ")",
+                () -> database.query(UPSERT_SQL, null, ResultSetUtil.groupColor(), stmt -> {
+                    stmt.setInt(1, groupId);
+                    stmt.setInt(2, typeId);
+                    stmt.setString(3, value);
+                    stmt.setInt(4, executorId);
+                    stmt.setInt(5, executorId);
+                }),
+                GroupException::new
+        );
+
+        if (saved == null) return null;
+        refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
+        return saved;
+    }
+
+    @Override
+    public @Nullable GroupColor upsert(@NotNull GroupColor groupColor, int executorId) {
+        return upsert(groupColor.groupId(), groupColor.typeId(), groupColor.value(), executorId);
     }
 }
