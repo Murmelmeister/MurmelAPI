@@ -19,6 +19,8 @@ public record PrefixColor(
         Objects.requireNonNull(id, "id must not be null");
         Objects.requireNonNull(color, "color must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
+        if (id.length() > 100) throw new IllegalArgumentException("id cannot be longer than 100 characters");
+        if (color.length() > 255) throw new IllegalArgumentException("color cannot be longer than 255 characters");
     }
 
     public static @NotNull Builder builder(@NotNull PrefixColor prefixColor) {
