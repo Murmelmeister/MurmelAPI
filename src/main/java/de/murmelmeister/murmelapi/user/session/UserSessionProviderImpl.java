@@ -85,7 +85,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql,
                 stmt -> stmt.setString(1, sessionId.toString()));
-        if (row < 1) return 0;
+        if (row != 1) return 0;
 
         refreshProvider.fireSingle(single, existing);
         return row;
