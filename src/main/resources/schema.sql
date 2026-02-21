@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS user_login (
     logout_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     ip_address INET6 NOT NULL,
     client_brand VARCHAR(50) NULL,
-    protocol_version INT NULL,
+    protocol_version INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX IF NOT EXISTS idx_user_id ON user_login (user_id);
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS user_session (
     login_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     ip_address INET6 NOT NULL,
     client_brand VARCHAR(50) NULL,
-    protocol_version INT NULL,
+    protocol_version INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
