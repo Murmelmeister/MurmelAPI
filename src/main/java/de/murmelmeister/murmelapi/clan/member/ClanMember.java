@@ -16,6 +16,7 @@ public record ClanMember(
         Objects.requireNonNull(clanId, "clanId must not be null");
         Objects.requireNonNull(joinedAt, "joinedAt must not be null");
         Objects.requireNonNull(groupId, "groupId must not be null");
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
     }
 
     public static @NotNull Builder builder(@NotNull ClanMember clanMember) {

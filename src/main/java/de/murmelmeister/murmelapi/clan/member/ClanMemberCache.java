@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +60,7 @@ public class ClanMemberCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.CLAN_MEMBERS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -119,14 +121,23 @@ public class ClanMemberCache implements MurmelCache {
         return optMember != null && optMember.isPresent() ? optMember.orElse(null) : null;
     }
 
-    public @Nullable List<ClanMember> getByClanId(@Nullable UUID clanId) {
-        if (clanId == null) return null;
-        return cacheByClanId.get(clanId);
+    public @NotNull @Unmodifiable List<ClanMember> getByClanId(@NotNull UUID clanId) {
+        List<ClanMember> members = cacheByClanId.get(clanId);
+        if (members == null || members.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(members);
+    }
+
+    public @NotNull @Unmodifiable List<ClanMember> getAll() {
+        List<ClanMember> members = listCache.get(ALL_KEY);
+        if (members == null || members.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(members);
     }
 
     public void remove(@NotNull Member member) {
         cache.invalidate(member);
-        CacheUtil.remove(cacheByClanId, member.clanId(), v -> v.clanId().equals(member.clanId()));
+        cacheByClanId.invalidate(member.clanId());
         CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(member.clanId()));
     }
 
@@ -134,13 +145,6 @@ public class ClanMemberCache implements MurmelCache {
         cache.invalidateAll();
         cacheByClanId.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<ClanMember> getCachedMembers() {
-        List<ClanMember> members = listCache.get(ALL_KEY);
-        if (members == null || members.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(members);
     }
 
     public record Member(@NotNull UUID clanId, int userId) {
