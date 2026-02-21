@@ -20,7 +20,7 @@ import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIp;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
-import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUser;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.settings.Settings;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.color.UserPrefixColor;
@@ -258,12 +258,12 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<PunishmentCurrentUser> punishmentCurrentUser() {
+    public static @NotNull ResultSetProcessor<PunishmentUser> punishmentUser() {
         return resultSet -> {
-            int userId = resultSet.getInt("user_id");
+            UUID userId = UUID.fromString(resultSet.getString("user_id"));
             int typeId = resultSet.getInt("type_id");
             UUID logId = UUID.fromString(resultSet.getString("log_id"));
-            return new PunishmentCurrentUser(userId, typeId, logId);
+            return new PunishmentUser(userId, typeId, logId);
         };
     }
 

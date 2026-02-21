@@ -4,8 +4,8 @@ import de.murmelmeister.murmelapi.exceptions.user.UserException;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProvider;
 import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
-import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUser;
-import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
 import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
@@ -32,7 +32,7 @@ public record UserService(
         @NotNull UserLoginProvider loginProvider,
         @NotNull UserSessionProvider sessionProvider,
         @NotNull UserExcuseProvider userExcuseProvider,
-        @NotNull PunishmentCurrentUserProvider punishUserProvider,
+        @NotNull PunishmentUserProvider punishUserProvider,
         @NotNull PunishmentLogProvider punishLogProvider
 ) {
     public UserService {
@@ -158,7 +158,7 @@ public record UserService(
     public void loginStreak(int userId,
                             ZoneId zoneId,
                             BiPredicate<Integer, LocalDate> isForgivenDay,
-                            Predicate<Integer> isPermanentlyBlocked) {
+                            Predicate<UUID> isPermanentlyBlocked) {
 
         if (userId < 1)
             throw new IllegalArgumentException("User ID must be greater than 0");
@@ -166,12 +166,16 @@ public record UserService(
         Objects.requireNonNull(isForgivenDay, "isForgivenDay must not be null");
         Objects.requireNonNull(isPermanentlyBlocked, "isPermanentlyBlocked must not be null");
 
+        User user = userProvider.findById(userId);
+        if (user == null)
+            throw new UserException("User not found for ID: " + userId);
+
         UserStats stats = statsProvider.findByUserId(userId);
         if (stats == null)
             throw new UserException("Stats not found for user ID: " + userId);
 
         // Permanent block => breaks the streak (and keeps the DB state clean)
-        if (isPermanentlyBlocked.test(userId)) {
+        if (isPermanentlyBlocked.test(user.mojangId())) {
             if (statsProvider.update(userId, stats.playTime(), 0, null, stats.lastSeenAt()) == null)
                 throw new UserException("Failed to update stats for user ID: " + userId);
             return;
@@ -222,7 +226,7 @@ public record UserService(
                                             @NotNull UserStats stats,
                                             ZoneId zoneId,
                                             BiPredicate<Integer, LocalDate> isForgivenDay,
-                                            Predicate<Integer> isPermanentlyBlocked) {
+                                            Predicate<UUID> isPermanentlyBlocked) {
         if (userId < 1) return;
         Objects.requireNonNull(stats, "stats must not be null");
         Objects.requireNonNull(zoneId, "zoneId must not be null");
@@ -258,9 +262,9 @@ public record UserService(
                 .anyMatch(excuse -> excuse.startAt().isBefore(nextDayStart) && !excuse.endAt().isBefore(dayStart));
     }
 
-    private boolean isPermanentlyBlocked(int userId) {
-        if (userId < 1) return false;
-        PunishmentCurrentUser punishUser = punishUserProvider.getPunishedUser(userId, PunishmentType.BAN.getId());
+    private boolean isPermanentlyBlocked(UUID mojangId) {
+        if (mojangId == null) return false;
+        PunishmentUser punishUser = punishUserProvider.findPunishedUser(mojangId, PunishmentType.BAN.getId());
         if (punishUser == null) return false;
 
         PunishmentLog punishmentLog = punishLogProvider.getLog(punishUser.logId());

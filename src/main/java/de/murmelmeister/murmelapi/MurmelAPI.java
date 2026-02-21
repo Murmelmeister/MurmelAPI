@@ -46,8 +46,8 @@ import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIpProvider;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentCurrentIpProviderImpl;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProviderImpl;
-import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProvider;
-import de.murmelmeister.murmelapi.punishment.user.PunishmentCurrentUserProviderImpl;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
+import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProviderImpl;
 import de.murmelmeister.murmelapi.settings.SettingsProvider;
 import de.murmelmeister.murmelapi.settings.SettingsProviderImpl;
 import de.murmelmeister.murmelapi.settings.SettingsService;
@@ -137,7 +137,7 @@ public final class MurmelAPI {
     private final PunishmentReasonProvider punishReasonProvider;
     private final PunishmentLogProvider punishLogProvider;
     private final PunishmentCurrentIpProvider punishIpProvider;
-    private final PunishmentCurrentUserProvider punishUserProvider;
+    private final PunishmentUserProvider punishUserProvider;
     private final PunishmentService punishmentService;
 
     private final ClanProvider clanProvider;
@@ -197,7 +197,7 @@ public final class MurmelAPI {
         this.punishReasonProvider = new PunishmentReasonProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishLogProvider = new PunishmentLogProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishIpProvider = new PunishmentCurrentIpProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.punishUserProvider = new PunishmentCurrentUserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.punishUserProvider = new PunishmentUserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishmentService = new PunishmentService(punishReasonProvider, punishLogProvider, punishIpProvider, punishUserProvider);
         this.userService = new UserService(userProvider, userStatsProvider, userLoginProvider, userSessionProvider,
                 userExcuseProvider, punishUserProvider, punishLogProvider);
@@ -415,7 +415,7 @@ public final class MurmelAPI {
         return punishIpProvider;
     }
 
-    public PunishmentCurrentUserProvider getPunishUserProvider() {
+    public PunishmentUserProvider getPunishUserProvider() {
         return punishUserProvider;
     }
 

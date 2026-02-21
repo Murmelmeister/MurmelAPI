@@ -196,7 +196,7 @@ CREATE INDEX IF NOT EXISTS idx_reason_type ON punishment_reasons (type_id);
 CREATE TABLE IF NOT EXISTS punishment_logs (
     id UUID PRIMARY KEY,
     action ENUM('CREATED', 'MODIFIED', 'REVOKED') NOT NULL,
-    user_id INT NULL,
+    user_id UUID NULL,
     ip_address INET6 NULL,
     CONSTRAINT chk_user_or_ip_not_both_null CHECK (user_id IS NOT NULL OR ip_address IS NOT NULL),
     reason_id INT NULL,
@@ -207,7 +207,6 @@ CREATE TABLE IF NOT EXISTS punishment_logs (
     reason_auto_punish BOOLEAN NOT NULL,
     created_by INT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (reason_id) REFERENCES punishment_reasons(id) ON DELETE SET NULL ON UPDATE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -215,7 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_user ON punishment_logs (user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_ip ON punishment_logs (ip_address);
 CREATE INDEX IF NOT EXISTS idx_audit_reason ON punishment_logs (reason_id);
 
-CREATE TABLE IF NOT EXISTS punishment_current_ip (
+CREATE TABLE IF NOT EXISTS punishment_ip_address (
     ip_address INET6 NOT NULL,
     type_id INT NOT NULL,
     log_id UUID NOT NULL UNIQUE,
@@ -224,12 +223,11 @@ CREATE TABLE IF NOT EXISTS punishment_current_ip (
     FOREIGN KEY (log_id) REFERENCES punishment_logs(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS punishment_current_user (
-    user_id INT NOT NULL,
+CREATE TABLE IF NOT EXISTS punishment_user (
+    user_id UUID NOT NULL,
     type_id INT NOT NULL,
     log_id UUID NOT NULL UNIQUE,
     PRIMARY KEY (user_id, type_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),
     FOREIGN KEY (log_id) REFERENCES punishment_logs(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

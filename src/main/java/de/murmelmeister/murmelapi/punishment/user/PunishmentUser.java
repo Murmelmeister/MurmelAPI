@@ -5,26 +5,27 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 import java.util.UUID;
 
-public record PunishmentCurrentUser(
-        int userId,
+public record PunishmentUser(
+        @NotNull UUID userId,
         int typeId,
         @NotNull UUID logId
 ) {
-    public PunishmentCurrentUser {
-        Objects.requireNonNull(logId, "Log ID cannot be null");
+    public PunishmentUser {
+        Objects.requireNonNull(userId, "userId cannot be null");
+        Objects.requireNonNull(logId, "logId cannot be null");
     }
 
-    public static @NotNull Builder builder(@NotNull PunishmentCurrentUser currentUser) {
+    public static @NotNull Builder builder(@NotNull PunishmentUser currentUser) {
         return new Builder(currentUser);
     }
 
     public static class Builder {
-        private final int userId;
+        private final UUID userId;
         private final int typeId;
 
         private UUID logId;
 
-        private Builder(@NotNull PunishmentCurrentUser currentUser) {
+        private Builder(@NotNull PunishmentUser currentUser) {
             this.userId = currentUser.userId();
             this.typeId = currentUser.typeId();
             this.logId = currentUser.logId();
@@ -35,8 +36,8 @@ public record PunishmentCurrentUser(
             return this;
         }
 
-        public @NotNull PunishmentCurrentUser build() {
-            return new PunishmentCurrentUser(userId, typeId, logId);
+        public @NotNull PunishmentUser build() {
+            return new PunishmentUser(userId, typeId, logId);
         }
     }
 }
