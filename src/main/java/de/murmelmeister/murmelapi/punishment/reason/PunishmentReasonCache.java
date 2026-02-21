@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +59,7 @@ public class PunishmentReasonCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.PUNISHMENT_REASONS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -115,13 +117,23 @@ public class PunishmentReasonCache implements MurmelCache {
         return optReason != null && optReason.isPresent() ? optReason.orElse(null) : null;
     }
 
-    public @Nullable List<PunishmentReason> getByType(int typeId) {
-        return cacheByType.get(typeId);
+    public @NotNull @Unmodifiable List<PunishmentReason> getByType(int typeId) {
+        List<PunishmentReason> reasons = cacheByType.get(typeId);
+        if (reasons == null || reasons.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(reasons);
+    }
+
+    public @NotNull @Unmodifiable List<PunishmentReason> getAll() {
+        List<PunishmentReason> reasons = listCache.get(ALL_KEY);
+        if (reasons == null || reasons.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(reasons);
     }
 
     public void remove(@NotNull PunishmentReason reason) {
         cacheById.invalidate(reason.id());
-        CacheUtil.remove(cacheByType, reason.typeId(), v -> v.id() == reason.id());
+        cacheByType.invalidate(reason.typeId());
         CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == reason.id());
     }
 
@@ -129,12 +141,5 @@ public class PunishmentReasonCache implements MurmelCache {
         cacheById.invalidateAll();
         cacheByType.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<PunishmentReason> getCachedPunishReasons() {
-        List<PunishmentReason> reasons = listCache.get(ALL_KEY);
-        if (reasons == null || reasons.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(reasons);
     }
 }
