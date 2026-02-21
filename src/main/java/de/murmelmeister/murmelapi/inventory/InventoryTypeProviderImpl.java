@@ -3,17 +3,32 @@ package de.murmelmeister.murmelapi.inventory;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.inventory.InventoryException;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 
 public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
     private static final String TABLE_NAME = "inventory_type";
+
+    @Language("MariaDB")
+    private static final String CREATE_SQL = """
+            INSERT INTO %s (inventory_name)
+            VALUES (?)
+            RETURNING id, inventory_name
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -38,37 +53,41 @@ public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
     }
 
     @Override
-    public @NotNull List<InventoryType> findAll() {
+    public @NotNull @Unmodifiable List<InventoryType> findAll() {
         return cache.getAll();
     }
 
     @Override
     public @Nullable InventoryType create(@NotNull String name) {
+        Objects.requireNonNull(name, "name cannot be null");
         String normalizedName = StringUtil.normalize(name);
-        if (normalizedName == null)
-            return null;
+        if (normalizedName == null || normalizedName.isBlank())
+            throw new IllegalArgumentException("name cannot be blank");
 
-        @Language("MariaDB")
-        String sql = "INSERT INTO %s (inventory_name) VALUES (?)".formatted(TABLE_NAME);
-        int id = (int) database.updateAndGetGeneratedKeys(sql, stmt -> stmt.setString(1, normalizedName));
-        if (id < 1) return null;
+        InventoryType type = MurmelExceptionWrapper.dbWrap(
+                "Failed to create InventoryType (name=" + normalizedName + ")",
+                () -> database.query(CREATE_SQL, null, ResultSetUtil.inventoryType(),
+                        stmt -> stmt.setString(1, normalizedName)),
+                InventoryException::new
+        );
 
-        InventoryType type = new InventoryType(id, normalizedName);
+        if (type == null) return null;
         refreshProvider.fireSingle(single, type);
         return type;
     }
 
     @Override
     public int delete(int id) {
-        if (id < 1) return 0;
         InventoryType existing = cache.getById(id);
         if (existing == null) return 0;
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql, stmt -> stmt.setInt(1, id));
-        if (row < 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete InventoryType (id=" + id + ")",
+                () -> database.update(DELETE_SQL, stmt -> stmt.setInt(1, id)),
+                InventoryException::new
+        );
 
+        if (row < 1) return 0;
         refreshProvider.fireSingle(single, existing);
         return row;
     }
