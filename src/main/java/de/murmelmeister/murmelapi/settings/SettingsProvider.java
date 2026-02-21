@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.settings;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
@@ -10,7 +11,9 @@ public interface SettingsProvider {
 
     @Nullable Settings findById(@Nullable String tag);
 
-    @NotNull List<Settings> findAll();
+    @NotNull
+    @Unmodifiable
+    List<Settings> findAll();
 
     @Nullable Settings create(@NotNull String tagId, @NotNull String json);
 

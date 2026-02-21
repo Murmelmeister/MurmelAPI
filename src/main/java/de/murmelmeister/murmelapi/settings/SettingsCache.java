@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +55,7 @@ public class SettingsCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.SETTINGS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -106,7 +108,7 @@ public class SettingsCache implements MurmelCache {
         return optSettings != null && optSettings.isPresent() ? optSettings.orElse(null) : null;
     }
 
-    public @NotNull List<Settings> getCachedSettings() {
+    public @NotNull @Unmodifiable List<Settings> getAll() {
         List<Settings> settings = listCache.get(ALL_KEY);
         if (settings == null || settings.isEmpty())
             return Collections.emptyList();

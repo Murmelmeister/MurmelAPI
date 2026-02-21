@@ -9,6 +9,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -41,8 +42,8 @@ public final class SettingsProviderImpl implements SettingsProvider {
     }
 
     @Override
-    public @NotNull List<Settings> findAll() {
-        return cache.getCachedSettings();
+    public @NotNull @Unmodifiable List<Settings> findAll() {
+        return cache.getAll();
     }
 
     @Override
@@ -51,24 +52,17 @@ public final class SettingsProviderImpl implements SettingsProvider {
         if (normalizedTagId == null) return null;
 
         @Language("MariaDB")
-        String insertSql = """
+        String sql = """
                 INSERT INTO %s (tag_id, value_json)
                 VALUES (?, ?)
+                RETURNING tag_id, value_json, updated_at
                 """.formatted(TABLE_NAME);
-        int row = database.update(insertSql, stmt -> {
+        Settings settings = database.query(sql, null, ResultSetUtil.settings(), stmt -> {
             stmt.setString(1, normalizedTagId);
             stmt.setString(2, json);
         });
-        if (row < 1) return null;
 
-        @Language("MariaDB")
-        String selectSql = "SELECT updated_at FROM %s WHERE tag_id = ?".formatted(TABLE_NAME);
-        LocalDateTime updatedAt = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("updated_at").toLocalDateTime(),
-                stmt -> stmt.setString(1, normalizedTagId));
-        if (updatedAt == null) return null;
-
-        Settings settings = new Settings(normalizedTagId, json, updatedAt);
+        if (settings == null) return null;
         refreshProvider.fireSingle(single, settings);
         return settings;
     }
@@ -81,7 +75,7 @@ public final class SettingsProviderImpl implements SettingsProvider {
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE tag_id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> stmt.setString(1, tagId));
-        if (row < 1) return 0;
+        if (row != 1) return 0;
 
         refreshProvider.fireSingle(single, existing);
         return row;
@@ -99,12 +93,16 @@ public final class SettingsProviderImpl implements SettingsProvider {
             return existing;
 
         @Language("MariaDB")
-        String updateSql = "UPDATE %s SET value_json = ? WHERE tag_id = ?".formatted(TABLE_NAME);
+        String updateSql = """
+                UPDATE %s
+                SET value_json = ?
+                WHERE tag_id = ?
+                """.formatted(TABLE_NAME);
         int row = database.update(updateSql, stmt -> {
             stmt.setString(1, json);
             stmt.setString(2, normalizedTagId);
         });
-        if (row < 1) return null;
+        if (row != 1) return null;
 
         @Language("MariaDB")
         String selectSql = "SELECT updated_at FROM %s WHERE tag_id = ?".formatted(TABLE_NAME);
@@ -129,7 +127,8 @@ public final class SettingsProviderImpl implements SettingsProvider {
 
         @Language("MariaDB")
         String sql = """
-                INSERT INTO %s (tag_id, value_json) VALUES (?, ?)
+                INSERT INTO %s (tag_id, value_json)
+                VALUES (?, ?)
                 ON DUPLICATE KEY UPDATE value_json = VALUES(value_json)
                 RETURNING tag_id, value_json, updated_at
                 """.formatted(TABLE_NAME);

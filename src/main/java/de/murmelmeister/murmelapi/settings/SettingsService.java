@@ -3,6 +3,7 @@ package de.murmelmeister.murmelapi.settings;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +17,7 @@ public final class SettingsService {
         this.gson = new GsonBuilder().setPrettyPrinting().create();
     }
 
-    public <T> T get(@NotNull String tagId, @NotNull Class<T> type, T defaultValue) {
+    public <T> T get(@NotNull String tagId, @NotNull Class<T> type, @Nullable T defaultValue) {
         Settings settings = provider.findById(tagId);
         if (settings == null) return defaultValue;
 
