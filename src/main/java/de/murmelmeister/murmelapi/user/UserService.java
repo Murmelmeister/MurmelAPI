@@ -1,7 +1,6 @@
 package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
-import de.murmelmeister.murmelapi.exceptions.user.UserSessionException;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProvider;
 import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
@@ -54,7 +53,7 @@ public record UserService(
         if (session != null) {
             loginProvider.create(session);
             if (sessionProvider.delete(session.id()) < 1)
-                throw new UserSessionException("Failed to delete existing session for user ID: " + userId);
+                throw new UserException("Failed to delete existing session for user ID: " + userId);
         }
         sessionProvider.create(userId, inetAddress, clientBrand, protocolVersion);
     }
@@ -67,7 +66,7 @@ public record UserService(
         if (session != null) {
             loginProvider.create(session);
             if (sessionProvider.delete(session.id()) < 1)
-                throw new UserSessionException("Failed to delete session for user ID: " + userId);
+                throw new UserException("Failed to delete session for user ID: " + userId);
         }
     }
 
