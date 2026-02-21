@@ -1,6 +1,8 @@
 package de.murmelmeister.murmelapi.exceptions.punishment;
 
-public class PunishmentException extends RuntimeException {
+import de.murmelmeister.murmelapi.exceptions.MurmelException;
+
+public class PunishmentException extends MurmelException {
     public PunishmentException(String message) {
         super(message);
     }
