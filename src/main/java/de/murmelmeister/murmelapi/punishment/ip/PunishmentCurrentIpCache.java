@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 
 import java.net.InetAddress;
@@ -54,6 +55,7 @@ public class PunishmentCurrentIpCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.PUNISHMENT_IPS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -108,6 +110,13 @@ public class PunishmentCurrentIpCache implements MurmelCache {
         return optIp != null && optIp.isPresent() ? optIp.orElse(null) : null;
     }
 
+    public @NotNull @Unmodifiable List<PunishmentCurrentIp> getAll() {
+        List<PunishmentCurrentIp> ips = listCache.get(ALL_KEY);
+        if (ips == null || ips.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(ips);
+    }
+
     public void remove(@NotNull IpTypeKey key) {
         cache.invalidate(key);
         CacheUtil.remove(listCache, ALL_KEY, v -> v.inetAddress().equals(key.inetAddress()) && v.typeId() == key.typeId());
@@ -116,13 +125,6 @@ public class PunishmentCurrentIpCache implements MurmelCache {
     public void clear() {
         cache.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<PunishmentCurrentIp> getCachedPunishIPs() {
-        List<PunishmentCurrentIp> ips = listCache.get(ALL_KEY);
-        if (ips == null || ips.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(ips);
     }
 
     public record IpTypeKey(@NotNull InetAddress inetAddress, int typeId) {

@@ -37,7 +37,7 @@ public final class PunishmentCurrentIpProviderImpl implements PunishmentCurrentI
 
     @Override
     public @NotNull @Unmodifiable List<InetAddress> getAllPunishedIps(int typeId) {
-        return cache.getCachedPunishIPs().stream()
+        return cache.getAll().stream()
                 .filter(punish -> punish.typeId() == typeId)
                 .map(PunishmentCurrentIp::inetAddress)
                 .toList();
