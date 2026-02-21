@@ -2,6 +2,7 @@ package de.murmelmeister.murmelapi.group;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
 
@@ -22,9 +23,9 @@ public sealed interface GroupProvider permits GroupProviderImpl {
 
     @Nullable Group findByName(@Nullable String groupName);
 
-    @NotNull List<Group> findAll();
+    @NotNull @Unmodifiable List<Group> findAll();
 
-    @NotNull List<String> findAllGroupNames();
+    @NotNull @Unmodifiable List<String> findAllGroupNames();
 
     @Nullable Group create(@NotNull String groupName, int priority, int createdBy);
 

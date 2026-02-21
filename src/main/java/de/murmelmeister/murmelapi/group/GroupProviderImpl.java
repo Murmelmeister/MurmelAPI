@@ -3,11 +3,15 @@ package de.murmelmeister.murmelapi.group;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
+import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
+import de.murmelmeister.murmelapi.exceptions.group.GroupException;
+import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -23,6 +27,28 @@ import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
  */
 public final class GroupProviderImpl implements GroupProvider {
     private static final String TABLE_NAME = "groups";
+
+    @Language("MariaDB")
+    private static final String CREATE_SQL = """
+            INSERT INTO %s (group_name, priority, created_by)
+            VALUES (?, ?, ?)
+            RETURNING id, group_name, priority, is_default, created_by, created_at, changed_by, changed_at
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String UPDATE_SQL = """
+            UPDATE %s
+            SET group_name = ?,
+                priority = ?,
+                changed_by = ?
+            WHERE id = ?
+            """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String UPDATE_SELECT_SQL = "SELECT changed_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -52,90 +78,90 @@ public final class GroupProviderImpl implements GroupProvider {
     }
 
     @Override
-    public @NotNull List<Group> findAll() {
-        return cache.getCachedGroups();
+    public @NotNull @Unmodifiable List<Group> findAll() {
+        return cache.getAll();
     }
 
     @Override
-    public @NotNull List<String> findAllGroupNames() {
+    public @NotNull @Unmodifiable List<String> findAllGroupNames() {
         return findAll().stream().map(Group::groupName).collect(Collectors.toList());
     }
 
     @Override
     public @Nullable Group create(@NotNull String groupName, int priority, int createdBy) {
+        Objects.requireNonNull(groupName, "groupName cannot be null");
         String normalizedGroupName = StringUtil.normalize(groupName);
-        if (normalizedGroupName == null || priority < 0 || createdBy < CONSOLE_USER_ID)
-            return null;
+        if (normalizedGroupName == null || normalizedGroupName.isBlank())
+            throw new IllegalArgumentException("groupName cannot be blank");
+        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
 
-        @Language("MariaDB")
-        String insertSql = """
-                INSERT INTO %s (group_name, priority, created_by)
-                VALUES (?, ?, ?)
-                """.formatted(TABLE_NAME);
-        int groupId = (int) database.updateAndGetGeneratedKeys(insertSql, stmt -> {
-            stmt.setString(1, normalizedGroupName);
-            stmt.setInt(2, priority);
-            stmt.setInt(3, createdBy);
-        });
-        if (groupId < 1) return null;
+        Group group = MurmelExceptionWrapper.dbWrap(
+                "Failed to create Group (groupName=" + normalizedGroupName + ")",
+                () -> database.query(CREATE_SQL, null, ResultSetUtil.group(), stmt -> {
+                    stmt.setString(1, normalizedGroupName);
+                    stmt.setInt(2, priority);
+                    stmt.setInt(3, createdBy);
+                }),
+                GroupException::new
+        );
 
-        @Language("MariaDB")
-        String selectSql = "SELECT created_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        LocalDateTime createdAt = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("created_at").toLocalDateTime(),
-                stmt -> stmt.setInt(1, groupId));
-        if (createdAt == null) return null;
-
-        Group group = new Group(groupId, normalizedGroupName, priority, false, createdBy, createdAt, null, null);
+        if (group == null) return null;
         refreshProvider.fireSingle(single, group);
         return group;
     }
 
     @Override
     public int delete(int groupId) {
-        if (groupId < 1) return 0;
+        if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
 
         Group existing = cache.getById(groupId);
         if (existing == null) return 0;
 
-        @Language("MariaDB")
-        String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        int row = database.update(sql,
-                stmt -> stmt.setInt(1, groupId));
-        if (row < 1) return 0;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete Group (groupId=" + groupId + ")",
+                () -> database.update(DELETE_SQL, stmt -> stmt.setInt(1, groupId)),
+                GroupException::new
+        );
 
+        if (row != 1) return 0;
         refreshProvider.fireSingle(single, existing);
         return row;
     }
 
     @Override
     public @Nullable Group update(int groupId, @NotNull String groupName, int priority, int changedBy) {
+        Objects.requireNonNull(groupName, "groupName cannot be null");
         String normalizedGroupName = StringUtil.normalize(groupName);
-        if (normalizedGroupName == null || priority < 0 || changedBy < CONSOLE_USER_ID)
-            return null;
+        if (normalizedGroupName == null || normalizedGroupName.isBlank())
+            throw new IllegalArgumentException("groupName cannot be blank");
+        if (changedBy < CONSOLE_USER_ID) throw new IllegalArgumentException("changedBy must be >= " + CONSOLE_USER_ID);
 
         Group existing = cache.getById(groupId);
         if (existing == null) return null;
 
-        if (Objects.equals(normalizedGroupName, existing.groupName()) &&
-                priority == existing.priority())
-            return existing; // No changes, return an existing group
+        if (Objects.equals(normalizedGroupName, existing.groupName())
+                && priority == existing.priority())
+            return existing;
 
-        @Language("MariaDB")
-        String updateSql = "UPDATE %s SET group_name = ?, priority = ?, changed_by = ? WHERE id = ?".formatted(TABLE_NAME);
-        int row = database.update(updateSql, stmt -> {
-            stmt.setString(1, normalizedGroupName);
-            stmt.setInt(2, priority);
-            stmt.setInt(3, changedBy);
-            stmt.setInt(4, groupId);
-        });
-        if (row < 1) return null;
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to update Group (groupId=" + groupId + ")",
+                () -> database.update(UPDATE_SQL, stmt -> {
+                    stmt.setString(1, normalizedGroupName);
+                    stmt.setInt(2, priority);
+                    stmt.setInt(3, changedBy);
+                    stmt.setInt(4, groupId);
+                }),
+                GroupException::new
+        );
+        if (row != 1) return null;
 
-        @Language("MariaDB")
-        String selectSql = "SELECT changed_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
-        LocalDateTime changedAt = database.query(selectSql, null,
-                resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
-                stmt -> stmt.setInt(1, groupId));
+        LocalDateTime changedAt = MurmelExceptionWrapper.dbWrap(
+                "Failed to select changed_at for Group (groupId=" + groupId + ")",
+                () -> database.query(UPDATE_SELECT_SQL, null,
+                        resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
+                        stmt -> stmt.setInt(1, groupId)),
+                GroupException::new
+        );
         if (changedAt == null) return null;
 
         Group group = Group.builder(existing)

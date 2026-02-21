@@ -13,6 +13,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,6 +59,7 @@ public class GroupCache implements MurmelCache {
     @Override
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
+
         if (RefreshType.GROUPS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
@@ -123,6 +125,13 @@ public class GroupCache implements MurmelCache {
         return optGroup != null && optGroup.isPresent() ? optGroup.orElse(null) : null;
     }
 
+    public @NotNull @Unmodifiable List<Group> getAll() {
+        List<Group> groups = listCache.get(ALL_KEY);
+        if (groups == null || groups.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(groups);
+    }
+
     public void remove(@NotNull Group group) {
         cacheById.invalidate(group.id());
         cacheByName.invalidate(group.groupName());
@@ -133,12 +142,5 @@ public class GroupCache implements MurmelCache {
         cacheById.invalidateAll();
         cacheByName.invalidateAll();
         listCache.invalidateAll();
-    }
-
-    public @NotNull List<Group> getCachedGroups() {
-        List<Group> groups = listCache.get(ALL_KEY);
-        if (groups == null || groups.isEmpty())
-            return Collections.emptyList();
-        return List.copyOf(groups);
     }
 }

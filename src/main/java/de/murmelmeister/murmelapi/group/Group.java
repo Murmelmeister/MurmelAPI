@@ -19,6 +19,7 @@ public record Group(
     public Group {
         Objects.requireNonNull(groupName, "groupName must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
+        if (groupName.length() > 100) throw new IllegalArgumentException("groupName cannot be longer than 100 characters");
     }
 
     public static @NotNull Builder builder(@NotNull Group group) {
