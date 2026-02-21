@@ -9,15 +9,11 @@ import java.util.List;
 public interface PunishmentReasonProvider {
     void refreshCache();
 
-    @Nullable PunishmentReason getReason(int id);
+    @Nullable PunishmentReason findReason(int id);
 
     @NotNull
     @Unmodifiable
-    List<PunishmentReason> getReasonsByType(int typeId);
-
-    @NotNull
-    @Unmodifiable
-    List<PunishmentReason> getAllReasons();
+    List<PunishmentReason> findReasons(int typeId);
 
     @Nullable PunishmentReason create(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs, boolean autoFlagIp, boolean autoPunish, int createdBy);
 

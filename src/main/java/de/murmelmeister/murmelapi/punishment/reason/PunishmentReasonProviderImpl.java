@@ -80,18 +80,13 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
     }
 
     @Override
-    public @Nullable PunishmentReason getReason(int id) {
+    public @Nullable PunishmentReason findReason(int id) {
         return cache.getById(id);
     }
 
     @Override
-    public @NotNull @Unmodifiable List<PunishmentReason> getReasonsByType(int typeId) {
+    public @NotNull @Unmodifiable List<PunishmentReason> findReasons(int typeId) {
         return cache.getByType(typeId);
-    }
-
-    @Override
-    public @NotNull @Unmodifiable List<PunishmentReason> getAllReasons() {
-        return cache.getAll();
     }
 
     @Override
