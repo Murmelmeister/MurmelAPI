@@ -27,6 +27,8 @@ public record Maintenance(
             throw new IllegalArgumentException("title cannot be longer than 64 characters");
         if (reason != null && reason.length() > 255)
             throw new IllegalArgumentException("reason cannot be longer than 255 characters");
+        if (startAt.isAfter(endAt))
+            throw new IllegalArgumentException("startAt must be before endAt");
     }
 
     public static @NotNull Builder builder(@NotNull Maintenance maintenance) {
