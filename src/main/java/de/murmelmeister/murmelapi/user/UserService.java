@@ -267,7 +267,7 @@ public record UserService(
         PunishmentUser punishUser = punishUserProvider.findPunishedUser(mojangId, PunishmentType.BAN.getId());
         if (punishUser == null) return false;
 
-        PunishmentLog punishmentLog = punishLogProvider.getLog(punishUser.logId());
+        PunishmentLog punishmentLog = punishLogProvider.findLog(punishUser.logId());
         return punishmentLog != null && punishmentLog.isPermanent();
     }
 }
