@@ -74,7 +74,7 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
             stmt.setInt(1, userId);
             stmt.setString(2, colorId);
         });
-        if (row < 1) return 0;
+        if (row != 1) return 0;
 
         refreshProvider.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
         return row;
@@ -89,13 +89,17 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
 
         if (active == existing.active()) return existing;
         @Language("MariaDB")
-        String sql = "UPDATE %s SET active = ? WHERE user_id = ? AND color_id = ?".formatted(TABLE_NAME);
+        String sql = """
+                UPDATE %s
+                SET active = ?
+                WHERE user_id = ? AND color_id = ?
+                """.formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> {
             stmt.setBoolean(1, active);
             stmt.setInt(2, userId);
             stmt.setString(3, colorId);
         });
-        if (row < 1) return null;
+        if (row != 1) return null;
 
         UserPrefixColor updated = UserPrefixColor.builder(existing)
                 .active(active)
