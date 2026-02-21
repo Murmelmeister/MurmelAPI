@@ -107,7 +107,7 @@ public final class UserProviderImpl implements UserProvider {
         @Language("MariaDB")
         String sql = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
         int row = database.update(sql, stmt -> stmt.setInt(1, userId));
-        if (row < 1) return 0;
+        if (row != 1) return 0;
 
         refreshProvider.fireSingle(single, existing);
         return row;
@@ -147,7 +147,7 @@ public final class UserProviderImpl implements UserProvider {
             stmt.setInt(5, languageId);
             stmt.setInt(6, userId);
         });
-        if (row < 1) return null;
+        if (row != 1) return null;
 
         User user = User.builder(existing)
                 .username(normalizedUsername)
