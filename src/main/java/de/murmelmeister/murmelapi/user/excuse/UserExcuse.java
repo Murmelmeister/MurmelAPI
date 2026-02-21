@@ -21,9 +21,12 @@ public record UserExcuse(
         Objects.requireNonNull(startAt, "startAt must not be null");
         Objects.requireNonNull(endAt, "endAt must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
         if (startAt.isAfter(endAt)) throw new IllegalArgumentException("startAt cannot be after endAt");
         if (reason != null && reason.length() > 255)
             throw new IllegalArgumentException("reason cannot be longer than 255 characters");
+        if (createdBy < 1) throw new IllegalArgumentException("createdBy must be >= 1");
+        if (changedBy != null && changedBy < 1) throw new IllegalArgumentException("changedBy must be >= 1");
     }
 
     public static @NotNull Builder builder(@NotNull UserExcuse userExcuse) {

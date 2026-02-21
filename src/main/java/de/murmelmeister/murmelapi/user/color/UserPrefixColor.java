@@ -14,7 +14,11 @@ public record UserPrefixColor(
     public UserPrefixColor {
         Objects.requireNonNull(colorId, "colorId must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
+        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
+        if (colorId.length() > 100) throw new IllegalArgumentException("colorId cannot be longer than 100 characters");
+        if (colorId.isBlank()) throw new IllegalArgumentException("colorId cannot be blank");
     }
+
     public static @NotNull Builder builder(@NotNull UserPrefixColor userPrefixColor) {
         return new Builder(userPrefixColor);
     }
