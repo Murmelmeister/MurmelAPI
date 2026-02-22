@@ -106,6 +106,61 @@ CREATE TABLE IF NOT EXISTS group_color (
     FOREIGN KEY (changed_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS participants (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    group_id INT NULL,
+    user_id INT NULL,
+
+    CONSTRAINT chk_participants_xor CHECK (
+        (group_id IS NOT NULL AND user_id IS NULL)
+        OR
+        (user_id IS NOT NULL AND group_id IS NULL)
+    ),
+
+    UNIQUE KEY uk_participants_group (group_id),
+    UNIQUE KEY uk_participants_user (user_id),
+
+    CONSTRAINT fk_participants_group FOREIGN KEY (group_id) REFERENCES groups(id),
+    CONSTRAINT fk_participants_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS participant_permissions (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    participant_id INT NOT NULL,
+    permission VARCHAR(200) NOT NULL,
+    expires_at DATETIME NULL,
+    created_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+
+    UNIQUE KEY (participant_id, permission),
+    INDEX idx_parent_par_exp (participant_id, expires_at),
+
+    FOREIGN KEY (participant_id) REFERENCES participants(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS participant_parents (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    participant_id INT NOT NULL,
+    parent_id INT NOT NULL,
+    expires_at DATETIME NULL,
+    created_by INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    changed_by INT NULL,
+    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+
+    UNIQUE KEY (participant_id, parent_id),
+    INDEX idx_permission_par_exp (participant_id, expires_at),
+
+    FOREIGN KEY (participant_id) REFERENCES participants(id),
+    FOREIGN KEY (parent_id) REFERENCES groups(id),
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (changed_by) REFERENCES users(id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS group_permission (
     group_id INT,
     permission VARCHAR(200),
