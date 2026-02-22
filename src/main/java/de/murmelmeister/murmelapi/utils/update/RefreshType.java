@@ -38,6 +38,9 @@ public enum RefreshType {
     MAINTENANCES("maintenances"),
     MAINTENANCE_WHITELISTS("maintenance_whitelists"),
     USER_EXCUSES("user_excuses"),
+    PARTICIPANTS("participants"),
+    PARTICIPANT_PARENTS("participant_parents"),
+    PARTICIPANT_PERMISSIONS("participant_permissions"),
     SINGLE_USER("single_user"),
     SINGLE_USER_LOGIN("single_user_login"),
     SINGLE_USER_SESSION("single_user_session"),
@@ -67,7 +70,11 @@ public enum RefreshType {
     SINGLE_USER_STAT("single_user_stat"),
     SINGLE_MAINTENANCE("single_maintenance"),
     SINGLE_MAINTENANCE_WHITELIST("single_maintenance_whitelist"),
-    SINGLE_USER_EXCUSE("single_user_excuse");
+    SINGLE_USER_EXCUSE("single_user_excuse"),
+    SINGLE_PARTICIPANT("single_participant"),
+    SINGLE_PARTICIPANT_PARENT("single_participant_parent"),
+    SINGLE_PARTICIPANT_PERMISSION("single_participant_permission")
+    ;
     private static final RefreshType[] VALUES = values();
 
     private final String name;
