@@ -90,6 +90,11 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
     }
 
     @Override
+    public @NotNull @Unmodifiable List<PunishmentReason> findAll() {
+        return cache.getAll();
+    }
+
+    @Override
     public @Nullable PunishmentReason create(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs, boolean autoFlagIp, boolean autoPunish, int createdBy) {
         if (id < 1) throw new IllegalArgumentException("id must be >= 1");
         if (typeId < 1) throw new IllegalArgumentException("typeId must be >= 1");

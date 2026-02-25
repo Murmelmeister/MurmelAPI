@@ -15,6 +15,8 @@ public interface PunishmentReasonProvider {
     @Unmodifiable
     List<PunishmentReason> findReasons(int typeId);
 
+    @NotNull @Unmodifiable List<PunishmentReason> findAll();
+
     @Nullable PunishmentReason create(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs, boolean autoFlagIp, boolean autoPunish, int createdBy);
 
     int delete(int id);
