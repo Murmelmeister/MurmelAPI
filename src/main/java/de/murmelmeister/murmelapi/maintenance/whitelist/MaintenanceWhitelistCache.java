@@ -64,13 +64,13 @@ public class MaintenanceWhitelistCache implements MurmelCache {
     public void onRefresh(@NotNull RefreshEvent<?> event) {
         String cacheName = event.type();
 
-        if (RefreshType.MAINTENANCES.getName().equalsIgnoreCase(cacheName)
+        if (RefreshType.MAINTENANCE_WHITELISTS.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
             return;
         }
 
-        if (RefreshType.SINGLE_MAINTENANCE.getName().equalsIgnoreCase(cacheName)) {
+        if (RefreshType.SINGLE_MAINTENANCE_WHITELIST.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
             if (key instanceof MaintenanceWhitelist whitelist)
                 remove(whitelist);
