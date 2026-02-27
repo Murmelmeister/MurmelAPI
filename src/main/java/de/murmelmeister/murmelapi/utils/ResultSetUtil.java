@@ -9,17 +9,14 @@ import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
 import de.murmelmeister.murmelapi.color.PrefixColor;
 import de.murmelmeister.murmelapi.group.Group;
 import de.murmelmeister.murmelapi.group.color.GroupColor;
-import de.murmelmeister.murmelapi.group.parent.GroupParent;
-import de.murmelmeister.murmelapi.group.permission.GroupPermission;
 import de.murmelmeister.murmelapi.inventory.InventoryType;
 import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.message.Message;
 import de.murmelmeister.murmelapi.maintenance.Maintenance;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
-import de.murmelmeister.murmelapi.participant.Participant;
-import de.murmelmeister.murmelapi.participant.parent.ParticipantParent;
-import de.murmelmeister.murmelapi.participant.permission.ParticipantPermission;
+import de.murmelmeister.murmelapi.permission.Permission;
+import de.murmelmeister.murmelapi.permission.parent.Parent;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -30,8 +27,6 @@ import de.murmelmeister.murmelapi.user.color.UserPrefixColor;
 import de.murmelmeister.murmelapi.user.excuse.UserExcuse;
 import de.murmelmeister.murmelapi.user.inventory.UserInventory;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
-import de.murmelmeister.murmelapi.user.parent.UserParent;
-import de.murmelmeister.murmelapi.user.permission.UserPermission;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.stats.UserStats;
 import org.jetbrains.annotations.NotNull;
@@ -125,32 +120,6 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<UserPermission> userPermission() {
-        return resultSet -> {
-            int userId = resultSet.getInt("user_id");
-            String permission = resultSet.getString("permission");
-            LocalDateTime expires_at = resultSet.getObject("expires_at", LocalDateTime.class);
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new UserPermission(userId, permission, expires_at, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<UserParent> userParent() {
-        return resultSet -> {
-            int userId = resultSet.getInt("user_id");
-            int parentId = resultSet.getInt("parent_id");
-            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new UserParent(userId, parentId, expiresAt, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
     public static @NotNull ResultSetProcessor<Group> group() {
         return resultSet -> {
             int id = resultSet.getInt("id");
@@ -178,29 +147,33 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<GroupPermission> groupPermission() {
+    public static @NotNull ResultSetProcessor<Permission> permission() {
         return resultSet -> {
-            int groupId = resultSet.getInt("group_id");
+            int id = resultSet.getInt("id");
+            Integer userId = resultSet.getObject("user_id", Integer.class);
+            Integer groupId = resultSet.getObject("group_id", Integer.class);
             String permission = resultSet.getString("permission");
             LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
             int createdBy = resultSet.getInt("created_by");
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new GroupPermission(groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
+            return new Permission(id, userId, groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
         };
     }
 
-    public static @NotNull ResultSetProcessor<GroupParent> groupParent() {
+    public static @NotNull ResultSetProcessor<Parent> parent() {
         return resultSet -> {
-            int groupId = resultSet.getInt("group_id");
+            int id = resultSet.getInt("id");
+            Integer userId = resultSet.getObject("user_id", Integer.class);
+            Integer groupId = resultSet.getObject("group_id", Integer.class);
             int parentId = resultSet.getInt("parent_id");
             LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
             int createdBy = resultSet.getInt("created_by");
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new GroupParent(groupId, parentId, expiresAt, createdBy, createdAt, changedBy, changedAt);
+            return new Parent(id, userId, groupId, parentId, expiresAt, createdBy, createdAt, changedBy, changedAt);
         };
     }
 
@@ -434,43 +407,6 @@ public final class ResultSetUtil {
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             return new UserExcuse(id, userId, startAt, endAt, reason, createdAt, createdBy, changedAt, changedBy);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<Participant> participant() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            int groupId = resultSet.getInt("group_id");
-            int userId = resultSet.getInt("user_id");
-            return new Participant(id, groupId, userId);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<ParticipantParent> participantParent() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            int participantId = resultSet.getInt("participant_id");
-            int parentId = resultSet.getInt("parent_id");
-            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new ParticipantParent(id, participantId, parentId, expiresAt, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<ParticipantPermission> participantPermission() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            int participantId = resultSet.getInt("participant_id");
-            String permission = resultSet.getString("permission");
-            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new ParticipantPermission(id, participantId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
         };
     }
 }

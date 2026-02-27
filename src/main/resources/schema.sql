@@ -106,27 +106,10 @@ CREATE TABLE IF NOT EXISTS group_color (
     FOREIGN KEY (changed_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS participants (
+CREATE TABLE IF NOT EXISTS permissions (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    group_id INT NULL,
     user_id INT NULL,
-
-    CONSTRAINT chk_participants_xor CHECK (
-        (group_id IS NOT NULL AND user_id IS NULL)
-        OR
-        (user_id IS NOT NULL AND group_id IS NULL)
-    ),
-
-    UNIQUE KEY uk_participants_group (group_id),
-    UNIQUE KEY uk_participants_user (user_id),
-
-    CONSTRAINT fk_participants_group FOREIGN KEY (group_id) REFERENCES groups(id),
-    CONSTRAINT fk_participants_user FOREIGN KEY (user_id) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS participant_permissions (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    participant_id INT NOT NULL,
+    group_id INT NULL,
     permission VARCHAR(200) NOT NULL,
     expires_at DATETIME NULL,
     created_by INT NOT NULL,
@@ -134,17 +117,24 @@ CREATE TABLE IF NOT EXISTS participant_permissions (
     changed_by INT NULL,
     changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
 
-    UNIQUE KEY (participant_id, permission),
-    INDEX idx_parent_par_exp (participant_id, expires_at),
-
-    FOREIGN KEY (participant_id) REFERENCES participants(id),
+    CONSTRAINT chk_permissions_xor CHECK (
+        (user_id IS NOT NULL AND group_id IS NULL)
+        OR
+        (group_id IS NOT NULL AND user_id IS NULL)
+    ),
+    UNIQUE KEY uk_user_permission (user_id, permission),
+    UNIQUE KEY uk_group_permission (group_id, permission),
+    INDEX idx_permissions_exp (expires_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id),
     FOREIGN KEY (changed_by) REFERENCES users(id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS participant_parents (
+CREATE TABLE IF NOT EXISTS parents (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    participant_id INT NOT NULL,
+    user_id INT NULL,
+    group_id INT NULL,
     parent_id INT NOT NULL,
     expires_at DATETIME NULL,
     created_by INT NOT NULL,
@@ -152,77 +142,20 @@ CREATE TABLE IF NOT EXISTS participant_parents (
     changed_by INT NULL,
     changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
 
-    UNIQUE KEY (participant_id, parent_id),
-    INDEX idx_permission_par_exp (participant_id, expires_at),
-
-    FOREIGN KEY (participant_id) REFERENCES participants(id),
-    FOREIGN KEY (parent_id) REFERENCES groups(id),
-    FOREIGN KEY (created_by) REFERENCES users(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS group_permission (
-    group_id INT,
-    permission VARCHAR(200),
-    PRIMARY KEY (group_id, permission),
-    expires_at DATETIME NULL,
-    created_by INT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    changed_by INT NULL,
-    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
-    FOREIGN KEY (group_id) REFERENCES groups(id),
+    CONSTRAINT chk_parents_xor CHECK (
+        (user_id IS NOT NULL AND group_id IS NULL)
+        OR
+        (group_id IS NOT NULL AND user_id IS NULL)
+    ),
+    UNIQUE KEY uk_user_parent (user_id, parent_id),
+    UNIQUE KEY uk_group_parent (group_id, parent_id),
+    INDEX idx_parents_exp (expires_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id),
     FOREIGN KEY (changed_by) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE INDEX IF NOT EXISTS idx_group_perm_groupId_exp ON group_permission (group_id, expires_at);
-
-CREATE TABLE IF NOT EXISTS group_parent (
-    group_id INT,
-    parent_id INT,
-    PRIMARY KEY (group_id, parent_id),
-    expires_at DATETIME NULL,
-    created_by INT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    changed_by INT NULL,
-    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
-    FOREIGN KEY (group_id) REFERENCES groups(id),
-    FOREIGN KEY (parent_id) REFERENCES groups(id),
-    FOREIGN KEY (created_by) REFERENCES users(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE INDEX IF NOT EXISTS idx_group_parent_groupId_exp ON group_parent (group_id, expires_at);
-
--- User inheritance and permissions
-CREATE TABLE IF NOT EXISTS user_parent (
-    user_id INT,
-    parent_id INT,
-    PRIMARY KEY (user_id, parent_id),
-    expires_at DATETIME NULL,
-    created_by INT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    changed_by INT NULL,
-    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (parent_id) REFERENCES groups(id),
-    FOREIGN KEY (created_by) REFERENCES users(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE INDEX IF NOT EXISTS idx_user_parent_userId_exp ON user_parent (user_id, expires_at);
-
-CREATE TABLE IF NOT EXISTS user_permission (
-    user_id INT,
-    permission VARCHAR(200),
-    PRIMARY KEY (user_id, permission),
-    expires_at DATETIME NULL,
-    created_by INT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    changed_by INT NULL,
-    changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (created_by) REFERENCES users(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE INDEX IF NOT EXISTS idx_user_perm_userId_exp ON user_permission (expires_at, user_id);
 
 -- Punishment types, reasons, logs, and current states
 CREATE TABLE IF NOT EXISTS punishment_types (
