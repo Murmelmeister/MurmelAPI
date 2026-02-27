@@ -1,165 +1,25 @@
 package de.murmelmeister.murmelapi.permission;
 
-import com.github.benmanes.caffeine.cache.LoadingCache;
-import de.murmelmeister.library.database.Database;
-import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
-import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
-import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.user.UserProvider;
-import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
-import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
-import de.murmelmeister.murmelapi.utils.CacheUtil;
-import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
-import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
-import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Unmodifiable;
 
-import java.time.Duration;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.List;
+import java.util.Optional;
 
-import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+public interface PermissionProvider {
+    void refreshCache();
 
-/**
- * The PermissionProvider class provides methods to manage and check permissions for users and groups.
- * It implements the Permission interface.
- */
-public final class PermissionProvider implements Permission, MurmelCache {
-    private final Database database;
-    private final RefreshProvider refreshProvider;
-    private final UserProvider userProvider;
-    private final GroupParentProvider groupParentProvider;
-    private final GroupPermissionProvider groupPermissionProvider;
-    private final UserParentProvider userParentProvider;
-    private final UserPermissionProvider userPermissionProvider;
-    private final LoadingCache<@NotNull Integer, Set<String>> cache;
+    @NotNull Optional<Permission> findPermission(@NotNull PermissionTarget target, @NotNull String permission);
 
-    public PermissionProvider(Database database, RefreshProvider refreshProvider, UserProvider userProvider,
-                              GroupParentProvider groupParentProvider, GroupPermissionProvider groupPermissionProvider,
-                              UserParentProvider userParentProvider, UserPermissionProvider userPermissionProvider,
-                              long cacheCapacity, Duration refreshInterval) {
-        this.database = database;
-        this.refreshProvider = refreshProvider;
-        this.userProvider = userProvider;
-        this.groupParentProvider = groupParentProvider;
-        this.groupPermissionProvider = groupPermissionProvider;
-        this.userParentProvider = userParentProvider;
-        this.userPermissionProvider = userPermissionProvider;
-        this.cache = CacheUtil.buildCacheRefresh(this::loadAllFromDatabase, cacheCapacity, refreshInterval);
-        this.refreshProvider.register(this);
-    }
+    @NotNull
+    @Unmodifiable
+    List<Permission> findPermissions(@NotNull PermissionTarget target);
 
-    private @NotNull Set<String> loadAllFromDatabase(int userId) {
-        return new LinkedHashSet<>(database.queryListCallable("CALL getUserPermission(?)",
-                resultSet -> resultSet.getString("permission"),
-                stmt -> stmt.setInt(1, userId)));
-    }
+    @NotNull Optional<Permission> upsert(@NotNull PermissionTarget target, @NotNull String permission, long duration, int executorId);
 
-    public static void setup(@NotNull Database database) {
-        database.update(Database.getProcedureQuery("getUserPermission", "p_user_id INT", """
-                     WITH RECURSIVE grp(grp_id) AS (
-                         SELECT parent_id AS grp_id
-                         FROM   user_parent
-                         WHERE  user_id = p_user_id
-                           AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP())
-                         UNION ALL
-                         SELECT gp.parent_id
-                         FROM   group_parent gp
-                         JOIN   grp g ON g.grp_id = gp.group_id
-                         WHERE  gp.expires_at IS NULL OR gp.expires_at > CURRENT_TIMESTAMP()
-                     ),
-                    \s
-                     perms AS (
-                         SELECT permission
-                         FROM   user_permission
-                         WHERE  user_id = p_user_id
-                           AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP())
-                         UNION
-                         SELECT permission
-                         FROM   group_permission
-                         WHERE  group_id IN (SELECT grp_id FROM grp)
-                           AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP())
-                     )
-                    \s
-                     SELECT DISTINCT permission
-                     FROM   perms
-                     ORDER BY permission;
-                \s"""));
-    }
+    int remove(@NotNull PermissionTarget target, @NotNull String permission);
 
-    @Override
-    public Set<String> getPermissions(int userId) {
-        return cache.get(userId);
-    }
+    int clear(@NotNull PermissionTarget target);
 
-    @Override
-    public boolean hasPermission(@NotNull User user, @NotNull String permission) {
-        if (user.id() < CONSOLE_USER_ID || permission.isEmpty())
-            return false; // Invalid permission
-        if (user.systemUser()) return true; // Special case for server-wide permissions
-        Set<String> permissions = getPermissions(user.id());
-        if (permissions.isEmpty()) return false;
-        if (permissions.contains("-" + permission)) return false;
-
-        for (String negative : permissions) {
-            if (negative.startsWith("-") && negative.endsWith(".*")) {
-                String prefix = negative.substring(1, negative.length() - 1); // "-minecraft.command.*" -> "minecraft.command."
-                if (permission.startsWith(prefix))
-                    return false; // Negative permission matches
-            }
-        }
-
-        if (permissions.contains("*")) return true;
-        if (permissions.contains(permission)) return true;
-
-        for (String perm : permissions) {
-            if (perm.endsWith(".*")) {
-                String prefix = perm.substring(0, perm.length() - 1); // "minecraft.command.*" -> "minecraft.command."
-                if (permission.startsWith(prefix))
-                    return true; // Permission matches with wildcard
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public boolean hasPermission(@NotNull UUID uuid, @NotNull String permission) {
-        User user = userProvider.findByMojangId(uuid);
-        if (user == null) return false; // User not found
-        return hasPermission(user, permission);
-    }
-
-    @Override
-    public int loadExpired() {
-        int groupParentExpired = groupParentProvider.loadExpired();
-        int groupPermissionExpired = groupPermissionProvider.loadExpired();
-        int userParentExpired = userParentProvider.loadExpired();
-        int userPermissionExpired = userPermissionProvider.loadExpired();
-        return groupParentExpired + groupPermissionExpired + userParentExpired + userPermissionExpired;
-    }
-
-    @Override
-    public void onRefresh(@NotNull RefreshEvent<?> event) {
-        String cacheName = event.type();
-        // Let the cache refresh by single and all events (Not really optimal, but works for now)
-        if (RefreshType.USER_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.GROUP_PERMISSIONS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.USER_PARENTS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.GROUP_PARENTS.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.SINGLE_USER_PERMISSION.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.SINGLE_GROUP_PERMISSION.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.SINGLE_USER_PARENT.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.SINGLE_GROUP_PARENT.getName().equalsIgnoreCase(cacheName)
-                || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
-            cache.invalidateAll();
-        }
-    }
-
-    @Override
-    public void close() {
-        refreshProvider.unregister(this);
-        cache.invalidateAll();
-    }
+    int loadExpired();
 }
