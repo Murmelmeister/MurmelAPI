@@ -20,10 +20,6 @@ import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.group.color.GroupColorProviderImpl;
-import de.murmelmeister.murmelapi.group.parent.GroupParentProvider;
-import de.murmelmeister.murmelapi.group.parent.GroupParentProviderImpl;
-import de.murmelmeister.murmelapi.group.permission.GroupPermissionProvider;
-import de.murmelmeister.murmelapi.group.permission.GroupPermissionProviderImpl;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProviderImpl;
 import de.murmelmeister.murmelapi.language.Language;
@@ -37,8 +33,11 @@ import de.murmelmeister.murmelapi.maintenance.MaintenanceProvider;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceProviderImpl;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelistProvider;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelistProviderImpl;
-import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.permission.PermissionProvider;
+import de.murmelmeister.murmelapi.permission.PermissionProviderImpl;
+import de.murmelmeister.murmelapi.permission.PermissionService;
+import de.murmelmeister.murmelapi.permission.parent.ParentProvider;
+import de.murmelmeister.murmelapi.permission.parent.ParentProviderImpl;
 import de.murmelmeister.murmelapi.punishment.PunishmentService;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProvider;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProviderImpl;
@@ -62,10 +61,6 @@ import de.murmelmeister.murmelapi.user.inventory.UserInventoryProvider;
 import de.murmelmeister.murmelapi.user.inventory.UserInventoryProviderImpl;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
 import de.murmelmeister.murmelapi.user.login.UserLoginProviderImpl;
-import de.murmelmeister.murmelapi.user.parent.UserParentProvider;
-import de.murmelmeister.murmelapi.user.parent.UserParentProviderImpl;
-import de.murmelmeister.murmelapi.user.permission.UserPermissionProvider;
-import de.murmelmeister.murmelapi.user.permission.UserPermissionProviderImpl;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
 import de.murmelmeister.murmelapi.user.stats.UserStatsProvider;
@@ -128,11 +123,9 @@ public final class MurmelAPI {
     private final GroupProvider groupProvider;
     private final GroupColorProvider groupColorProvider;
 
-    private final UserPermissionProvider userPermissionProvider;
-    private final UserParentProvider userParentProvider;
-    private final GroupPermissionProvider groupPermissionProvider;
-    private final GroupParentProvider groupParentProvider;
-    private final Permission permission;
+    private final ParentProvider parentProvider;
+    private final PermissionProvider permissionProvider;
+    private final PermissionService permissionService;
 
     private final PunishmentReasonProvider punishReasonProvider;
     private final PunishmentLogProvider punishLogProvider;
@@ -188,12 +181,11 @@ public final class MurmelAPI {
         this.userExcuseProvider = new UserExcuseProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupProvider = new GroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupColorProvider = new GroupColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userPermissionProvider = new UserPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userParentProvider = new UserParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.groupPermissionProvider = new GroupPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.groupParentProvider = new GroupParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.permission = new PermissionProvider(database, refreshProvider, userProvider, groupParentProvider, groupPermissionProvider, userParentProvider, userPermissionProvider,
-                cacheCapacity, refreshInterval);
+
+        this.parentProvider = new ParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.permissionProvider = new PermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.permissionService = new PermissionService(parentProvider, permissionProvider, groupProvider, userProvider);
+
         this.punishReasonProvider = new PunishmentReasonProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishLogProvider = new PunishmentLogProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishIpProvider = new PunishmentIpAddressProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -252,7 +244,6 @@ public final class MurmelAPI {
     public void setupTables() {
         runSqlScript("schema.sql");
         runSqlScript("data.sql");
-        PermissionProvider.setup(database);
     }
 
     private void runSqlScript(String script) {
@@ -383,24 +374,16 @@ public final class MurmelAPI {
         return groupColorProvider;
     }
 
-    public UserPermissionProvider getUserPermissionProvider() {
-        return userPermissionProvider;
+    public ParentProvider getParentProvider() {
+        return parentProvider;
     }
 
-    public UserParentProvider getUserParentProvider() {
-        return userParentProvider;
+    public PermissionProvider getPermissionProvider() {
+        return permissionProvider;
     }
 
-    public GroupPermissionProvider getGroupPermissionProvider() {
-        return groupPermissionProvider;
-    }
-
-    public GroupParentProvider getGroupParentProvider() {
-        return groupParentProvider;
-    }
-
-    public Permission getPermission() {
-        return permission;
+    public PermissionService getPermissionService() {
+        return permissionService;
     }
 
     public PunishmentReasonProvider getPunishReasonProvider() {
