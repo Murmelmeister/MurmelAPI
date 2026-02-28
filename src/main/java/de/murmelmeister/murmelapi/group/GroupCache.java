@@ -135,7 +135,7 @@ public class GroupCache implements MurmelCache {
     public void remove(@NotNull Group group) {
         cacheById.invalidate(group.id());
         cacheByName.invalidate(group.groupName());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == group.id());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

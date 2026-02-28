@@ -159,7 +159,7 @@ public class UserCache implements MurmelCache {
         cacheById.invalidate(user.id());
         cacheByUUID.invalidate(user.mojangId());
         cacheByName.invalidate(user.username());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == user.id());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {
