@@ -101,6 +101,7 @@ public record UserService(
         Objects.requireNonNull(uuid, "uuid must not be null");
         Objects.requireNonNull(username, "username must not be null");
 
+        // TODO: Update not working
         User user = userProvider.findByMojangId(uuid);
         if (user == null) {
             user = userProvider.create(uuid, username);
@@ -133,7 +134,10 @@ public record UserService(
                 throw new UserStatsException("Failed to update stats for user with ID: " + user.id());
         }
 
-        return user;
+        User updated = userProvider.findById(user.id());
+        if (updated == null)
+            throw new UserException("Failed to update user with ID: " + user.id());
+        return updated;
     }
 
     public boolean isOnline(int userId) {
