@@ -120,7 +120,7 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
     @Override
     public int loadExpired() {
         List<PunishmentUserCache.PunishKey> expiredKeys = MurmelExceptionWrapper.dbWrap(
-                "Failed to remove expired Permissions",
+                "Failed to remove expired PunishmentUsers",
                 () -> database.queryList(
                         EXPIRES_SQL,
                         resultSet -> {
