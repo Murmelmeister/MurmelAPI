@@ -6,20 +6,21 @@ import org.jetbrains.annotations.Unmodifiable;
 
 import java.net.InetAddress;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface PunishmentIpAddressProvider {
     void refreshCache();
 
-    @Nullable PunishmentIpAddress findPunishedIpAddress(@NotNull InetAddress inetAddress, int typeId);
+    @NotNull Optional<PunishmentIpAddress> findPunishedIpAddress(@NotNull InetAddress inetAddress, int typeId);
 
     @NotNull
     @Unmodifiable
     List<PunishmentIpAddress> findPunishedIpAddresses(int typeId);
 
-    @Nullable PunishmentIpAddress create(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId);
+    @NotNull Optional<PunishmentIpAddress> upsert(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId, @Nullable Long durationSecs);
 
     int delete(@NotNull InetAddress inetAddress, int typeId);
 
-    @Nullable PunishmentIpAddress update(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId);
+    int loadExpired();
 }

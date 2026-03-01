@@ -13,29 +13,36 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.sql.Types;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddressProvider {
     public static final String TABLE_NAME = "punishment_ip_address";
 
     @Language("MariaDB")
-    private static final String CREATE_SQL = """
-            INSERT INTO %s (ip_address, type_id, log_id)
-            VALUES (?, ?, ?)
-            RETURNING ip_address, type_id, log_id
+    private static final String UPSERT_SQL = """
+            INSERT INTO %s (ip_address, type_id, log_id, expires_at)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                log_id = VALUES(log_id),
+                expires_at = VALUES(expires_at)
+            RETURNING ip_address, type_id, log_id, expires_at
             """.formatted(TABLE_NAME);
 
     @Language("MariaDB")
     private static final String DELETE_SQL = "DELETE FROM %s WHERE ip_address = ? AND type_id = ?".formatted(TABLE_NAME);
 
     @Language("MariaDB")
-    private static final String UPDATE_SQL = """
-            UPDATE %s
-            SET log_id = ?
-            WHERE ip_address = ? AND type_id = ?
+    private static final String EXPIRES_SQL = """
+            DELETE FROM %s
+            WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP()
+            RETURNING ip_address, type_id
             """.formatted(TABLE_NAME);
 
     private final Database database;
@@ -56,8 +63,8 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
     }
 
     @Override
-    public @Nullable PunishmentIpAddress findPunishedIpAddress(@NotNull InetAddress inetAddress, int typeId) {
-        return cache.get(inetAddress, typeId);
+    public @NotNull Optional<PunishmentIpAddress> findPunishedIpAddress(@NotNull InetAddress inetAddress, int typeId) {
+        return cache.getByKey(inetAddress, typeId);
     }
 
     @Override
@@ -66,23 +73,32 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
     }
 
     @Override
-    public @Nullable PunishmentIpAddress create(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId) {
+    public @NotNull Optional<PunishmentIpAddress> upsert(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId, @Nullable Long durationSecs) {
         Objects.requireNonNull(inetAddress, "inetAddress must not be null");
         Objects.requireNonNull(logId, "logId must not be null");
 
+        LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
+        Optional<PunishmentIpAddress> optExisting = cache.getByKey(inetAddress, typeId);
+        if (optExisting.isPresent()) {
+            if (Objects.equals(logId, optExisting.get().logId())
+                    && Objects.equals(expiresAt, optExisting.get().expiresAt()))
+                return optExisting;
+        }
+
         PunishmentIpAddress punish = MurmelExceptionWrapper.dbWrap(
-                "Failed to create PunishmentIpAddress (inetAddress=" + inetAddress.getHostAddress() + ", typeId=" + typeId + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.punishmentIpAddress(), stmt -> {
+                "Failed to upsert PunishmentIpAddress (inetAddress=" + inetAddress.getHostAddress() + ", typeId=" + typeId + ")",
+                () -> database.query(UPSERT_SQL, null, ResultSetUtil.punishmentIpAddress(), stmt -> {
                     stmt.setString(1, inetAddress.getHostAddress());
                     stmt.setInt(2, typeId);
                     stmt.setString(3, logId.toString());
+                    stmt.setObject(4, expiresAt, Types.TIMESTAMP);
                 }),
                 PunishmentIpAddressException::new
         );
 
-        if (punish == null) return null;
+        if (punish == null) return Optional.empty();
         refreshProvider.fireSingle(single, new PunishmentIpAddressCache.PunishKey(inetAddress, typeId));
-        return punish;
+        return Optional.of(punish);
     }
 
     @Override
@@ -104,31 +120,30 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
     }
 
     @Override
-    public @Nullable PunishmentIpAddress update(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId) {
-        Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
-        Objects.requireNonNull(logId, "logId cannot be null");
-
-        PunishmentIpAddress existing = cache.get(inetAddress, typeId);
-        if (existing == null) return null;
-
-        if (Objects.equals(logId, existing.logId()))
-            return existing;
-
-        int row = MurmelExceptionWrapper.dbWrap(
-                "Failed to update PunishmentIpAddress (inetAddress=" + inetAddress.getHostAddress() + ", typeId=" + typeId + ")",
-                () -> database.update(UPDATE_SQL, stmt -> {
-                    stmt.setString(1, logId.toString());
-                    stmt.setString(2, inetAddress.getHostAddress());
-                    stmt.setInt(3, typeId);
-                }),
+    public int loadExpired() {
+        List<PunishmentIpAddressCache.PunishKey> expiredKeys = MurmelExceptionWrapper.dbWrap(
+                "Failed to remove expired PunishmentIpAddresses",
+                () -> database.queryList(
+                        EXPIRES_SQL,
+                        resultSet -> {
+                            InetAddress inetAddress;
+                            try {
+                                inetAddress = InetAddress.getByName(resultSet.getString("ip_address"));
+                            } catch (UnknownHostException e) {
+                                throw new RuntimeException(e);
+                            }
+                            int typeId = resultSet.getInt("type_id");
+                            return new PunishmentIpAddressCache.PunishKey(inetAddress, typeId);
+                        },
+                        null
+                ),
                 PunishmentIpAddressException::new
         );
-        if (row != 1) return null;
 
-        PunishmentIpAddress punish = PunishmentIpAddress.builder(existing)
-                .logId(logId)
-                .build();
-        refreshProvider.fireSingle(single, new PunishmentIpAddressCache.PunishKey(inetAddress, typeId));
-        return punish;
+        if (expiredKeys == null || expiredKeys.isEmpty())
+            return 0;
+
+        expiredKeys.forEach(key -> refreshProvider.fireSingle(single, key));
+        return expiredKeys.size();
     }
 }
