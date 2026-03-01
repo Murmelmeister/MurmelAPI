@@ -12,29 +12,35 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
+import java.sql.Types;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class PunishmentUserProviderImpl implements PunishmentUserProvider {
     private static final String TABLE_NAME = "punishment_user";
 
     @Language("MariaDB")
-    private static final String CREATE_SQL = """
-            INSERT INTO %s (user_id, type_id, log_id)
-            VALUES (?, ?, ?)
-            RETURNING user_id, type_id, log_id
+    private static final String UPSERT_SQL = """
+            INSERT INTO %s (mojang_id, type_id, log_id, expires_at)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                log_id = VALUES(log_id),
+                expires_at = VALUES(expires_at)
+            RETURNING mojang_id, type_id, log_id, expires_at
             """.formatted(TABLE_NAME);
 
     @Language("MariaDB")
-    private static final String DELETE_SQL = "DELETE FROM %s WHERE user_id = ? AND type_id = ?".formatted(TABLE_NAME);
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE mojang_id = ? AND type_id = ?".formatted(TABLE_NAME);
 
     @Language("MariaDB")
-    private static final String UPDATE_SQL = """
-            UPDATE %s
-            SET log_id = ?
-            WHERE user_id = ? AND type_id = ?
+    private static final String EXPIRES_SQL = """
+            DELETE FROM %s
+            WHERE expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP()
+            RETURNING mojang_id, type_id
             """.formatted(TABLE_NAME);
 
     private final Database database;
@@ -55,8 +61,8 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
     }
 
     @Override
-    public @Nullable PunishmentUser findPunishedUser(@NotNull UUID userId, int typeId) {
-        return cache.get(userId, typeId);
+    public @NotNull Optional<PunishmentUser> findPunishedUser(@NotNull UUID mojangId, int typeId) {
+        return cache.getByKey(mojangId, typeId);
     }
 
     @Override
@@ -65,69 +71,72 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
     }
 
     @Override
-    public @Nullable PunishmentUser create(@NotNull UUID userId, int typeId, @NotNull UUID logId) {
-        Objects.requireNonNull(userId, "userId cannot be null");
+    public @NotNull Optional<PunishmentUser> upsert(@NotNull UUID mojangId, int typeId, @NotNull UUID logId, @Nullable Long durationSecs) {
+        Objects.requireNonNull(mojangId, "mojangId cannot be null");
         Objects.requireNonNull(logId, "logId cannot be null");
 
+        LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
+        Optional<PunishmentUser> optExisting = cache.getByKey(mojangId, typeId);
+        if (optExisting.isPresent()) {
+            if (Objects.equals(logId, optExisting.get().logId())
+                    && Objects.equals(expiresAt, optExisting.get().expiresAt()))
+                return optExisting;
+        }
+
         PunishmentUser punish = MurmelExceptionWrapper.dbWrap(
-                "Failed to create PunishmentUser (userId=" + userId + ", typeId=" + typeId + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.punishmentUser(), stmt -> {
-                    stmt.setString(1, userId.toString());
+                "Failed to upsert PunishmentUser (mojangId=" + mojangId + ", typeId=" + typeId + ")",
+                () -> database.query(UPSERT_SQL, null, ResultSetUtil.punishmentUser(), stmt -> {
+                    stmt.setString(1, mojangId.toString());
                     stmt.setInt(2, typeId);
                     stmt.setString(3, logId.toString());
+                    stmt.setObject(4, expiresAt, Types.TIMESTAMP);
                 }),
                 PunishmentUserException::new
         );
 
-        if (punish == null) return null;
-        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(userId, typeId));
-        return punish;
+        if (punish == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(mojangId, typeId));
+        return Optional.of(punish);
     }
 
     @Override
-    public int delete(@NotNull UUID userId, int typeId) {
-        Objects.requireNonNull(userId, "userId cannot be null");
+    public int delete(@NotNull UUID mojangId, int typeId) {
+        Objects.requireNonNull(mojangId, "mojangId cannot be null");
 
         int row = MurmelExceptionWrapper.dbWrap(
-                "Failed to delete PunishmentUser (userId=" + userId + ", typeId=" + typeId + ")",
+                "Failed to delete PunishmentUser (mojangId=" + mojangId + ", typeId=" + typeId + ")",
                 () -> database.update(DELETE_SQL, stmt -> {
-                    stmt.setString(1, userId.toString());
+                    stmt.setString(1, mojangId.toString());
                     stmt.setInt(2, typeId);
                 }),
                 PunishmentUserException::new
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(userId, typeId));
+        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(mojangId, typeId));
         return row;
     }
 
     @Override
-    public @Nullable PunishmentUser update(@NotNull UUID userId, int typeId, @NotNull UUID logId) {
-        Objects.requireNonNull(userId, "userId cannot be null");
-        Objects.requireNonNull(logId, "logId cannot be null");
-
-        PunishmentUser existing = cache.get(userId, typeId);
-        if (existing == null) return null;
-
-        if (Objects.equals(logId, existing.logId()))
-            return existing;
-
-        int row = MurmelExceptionWrapper.dbWrap(
-                "Failed to update PunishmentUser (userId=" + userId + ", typeId=" + typeId + ")",
-                () -> database.update(UPDATE_SQL, stmt -> {
-                    stmt.setString(1, logId.toString());
-                    stmt.setString(2, userId.toString());
-                    stmt.setInt(3, typeId);
-                }),
+    public int loadExpired() {
+        List<PunishmentUserCache.PunishKey> expiredKeys = MurmelExceptionWrapper.dbWrap(
+                "Failed to remove expired Permissions",
+                () -> database.queryList(
+                        EXPIRES_SQL,
+                        resultSet -> {
+                            UUID mojangId = UUID.fromString(resultSet.getString("mojang_id"));
+                            int typeId = resultSet.getInt("type_id");
+                            return new PunishmentUserCache.PunishKey(mojangId, typeId);
+                        },
+                        null
+                ),
                 PunishmentUserException::new
         );
-        if (row != 1) return null;
 
-        PunishmentUser punish = PunishmentUser.builder(existing)
-                .logId(logId)
-                .build();
-        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(userId, typeId));
-        return punish;
+        if (expiredKeys == null || expiredKeys.isEmpty())
+            return 0;
+
+        expiredKeys.forEach(key -> refreshProvider.fireSingle(single, key));
+        return expiredKeys.size();
     }
 }

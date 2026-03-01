@@ -1,18 +1,29 @@
 package de.murmelmeister.murmelapi.punishment.user;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
 public record PunishmentUser(
-        @NotNull UUID userId,
+        @NotNull UUID mojangId,
         int typeId,
-        @NotNull UUID logId
+        @NotNull UUID logId,
+        @Nullable LocalDateTime expiresAt
 ) {
     public PunishmentUser {
-        Objects.requireNonNull(userId, "userId cannot be null");
+        Objects.requireNonNull(mojangId, "mojangId cannot be null");
         Objects.requireNonNull(logId, "logId cannot be null");
+    }
+
+    public boolean isExpired() {
+        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
+    }
+
+    public boolean isPermanent() {
+        return expiresAt == null;
     }
 
     public static @NotNull Builder builder(@NotNull PunishmentUser currentUser) {
@@ -24,11 +35,13 @@ public record PunishmentUser(
         private final int typeId;
 
         private UUID logId;
+        private LocalDateTime expiresAt;
 
         private Builder(@NotNull PunishmentUser currentUser) {
-            this.userId = currentUser.userId();
+            this.userId = currentUser.mojangId();
             this.typeId = currentUser.typeId();
             this.logId = currentUser.logId();
+            this.expiresAt = currentUser.expiresAt();
         }
 
         public Builder logId(@NotNull UUID logId) {
@@ -36,8 +49,13 @@ public record PunishmentUser(
             return this;
         }
 
+        public Builder expiresAt(@Nullable LocalDateTime expiresAt) {
+            this.expiresAt = expiresAt;
+            return this;
+        }
+
         public @NotNull PunishmentUser build() {
-            return new PunishmentUser(userId, typeId, logId);
+            return new PunishmentUser(userId, typeId, logId, expiresAt);
         }
     }
 }

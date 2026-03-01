@@ -5,20 +5,21 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface PunishmentUserProvider {
     void refreshCache();
 
-    @Nullable PunishmentUser findPunishedUser(@NotNull UUID userId, int typeId);
+    @NotNull Optional<PunishmentUser> findPunishedUser(@NotNull UUID mojangId, int typeId);
 
     @NotNull
     @Unmodifiable
     List<PunishmentUser> findPunishedUsers(int typeId);
 
-    @Nullable PunishmentUser create(@NotNull UUID userId, int typeId, @NotNull UUID logId);
+    @NotNull Optional<PunishmentUser> upsert(@NotNull UUID mojangId, int typeId, @NotNull UUID logId, @Nullable Long durationSecs);
 
-    int delete(@NotNull UUID userId, int typeId);
+    int delete(@NotNull UUID mojangId, int typeId);
 
-    @Nullable PunishmentUser update(@NotNull UUID userId, int typeId, @NotNull UUID logId);
+    int loadExpired();
 }
