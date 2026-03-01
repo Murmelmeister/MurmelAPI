@@ -17,6 +17,9 @@ import org.jetbrains.annotations.NotNull;
 import java.net.InetAddress;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
+
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
 public record PunishmentService(
         @NotNull PunishmentReasonProvider reasonProvider,
@@ -97,20 +100,12 @@ public record PunishmentService(
         return row;
     }
 
-    public void autoUnpunishedUser(@NotNull UUID mojangId, int typeId) {
-        userProvider.delete(mojangId, typeId);
-    }
-
-    public void autoUnpunishedIp(@NotNull InetAddress inetAddress, int typeId) {
-        ipProvider.delete(inetAddress, typeId);
-    }
-
     public boolean isPunishedUser(@NotNull UUID mojangId, int typeId) {
-        return userProvider.findPunishedUser(mojangId, typeId).orElse(null) != null;
+        return userProvider.findPunishedUser(mojangId, typeId).isPresent();
     }
 
     public boolean isPunishedIp(@NotNull InetAddress inetAddress, int typeId) {
-        return ipProvider.findPunishedIpAddress(inetAddress, typeId).orElse(null) != null;
+        return ipProvider.findPunishedIpAddress(inetAddress, typeId).isPresent();
     }
 
     public boolean isExpiredUser(@NotNull UUID mojangId, int typeId) {
@@ -121,6 +116,42 @@ public record PunishmentService(
     public boolean isExpiredIp(@NotNull InetAddress inetAddress, int typeId) {
         PunishmentIpAddress punish = ipProvider.findPunishedIpAddress(inetAddress, typeId).orElse(null);
         return punish != null && punish.isExpired();
+    }
+
+    public boolean checkUserPunishment(@NotNull UUID mojangId, int typeId, @NotNull Consumer<PunishmentAudit> consumer) {
+        Objects.requireNonNull(mojangId, "mojangId must not be null");
+        Objects.requireNonNull(consumer, "consumer must not be null");
+
+        return userProvider.findPunishedUser(mojangId, typeId)
+                .flatMap(punish -> auditProvider.findAudit(punish.logId())
+                        .map(audit -> {
+                            if (punish.isExpired()) {
+                                unpunishedUser(mojangId, typeId, punish.logId(), CONSOLE_USER_ID);
+                                return false;
+                            }
+                            consumer.accept(audit);
+                            return true;
+                        })
+                )
+                .orElse(false);
+    }
+
+    public boolean checkIpPunishment(@NotNull InetAddress inetAddress, int typeId, @NotNull Consumer<PunishmentAudit> consumer) {
+        Objects.requireNonNull(inetAddress, "inetAddress must not be null");
+        Objects.requireNonNull(consumer, "consumer must not be null");
+
+        return ipProvider.findPunishedIpAddress(inetAddress, typeId)
+                .flatMap(punish -> auditProvider.findAudit(punish.logId())
+                        .map(audit -> {
+                            if (punish.isExpired()) {
+                                unpunishedIp(inetAddress, typeId, punish.logId(), CONSOLE_USER_ID);
+                                return false;
+                            }
+                            consumer.accept(audit);
+                            return true;
+                        })
+                )
+                .orElse(false);
     }
 
     public int loadExpired() {
