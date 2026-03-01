@@ -18,19 +18,20 @@ import java.sql.Types;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
-public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
-    private static final String TABLE_NAME = "punishment_logs";
+public final class PunishmentAuditProviderImpl implements PunishmentAuditProvider {
+    private static final String TABLE_NAME = "punishment_audit";
 
     @Language("MariaDB")
     private static final String SQL = """
             INSERT INTO %s (
                 id,
                 action,
-                user_id,
+                mojang_id,
                 ip_address,
                 reason_id,
                 reason_type_id,
@@ -41,19 +42,19 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
                 created_by
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, action, user_id, ip_address, reason_id, reason_type_id, reason_text, reason_duration, reason_auto_flag_ip, reason_auto_punish, created_by, created_at
+            RETURNING id, action, mojang_id, ip_address, reason_id, reason_type_id, reason_text, reason_duration, reason_auto_flag_ip, reason_auto_punish, created_by, created_at
             """.formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
-    private final PunishmentLogCache cache;
+    private final PunishmentAuditCache cache;
     private final RefreshType all = RefreshType.PUNISHMENT_LOGS;
     private final RefreshType single = RefreshType.SINGLE_PUNISHMENT_LOG;
 
-    public PunishmentLogProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public PunishmentAuditProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
-        this.cache = new PunishmentLogCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
+        this.cache = new PunishmentAuditCache(database, gson, refreshProvider, TABLE_NAME, fetchLimit, cacheCapacity, refreshInterval);
     }
 
     @Override
@@ -62,40 +63,35 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
     }
 
     @Override
-    public @Nullable PunishmentLog findLog(@Nullable UUID logId) {
-        return cache.getById(logId);
+    public @NotNull Optional<PunishmentAudit> findLog(@NotNull UUID logId) {
+        return cache.getByLogId(logId);
     }
 
     @Override
-    public @NotNull @Unmodifiable List<PunishmentLog> findLogs(@NotNull UUID userId) {
-        return cache.getByUser(userId);
+    public @NotNull @Unmodifiable List<PunishmentAudit> findLogs(@NotNull UUID userId) {
+        return cache.getByMojangId(userId);
     }
 
     @Override
-    public @NotNull @Unmodifiable List<PunishmentLog> findLogs(@NotNull InetAddress inetAddress) {
-        return cache.getByIp(inetAddress);
+    public @NotNull @Unmodifiable List<PunishmentAudit> findLogs(@NotNull InetAddress inetAddress) {
+        return cache.getByIpAddress(inetAddress);
     }
 
-    @Override
-    public @NotNull @Unmodifiable List<PunishmentLog> findLogs() {
-        return cache.getAll();
-    }
-
-    private @Nullable PunishmentLog createLog(@NotNull PunishmentLog.Action action, @Nullable UUID userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
+    private @NotNull Optional<PunishmentAudit> createLog(@NotNull PunishmentAudit.Action action, @Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
         Objects.requireNonNull(action, "action cannot be null");
         Objects.requireNonNull(reason, "reason cannot be null");
         if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
 
         UUID logId = UUID.randomUUID();
-        return MurmelExceptionWrapper.dbWrap(
-                "Failed to create or modify PunishmentLog (logId=" + logId + ")",
+        PunishmentAudit log = MurmelExceptionWrapper.dbWrap(
+                "Failed to create or modify PunishmentAudit (logId=" + logId + ")",
                 () -> database.query(SQL, null, ResultSetUtil.punishmentLog(), stmt -> {
                     stmt.setString(1, logId.toString());
                     stmt.setString(2, action.name());
-                    stmt.setString(3, userId == null ? null : userId.toString());
+                    stmt.setString(3, mojangId == null ? null : mojangId.toString());
                     stmt.setString(4, inetAddress == null ? null : inetAddress.getHostAddress());
-                    stmt.setInt(5, reason.id());
-                    stmt.setInt(6, reason.typeId());
+                    stmt.setObject(5, reason.id(), Types.INTEGER);
+                    stmt.setObject(6, reason.typeId(), Types.INTEGER);
                     stmt.setString(7, reason.reasonText());
                     stmt.setObject(8, reason.durationSecs(), Types.BIGINT);
                     stmt.setBoolean(9, reason.autoFlagIp());
@@ -103,55 +99,57 @@ public final class PunishmentLogProviderImpl implements PunishmentLogProvider {
                 }),
                 PunishmentLogException::new
         );
+
+        return Optional.ofNullable(log);
     }
 
     @Override
-    public @Nullable PunishmentLog create(@Nullable UUID userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
-        PunishmentLog.Action action = PunishmentLog.Action.CREATED;
-        PunishmentLog log = createLog(action, userId, inetAddress, reason, createdBy);
+    public @NotNull Optional<PunishmentAudit> create(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
+        PunishmentAudit.Action action = PunishmentAudit.Action.CREATED;
+        Optional<PunishmentAudit> log = createLog(action, mojangId, inetAddress, reason, createdBy);
 
-        if (log == null) return null;
-        refreshProvider.fireSingle(single, log);
+        if (log.isEmpty()) return Optional.empty();
+        refreshProvider.fireSingle(single, log.get());
         return log;
     }
 
     @Override
-    public @Nullable PunishmentLog modify(@Nullable UUID userId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
-        PunishmentLog.Action action = PunishmentLog.Action.MODIFIED;
-        PunishmentLog log = createLog(action, userId, inetAddress, reason, createdBy);
+    public @NotNull Optional<PunishmentAudit> modify(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
+        PunishmentAudit.Action action = PunishmentAudit.Action.MODIFIED;
+        Optional<PunishmentAudit> log = createLog(action, mojangId, inetAddress, reason, createdBy);
 
-        if (log == null) return null;
-        refreshProvider.fireSingle(single, log);
+        if (log.isEmpty()) return Optional.empty();
+        refreshProvider.fireSingle(single, log.get());
         return log;
     }
 
     @Override
-    public @Nullable PunishmentLog revoke(@Nullable UUID userId, @Nullable InetAddress inetAddress, @NotNull PunishmentLog log, int createdBy) {
+    public @NotNull Optional<PunishmentAudit> revoke(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentAudit log, int createdBy) {
         Objects.requireNonNull(log, "log cannot be null");
         if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
 
         UUID logId = UUID.randomUUID();
-        PunishmentLog.Action action = PunishmentLog.Action.REVOKED;
+        PunishmentAudit.Action action = PunishmentAudit.Action.REVOKED;
 
-        PunishmentLog newLog = MurmelExceptionWrapper.dbWrap(
-                "Failed to revoke PunishmentLog (logId=" + logId + ")",
+        PunishmentAudit newLog = MurmelExceptionWrapper.dbWrap(
+                "Failed to revoke PunishmentAudit (logId=" + logId + ")",
                 () -> database.query(SQL, null, ResultSetUtil.punishmentLog(), stmt -> {
                     stmt.setString(1, logId.toString());
                     stmt.setString(2, action.name());
-                    stmt.setString(3, userId == null ? null : userId.toString());
+                    stmt.setString(3, mojangId == null ? null : mojangId.toString());
                     stmt.setString(4, inetAddress == null ? null : inetAddress.getHostAddress());
-                    stmt.setInt(5, log.reasonId() == null ? Types.NULL : log.reasonId());
-                    stmt.setInt(6, log.reasonTypeId());
+                    stmt.setObject(5, log.reasonId(), Types.INTEGER);
+                    stmt.setObject(6, log.reasonTypeId(), Types.INTEGER);
                     stmt.setString(7, log.reasonText());
-                    stmt.setLong(8, log.reasonDuration() == null ? Types.NULL : log.reasonDuration());
+                    stmt.setObject(8, log.reasonDuration(), Types.BIGINT);
                     stmt.setBoolean(9, log.reasonAutoFlagIp());
                     stmt.setBoolean(10, log.reasonAutoPunish());
                 }),
                 PunishmentLogException::new
         );
 
-        if (newLog == null) return null;
+        if (newLog == null) return Optional.empty();
         refreshProvider.fireSingle(single, newLog);
-        return newLog;
+        return Optional.of(newLog);
     }
 }

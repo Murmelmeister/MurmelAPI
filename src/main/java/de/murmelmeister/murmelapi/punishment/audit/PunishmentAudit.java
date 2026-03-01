@@ -17,26 +17,26 @@ import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
  * @param reasonId       ID of the reason, null if reason id deleted
  * @param reasonDuration Duration in seconds, null for permanent punishments
  */
-public record PunishmentLog(
+public record PunishmentAudit(
         @NotNull UUID id,
         @NotNull Action action,
-        @Nullable UUID userId,
+        @Nullable UUID mojangId,
         @Nullable InetAddress inetAddress,
         @Nullable Integer reasonId,
-        int reasonTypeId,
+        @Nullable Integer reasonTypeId,
         @NotNull String reasonText,
         @Nullable Long reasonDuration,
         boolean reasonAutoFlagIp,
         boolean reasonAutoPunish,
-        int createdBy,
+        @Nullable Integer createdBy,
         @NotNull LocalDateTime createdAt
 ) {
-    public PunishmentLog {
+    public PunishmentAudit {
         Objects.requireNonNull(id, "logId cannot be null");
         Objects.requireNonNull(action, "action cannot be null");
         Objects.requireNonNull(reasonText, "reasonText cannot be null");
         Objects.requireNonNull(createdAt, "createdAt cannot be null");
-        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (createdBy != null && createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
     }
 
     public enum Action {
