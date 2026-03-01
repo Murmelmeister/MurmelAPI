@@ -51,9 +51,9 @@ public class GroupColorCache implements MurmelCache {
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cacheByKey = CacheUtil.buildCacheExpired(this::loadByKey, cacheCapacity, refreshInterval);
-        this.cacheByGroupId = CacheUtil.buildCacheExpired(this::loadByGroupId, cacheCapacity, refreshInterval);
-        this.listCache = CacheUtil.buildCacheExpired(key -> loadAllFromDatabase(), 1, refreshInterval);
+        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapacity, refreshInterval);
+        this.cacheByGroupId = CacheUtil.buildCacheRefresh(this::loadByGroupId, cacheCapacity, refreshInterval);
+        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         this.refreshProvider.register(this);
     }
 
