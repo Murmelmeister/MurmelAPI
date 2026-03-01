@@ -5,26 +5,25 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PunishmentReasonProvider {
     void refreshCache();
 
-    @Nullable PunishmentReason findReason(int id);
+    @NotNull Optional<PunishmentReason> findReason(int id);
 
     @NotNull
     @Unmodifiable
     List<PunishmentReason> findReasons(int typeId);
 
-    @NotNull @Unmodifiable List<PunishmentReason> findAll();
+    @NotNull
+    @Unmodifiable
+    List<PunishmentReason> findAll();
 
-    @Nullable PunishmentReason create(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs, boolean autoFlagIp, boolean autoPunish, int createdBy);
+    @NotNull Optional<PunishmentReason> upsert(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs,
+                                               boolean autoFlagIp, boolean autoPunish, int executorId);
+
+    @NotNull Optional<PunishmentReason> upsert(@NotNull PunishmentReason reason, int executorId);
 
     int delete(int id);
-
-    @Nullable PunishmentReason update(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs, boolean autoFlagIp, boolean autoPunish, int changedBy);
-
-    @Nullable PunishmentReason upsert(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs,
-                                      boolean autoFlagIp, boolean autoPunish, int executorId);
-
-    @Nullable PunishmentReason upsert(@NotNull PunishmentReason reason, int executorId);
 }

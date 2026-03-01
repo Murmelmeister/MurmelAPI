@@ -12,7 +12,6 @@ import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,9 +111,8 @@ public class PunishmentReasonCache implements MurmelCache {
         return Optional.ofNullable(punishmentReason);
     }
 
-    public @Nullable PunishmentReason getById(int reasonId) {
-        Optional<PunishmentReason> optReason = cacheById.get(reasonId);
-        return optReason != null && optReason.isPresent() ? optReason.orElse(null) : null;
+    public @NotNull Optional<PunishmentReason> getById(int reasonId) {
+        return cacheById.get(reasonId);
     }
 
     public @NotNull @Unmodifiable List<PunishmentReason> getByType(int typeId) {
@@ -134,7 +132,7 @@ public class PunishmentReasonCache implements MurmelCache {
     public void remove(@NotNull PunishmentReason reason) {
         cacheById.invalidate(reason.id());
         cacheByType.invalidate(reason.typeId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == reason.id());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {
