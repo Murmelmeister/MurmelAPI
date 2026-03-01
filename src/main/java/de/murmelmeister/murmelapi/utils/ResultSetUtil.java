@@ -17,7 +17,7 @@ import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
 import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.permission.parent.Parent;
-import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
+import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
@@ -177,11 +177,11 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<PunishmentLog> punishmentLog() {
+    public static @NotNull ResultSetProcessor<PunishmentAudit> punishmentLog() {
         return resultSet -> {
             UUID id = UUID.fromString(resultSet.getString("id"));
-            PunishmentLog.Action action = PunishmentLog.Action.valueOf(resultSet.getString("action"));
-            UUID userId = resultSet.getObject("user_id", UUID.class);
+            PunishmentAudit.Action action = PunishmentAudit.Action.valueOf(resultSet.getString("action"));
+            UUID mojangId = resultSet.getObject("mojang_id", UUID.class);
             String ipAddress = resultSet.getString("ip_address");
             InetAddress inetAddress;
             try {
@@ -197,7 +197,7 @@ public final class ResultSetUtil {
             boolean reasonAutoPunish = resultSet.getBoolean("reason_auto_punish");
             int createdBy = resultSet.getInt("created_by");
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            return new PunishmentLog(id, action, userId, inetAddress, reasonId, reasonTypeId, reasonText,
+            return new PunishmentAudit(id, action, mojangId, inetAddress, reasonId, reasonTypeId, reasonText,
                     reasonDuration, reasonAutoFlagIp, reasonAutoPunish, createdBy, createdAt);
         };
     }
@@ -237,11 +237,11 @@ public final class ResultSetUtil {
 
     public static @NotNull ResultSetProcessor<PunishmentUser> punishmentUser() {
         return resultSet -> {
-            UUID userId = UUID.fromString(resultSet.getString("user_id"));
+            UUID mojangId = UUID.fromString(resultSet.getString("mojang_id"));
             int typeId = resultSet.getInt("type_id");
             UUID logId = UUID.fromString(resultSet.getString("log_id"));
             LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            return new PunishmentUser(userId, typeId, logId, expiresAt);
+            return new PunishmentUser(mojangId, typeId, logId, expiresAt);
         };
     }
 

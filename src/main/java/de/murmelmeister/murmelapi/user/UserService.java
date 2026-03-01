@@ -3,8 +3,8 @@ package de.murmelmeister.murmelapi.user;
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
 import de.murmelmeister.murmelapi.exceptions.user.UserSessionException;
 import de.murmelmeister.murmelapi.exceptions.user.UserStatsException;
-import de.murmelmeister.murmelapi.punishment.audit.PunishmentLog;
-import de.murmelmeister.murmelapi.punishment.audit.PunishmentLogProvider;
+import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
+import de.murmelmeister.murmelapi.punishment.audit.PunishmentAuditProvider;
 import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
@@ -35,7 +35,7 @@ public record UserService(
         @NotNull UserSessionProvider sessionProvider,
         @NotNull UserExcuseProvider userExcuseProvider,
         @NotNull PunishmentUserProvider punishUserProvider,
-        @NotNull PunishmentLogProvider punishLogProvider
+        @NotNull PunishmentAuditProvider punishAuditProvider
 ) {
     public UserService {
         Objects.requireNonNull(userProvider, "userProvider must not be null");
@@ -44,7 +44,7 @@ public record UserService(
         Objects.requireNonNull(sessionProvider, "sessionProvider must not be null");
         Objects.requireNonNull(userExcuseProvider, "userExcuseProvider must not be null");
         Objects.requireNonNull(punishUserProvider, "punishUserProvider must not be null");
-        Objects.requireNonNull(punishLogProvider, "punishLogProvider must not be null");
+        Objects.requireNonNull(punishAuditProvider, "punishAuditProvider must not be null");
     }
 
     public void startSession(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
@@ -271,10 +271,10 @@ public record UserService(
 
     private boolean isPermanentlyBlocked(UUID mojangId) {
         if (mojangId == null) return false;
-        PunishmentUser punishUser = punishUserProvider.findPunishedUser(mojangId, PunishmentType.BAN.getId());
+        PunishmentUser punishUser = punishUserProvider.findPunishedUser(mojangId, PunishmentType.BAN.getId()).orElse(null);
         if (punishUser == null) return false;
 
-        PunishmentLog punishmentLog = punishLogProvider.findLog(punishUser.logId());
-        return punishmentLog != null && punishmentLog.isPermanent();
+        PunishmentAudit punishmentAudit = punishAuditProvider.findLog(punishUser.logId()).orElse(null);
+        return punishmentAudit != null && punishmentAudit.isPermanent();
     }
 }
