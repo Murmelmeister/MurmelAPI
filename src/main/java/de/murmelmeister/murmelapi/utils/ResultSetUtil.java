@@ -177,7 +177,7 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<PunishmentAudit> punishmentLog() {
+    public static @NotNull ResultSetProcessor<PunishmentAudit> punishmentAudit() {
         return resultSet -> {
             UUID id = UUID.fromString(resultSet.getString("id"));
             PunishmentAudit.Action action = PunishmentAudit.Action.valueOf(resultSet.getString("action"));

@@ -276,7 +276,7 @@ public final class MurmelAPI {
         if (userId < 1) return 0;
         int softDeleteRow = deleteUserSoft(userId);
         //int punishmentRow = punishmentUser.unpunish(userId);
-        //int logsRow = punishmentLog.deleteUserLogs(userId);
+        //int logsRow = punishmentAudit.deleteUserLogs(userId);
         int userRow = userProvider.deleteUser(userId);
         //return softDeleteRow + punishmentRow + logsRow + userRow;
         return softDeleteRow + userRow;

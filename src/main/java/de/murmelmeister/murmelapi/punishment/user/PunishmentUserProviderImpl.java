@@ -74,6 +74,7 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
     public @NotNull Optional<PunishmentUser> upsert(@NotNull UUID mojangId, int typeId, @NotNull UUID logId, @Nullable Long durationSecs) {
         Objects.requireNonNull(mojangId, "mojangId cannot be null");
         Objects.requireNonNull(logId, "logId cannot be null");
+        if (durationSecs != null && durationSecs < 0) throw new IllegalArgumentException("durationSecs must be null or >= 0");
 
         LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
         Optional<PunishmentUser> optExisting = cache.getByKey(mojangId, typeId);

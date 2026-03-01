@@ -13,19 +13,19 @@ import java.util.UUID;
 public interface PunishmentAuditProvider {
     void refreshCache();
 
-    @NotNull Optional<PunishmentAudit> findLog(@NotNull UUID logId);
+    @NotNull Optional<PunishmentAudit> findAudit(@NotNull UUID id);
 
     @NotNull
     @Unmodifiable
-    List<PunishmentAudit> findLogs(@NotNull UUID mojangId);
+    List<PunishmentAudit> findAudits(@NotNull UUID mojangId);
 
     @NotNull
     @Unmodifiable
-    List<PunishmentAudit> findLogs(@NotNull InetAddress inetAddress);
+    List<PunishmentAudit> findAudits(@NotNull InetAddress inetAddress);
 
-    @NotNull Optional<PunishmentAudit> create(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy);
+    @NotNull Optional<PunishmentAudit> create(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int executorId);
 
-    @NotNull Optional<PunishmentAudit> modify(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy);
+    @NotNull Optional<PunishmentAudit> modify(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int executorId);
 
-    @NotNull Optional<PunishmentAudit> revoke(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentAudit log, int createdBy);
+    @NotNull Optional<PunishmentAudit> revoke(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentAudit audit, int executorId);
 }

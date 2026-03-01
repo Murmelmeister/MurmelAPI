@@ -76,6 +76,7 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
     public @NotNull Optional<PunishmentIpAddress> upsert(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId, @Nullable Long durationSecs) {
         Objects.requireNonNull(inetAddress, "inetAddress must not be null");
         Objects.requireNonNull(logId, "logId must not be null");
+        if (durationSecs != null && durationSecs < 0) throw new IllegalArgumentException("durationSecs must be null or >= 0");
 
         LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
         Optional<PunishmentIpAddress> optExisting = cache.getByKey(inetAddress, typeId);

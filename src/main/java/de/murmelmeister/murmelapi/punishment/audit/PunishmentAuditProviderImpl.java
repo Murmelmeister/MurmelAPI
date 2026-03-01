@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.punishment.audit;
 import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
-import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentLogException;
+import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentAuditException;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -48,8 +48,8 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
     private final Database database;
     private final RefreshProvider refreshProvider;
     private final PunishmentAuditCache cache;
-    private final RefreshType all = RefreshType.PUNISHMENT_LOGS;
-    private final RefreshType single = RefreshType.SINGLE_PUNISHMENT_LOG;
+    private final RefreshType all = RefreshType.PUNISHMENT_AUDITS;
+    private final RefreshType single = RefreshType.SINGLE_PUNISHMENT_AUDIT;
 
     public PunishmentAuditProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
@@ -63,30 +63,31 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
     }
 
     @Override
-    public @NotNull Optional<PunishmentAudit> findLog(@NotNull UUID logId) {
-        return cache.getByLogId(logId);
+    public @NotNull Optional<PunishmentAudit> findAudit(@NotNull UUID id) {
+        return cache.getById(id);
     }
 
     @Override
-    public @NotNull @Unmodifiable List<PunishmentAudit> findLogs(@NotNull UUID userId) {
+    public @NotNull @Unmodifiable List<PunishmentAudit> findAudits(@NotNull UUID userId) {
         return cache.getByMojangId(userId);
     }
 
     @Override
-    public @NotNull @Unmodifiable List<PunishmentAudit> findLogs(@NotNull InetAddress inetAddress) {
+    public @NotNull @Unmodifiable List<PunishmentAudit> findAudits(@NotNull InetAddress inetAddress) {
         return cache.getByIpAddress(inetAddress);
     }
 
-    private @NotNull Optional<PunishmentAudit> createLog(@NotNull PunishmentAudit.Action action, @Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
+    private @NotNull Optional<PunishmentAudit> createLog(@NotNull PunishmentAudit.Action action, @Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int executorId) {
         Objects.requireNonNull(action, "action cannot be null");
         Objects.requireNonNull(reason, "reason cannot be null");
-        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (executorId < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("executorId must be >= " + CONSOLE_USER_ID);
 
-        UUID logId = UUID.randomUUID();
-        PunishmentAudit log = MurmelExceptionWrapper.dbWrap(
-                "Failed to create or modify PunishmentAudit (logId=" + logId + ")",
-                () -> database.query(SQL, null, ResultSetUtil.punishmentLog(), stmt -> {
-                    stmt.setString(1, logId.toString());
+        UUID id = UUID.randomUUID();
+        PunishmentAudit audit = MurmelExceptionWrapper.dbWrap(
+                "Failed to create or modify PunishmentAudit (logId=" + id + ")",
+                () -> database.query(SQL, null, ResultSetUtil.punishmentAudit(), stmt -> {
+                    stmt.setString(1, id.toString());
                     stmt.setString(2, action.name());
                     stmt.setString(3, mojangId == null ? null : mojangId.toString());
                     stmt.setString(4, inetAddress == null ? null : inetAddress.getHostAddress());
@@ -97,59 +98,60 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
                     stmt.setBoolean(9, reason.autoFlagIp());
                     stmt.setBoolean(10, reason.autoPunish());
                 }),
-                PunishmentLogException::new
+                PunishmentAuditException::new
         );
 
-        return Optional.ofNullable(log);
+        return Optional.ofNullable(audit);
     }
 
     @Override
-    public @NotNull Optional<PunishmentAudit> create(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
+    public @NotNull Optional<PunishmentAudit> create(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int executorId) {
         PunishmentAudit.Action action = PunishmentAudit.Action.CREATED;
-        Optional<PunishmentAudit> log = createLog(action, mojangId, inetAddress, reason, createdBy);
+        Optional<PunishmentAudit> audit = createLog(action, mojangId, inetAddress, reason, executorId);
 
-        if (log.isEmpty()) return Optional.empty();
-        refreshProvider.fireSingle(single, log.get());
-        return log;
+        if (audit.isEmpty()) return Optional.empty();
+        refreshProvider.fireSingle(single, audit.get());
+        return audit;
     }
 
     @Override
-    public @NotNull Optional<PunishmentAudit> modify(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int createdBy) {
+    public @NotNull Optional<PunishmentAudit> modify(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int executorId) {
         PunishmentAudit.Action action = PunishmentAudit.Action.MODIFIED;
-        Optional<PunishmentAudit> log = createLog(action, mojangId, inetAddress, reason, createdBy);
+        Optional<PunishmentAudit> audit = createLog(action, mojangId, inetAddress, reason, executorId);
 
-        if (log.isEmpty()) return Optional.empty();
-        refreshProvider.fireSingle(single, log.get());
-        return log;
+        if (audit.isEmpty()) return Optional.empty();
+        refreshProvider.fireSingle(single, audit.get());
+        return audit;
     }
 
     @Override
-    public @NotNull Optional<PunishmentAudit> revoke(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentAudit log, int createdBy) {
-        Objects.requireNonNull(log, "log cannot be null");
-        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+    public @NotNull Optional<PunishmentAudit> revoke(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentAudit audit, int executorId) {
+        Objects.requireNonNull(audit, "audit cannot be null");
+        if (executorId < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("executorId must be >= " + CONSOLE_USER_ID);
 
-        UUID logId = UUID.randomUUID();
+        UUID id = UUID.randomUUID();
         PunishmentAudit.Action action = PunishmentAudit.Action.REVOKED;
 
-        PunishmentAudit newLog = MurmelExceptionWrapper.dbWrap(
-                "Failed to revoke PunishmentAudit (logId=" + logId + ")",
-                () -> database.query(SQL, null, ResultSetUtil.punishmentLog(), stmt -> {
-                    stmt.setString(1, logId.toString());
+        PunishmentAudit newAudit = MurmelExceptionWrapper.dbWrap(
+                "Failed to revoke PunishmentAudit (id=" + id + ")",
+                () -> database.query(SQL, null, ResultSetUtil.punishmentAudit(), stmt -> {
+                    stmt.setString(1, id.toString());
                     stmt.setString(2, action.name());
                     stmt.setString(3, mojangId == null ? null : mojangId.toString());
                     stmt.setString(4, inetAddress == null ? null : inetAddress.getHostAddress());
-                    stmt.setObject(5, log.reasonId(), Types.INTEGER);
-                    stmt.setObject(6, log.reasonTypeId(), Types.INTEGER);
-                    stmt.setString(7, log.reasonText());
-                    stmt.setObject(8, log.reasonDuration(), Types.BIGINT);
-                    stmt.setBoolean(9, log.reasonAutoFlagIp());
-                    stmt.setBoolean(10, log.reasonAutoPunish());
+                    stmt.setObject(5, audit.reasonId(), Types.INTEGER);
+                    stmt.setObject(6, audit.reasonTypeId(), Types.INTEGER);
+                    stmt.setString(7, audit.reasonText());
+                    stmt.setObject(8, audit.reasonDuration(), Types.BIGINT);
+                    stmt.setBoolean(9, audit.reasonAutoFlagIp());
+                    stmt.setBoolean(10, audit.reasonAutoPunish());
                 }),
-                PunishmentLogException::new
+                PunishmentAuditException::new
         );
 
-        if (newLog == null) return Optional.empty();
-        refreshProvider.fireSingle(single, newLog);
-        return Optional.of(newLog);
+        if (newAudit == null) return Optional.empty();
+        refreshProvider.fireSingle(single, newAudit);
+        return Optional.of(newAudit);
     }
 }
