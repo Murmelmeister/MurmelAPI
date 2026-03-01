@@ -124,11 +124,11 @@ CREATE TABLE IF NOT EXISTS permissions (
     ),
     UNIQUE KEY uk_user_permission (user_id, permission),
     UNIQUE KEY uk_group_permission (group_id, permission),
-    INDEX idx_permissions_exp (expires_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
+    FOREIGN KEY (changed_by) REFERENCES users(id),
+    INDEX idx_permissions_exp (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS parents (
@@ -149,12 +149,12 @@ CREATE TABLE IF NOT EXISTS parents (
     ),
     UNIQUE KEY uk_user_parent (user_id, parent_id),
     UNIQUE KEY uk_group_parent (group_id, parent_id),
-    INDEX idx_parents_exp (expires_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
+    FOREIGN KEY (changed_by) REFERENCES users(id),
+    INDEX idx_parents_exp (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Punishment types, reasons, logs, and current states
@@ -175,49 +175,65 @@ CREATE TABLE IF NOT EXISTS punishment_reasons (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     changed_by INT NULL,
     changed_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP(),
+
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),
     FOREIGN KEY (created_by) REFERENCES users(id),
-    FOREIGN KEY (changed_by) REFERENCES users(id)
+    FOREIGN KEY (changed_by) REFERENCES users(id),
+    INDEX idx_reason_type (type_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE INDEX IF NOT EXISTS idx_reason_type ON punishment_reasons (type_id);
 
-CREATE TABLE IF NOT EXISTS punishment_logs (
+CREATE TABLE IF NOT EXISTS punishment_audit (
     id UUID PRIMARY KEY,
     action ENUM('CREATED', 'MODIFIED', 'REVOKED') NOT NULL,
-    user_id UUID NULL,
+
+    mojang_id UUID NULL,
     ip_address INET6 NULL,
-    CONSTRAINT chk_user_or_ip_not_both_null CHECK (user_id IS NOT NULL OR ip_address IS NOT NULL),
+
     reason_id INT NULL,
-    reason_type_id INT NOT NULL,
+    reason_type_id INT NULL,
     reason_text TEXT NOT NULL,
     reason_duration BIGINT NULL,
     reason_auto_flag_ip BOOLEAN NOT NULL,
     reason_auto_punish BOOLEAN NOT NULL,
-    created_by INT NOT NULL,
+
+    created_by INT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
-    FOREIGN KEY (reason_id) REFERENCES punishment_reasons(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    FOREIGN KEY (created_by) REFERENCES users(id)
+
+    CONSTRAINT chk_user_or_ip_not_both_null CHECK (
+        mojang_id IS NOT NULL OR ip_address IS NOT NULL
+    ),
+    FOREIGN KEY (reason_id) REFERENCES punishment_reasons(id) ON DELETE SET NULL,
+    FOREIGN KEY (reason_type_id) REFERENCES punishment_types(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_audit_user (mojang_id),
+    INDEX idx_audit_ip (ip_address),
+    INDEX idx_audit_reason (reason_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE INDEX IF NOT EXISTS idx_audit_user ON punishment_logs (user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_ip ON punishment_logs (ip_address);
-CREATE INDEX IF NOT EXISTS idx_audit_reason ON punishment_logs (reason_id);
 
 CREATE TABLE IF NOT EXISTS punishment_ip_address (
     ip_address INET6 NOT NULL,
     type_id INT NOT NULL,
     log_id UUID NOT NULL UNIQUE,
+
+    expires_at DATETIME NULL,
+
     PRIMARY KEY (ip_address, type_id),
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),
-    FOREIGN KEY (log_id) REFERENCES punishment_logs(id)
+    FOREIGN KEY (log_id) REFERENCES punishment_logs(id) ON DELETE CASCADE,
+    INDEX idx_punish_ip_exp (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS punishment_user (
-    user_id UUID NOT NULL,
+    mojang_id UUID NOT NULL,
     type_id INT NOT NULL,
     log_id UUID NOT NULL UNIQUE,
-    PRIMARY KEY (user_id, type_id),
+
+    expires_at DATETIME NULL,
+
+    PRIMARY KEY (mojang_id, type_id),
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),
-    FOREIGN KEY (log_id) REFERENCES punishment_logs(id)
+    FOREIGN KEY (log_id) REFERENCES punishment_logs(id) ON DELETE CASCADE,
+    INDEX idx_punish_user_exp (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Clan data

@@ -6,6 +6,7 @@ import com.github.benmanes.caffeine.cache.LoadingCache;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.database.ParameterProcessor;
 import de.murmelmeister.library.database.ResultSetProcessor;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -14,27 +15,28 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public final class CacheUtil {
-    public static <K, V> LoadingCache<K, V> buildCache(CacheLoader<K, V> loader, long maxSize) {
-        return Caffeine.newBuilder()
-                .maximumSize(maxSize)
-                .recordStats()
-                .build(loader);
+    public static <K, V> @NotNull LoadingCache<K, V> buildCache(CacheLoader<K, V> loader, long maxSize) {
+        Caffeine<Object, Object> builder = Caffeine.newBuilder()
+                .recordStats();
+        if (maxSize > 0) builder.maximumSize(maxSize);
+        return builder.build(loader);
     }
 
-    public static <K, V> LoadingCache<K, V> buildCacheExpired(CacheLoader<K, V> loader, long maxSize, Duration ttl) {
-        return Caffeine.newBuilder()
-                .maximumSize(maxSize)
+    public static <K, V> @NotNull LoadingCache<K, V> buildCacheExpired(CacheLoader<K, V> loader, long maxSize, Duration ttl) {
+        Caffeine<Object, Object> builder = Caffeine.newBuilder()
                 .expireAfterWrite(ttl)
-                .recordStats()
-                .build(loader);
+                .recordStats();
+        if (maxSize > 0) builder.maximumSize(maxSize);
+        return builder.build(loader);
     }
 
-    public static <K, V> LoadingCache<K, V> buildCacheRefresh(CacheLoader<K, V> loader, long maxSize, Duration ttl) {
-        return Caffeine.newBuilder()
-                .maximumSize(maxSize)
-                .refreshAfterWrite(ttl)
+    public static <K, V> @NotNull LoadingCache<K, V> buildCacheRefresh(CacheLoader<K, V> loader, long maxSize, Duration ttl) {
+        Caffeine<Object, Object> builder = Caffeine.newBuilder()
                 .recordStats()
-                .build(loader);
+                .refreshAfterWrite(ttl)
+                .expireAfterAccess(ttl.multipliedBy(3));
+        if (maxSize > 0) builder.maximumSize(maxSize);
+        return builder.build(loader);
     }
 
     public static <K, V> void remove(LoadingCache<K, List<V>> cache, K key, Predicate<V> removeIf) {

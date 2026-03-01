@@ -149,7 +149,7 @@ public final class MurmelAPI {
     private final MaintenanceWhitelistProvider maintenanceWhitelistProvider;
 
     public MurmelAPI() {
-        this(null, 10_000, Duration.ofMinutes(30));
+        this(null, -1, Duration.ofMinutes(10));
     }
 
     public MurmelAPI(Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
