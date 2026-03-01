@@ -230,7 +230,8 @@ public final class ResultSetUtil {
             }
             int typeId = resultSet.getInt("type_id");
             UUID logId = UUID.fromString(resultSet.getString("log_id"));
-            return new PunishmentIpAddress(inetAddress, typeId, logId);
+            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
+            return new PunishmentIpAddress(inetAddress, typeId, logId, expiresAt);
         };
     }
 
@@ -239,7 +240,8 @@ public final class ResultSetUtil {
             UUID userId = UUID.fromString(resultSet.getString("user_id"));
             int typeId = resultSet.getInt("type_id");
             UUID logId = UUID.fromString(resultSet.getString("log_id"));
-            return new PunishmentUser(userId, typeId, logId);
+            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
+            return new PunishmentUser(userId, typeId, logId, expiresAt);
         };
     }
 
