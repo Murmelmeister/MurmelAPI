@@ -27,7 +27,6 @@ public record PunishmentAudit(
         @NotNull String reasonText,
         @Nullable Long reasonDuration,
         boolean reasonAutoFlagIp,
-        boolean reasonAutoPunish,
         @Nullable Integer createdBy,
         @NotNull LocalDateTime createdAt
 ) {

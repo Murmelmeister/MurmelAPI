@@ -25,16 +25,15 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
 
     @Language("MariaDB")
     private static final String UPSERT_SQL = """
-            INSERT INTO %s (id, type_id, reason_text, duration_secs, auto_flag_ip, auto_punish, created_by)
+            INSERT INTO %s (id, type_id, reason_text, duration_secs, auto_flag_ip, created_by)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 type_id = VALUES(type_id),
                 reason_text = VALUES(reason_text),
                 duration_secs = VALUES(duration_secs),
                 auto_flag_ip = VALUES(auto_flag_ip),
-                auto_punish = VALUES(auto_punish),
                 changed_by = ?
-            RETURNING id, type_id, reason_text, duration_secs, auto_flag_ip, auto_punish, created_by, created_at, changed_by, changed_at
+            RETURNING id, type_id, reason_text, duration_secs, auto_flag_ip, created_by, created_at, changed_by, changed_at
             """.formatted(TABLE_NAME);
 
     @Language("MariaDB")
@@ -75,7 +74,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
 
     @Override
     public @NotNull Optional<PunishmentReason> upsert(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs,
-                                                      boolean autoFlagIp, boolean autoPunish, int executorId) {
+                                                      boolean autoFlagIp, int executorId) {
         if (id < 1) throw new IllegalArgumentException("id must be >= 1");
         if (typeId < 1) throw new IllegalArgumentException("typeId must be >= 1");
         if (reasonText.isBlank()) throw new IllegalArgumentException("reasonText must not be blank");
@@ -90,8 +89,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
             if (typeId == existing.typeId()
                     && Objects.equals(reasonText, existing.reasonText())
                     && Objects.equals(durationSecs, existing.durationSecs())
-                    && autoFlagIp == existing.autoFlagIp()
-                    && autoPunish == existing.autoPunish())
+                    && autoFlagIp == existing.autoFlagIp())
                 return optExisting;
         }
 
@@ -103,9 +101,8 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
                     stmt.setString(3, reasonText);
                     stmt.setObject(4, durationSecs, Types.BIGINT);
                     stmt.setBoolean(5, autoFlagIp);
-                    stmt.setBoolean(6, autoPunish);
+                    stmt.setInt(6, executorId);
                     stmt.setInt(7, executorId);
-                    stmt.setInt(8, executorId);
                 }),
                 PunishmentReasonException::new
         );
@@ -123,7 +120,6 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
                 reason.reasonText(),
                 reason.durationSecs(),
                 reason.autoFlagIp(),
-                reason.autoPunish(),
                 executorId
         );
     }

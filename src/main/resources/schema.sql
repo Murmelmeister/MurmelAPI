@@ -170,7 +170,6 @@ CREATE TABLE IF NOT EXISTS punishment_reasons (
     reason_text TEXT NOT NULL,
     duration_secs BIGINT NULL,
     auto_flag_ip BOOLEAN NOT NULL DEFAULT FALSE,
-    auto_punish BOOLEAN NOT NULL DEFAULT FALSE,
     created_by INT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
     changed_by INT NULL,
@@ -194,7 +193,6 @@ CREATE TABLE IF NOT EXISTS punishment_audit (
     reason_text TEXT NOT NULL,
     reason_duration BIGINT NULL,
     reason_auto_flag_ip BOOLEAN NOT NULL,
-    reason_auto_punish BOOLEAN NOT NULL,
 
     created_by INT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),

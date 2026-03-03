@@ -194,11 +194,10 @@ public final class ResultSetUtil {
             String reasonText = resultSet.getString("reason_text");
             Long reasonDuration = resultSet.getObject("reason_duration", Long.class);
             boolean reasonAutoFlagIp = resultSet.getBoolean("reason_auto_flag_ip");
-            boolean reasonAutoPunish = resultSet.getBoolean("reason_auto_punish");
             int createdBy = resultSet.getInt("created_by");
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
             return new PunishmentAudit(id, action, mojangId, inetAddress, reasonId, reasonTypeId, reasonText,
-                    reasonDuration, reasonAutoFlagIp, reasonAutoPunish, createdBy, createdAt);
+                    reasonDuration, reasonAutoFlagIp, createdBy, createdAt);
         };
     }
 
@@ -209,12 +208,11 @@ public final class ResultSetUtil {
             String reasonText = resultSet.getString("reason_text");
             Long durationSecs = resultSet.getObject("duration_secs", Long.class);
             boolean autoFlagIp = resultSet.getBoolean("auto_flag_ip");
-            boolean autoPunish = resultSet.getBoolean("auto_punish");
             int createdBy = resultSet.getInt("created_by");
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp, autoPunish,
+            return new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp,
                     createdBy, createdAt, changedBy, changedAt);
         };
     }

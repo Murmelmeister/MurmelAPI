@@ -21,7 +21,7 @@ public interface PunishmentReasonProvider {
     List<PunishmentReason> findAll();
 
     @NotNull Optional<PunishmentReason> upsert(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs,
-                                               boolean autoFlagIp, boolean autoPunish, int executorId);
+                                               boolean autoFlagIp, int executorId);
 
     @NotNull Optional<PunishmentReason> upsert(@NotNull PunishmentReason reason, int executorId);
 

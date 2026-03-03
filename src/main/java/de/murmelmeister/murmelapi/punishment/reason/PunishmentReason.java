@@ -17,7 +17,6 @@ public record PunishmentReason(
         @NotNull String reasonText,
         @Nullable Long durationSecs,
         boolean autoFlagIp,
-        boolean autoPunish,
         int createdBy,
         @NotNull LocalDateTime createdAt,
         @Nullable Integer changedBy,
@@ -48,7 +47,6 @@ public record PunishmentReason(
         private String reasonText;
         private Long durationSecs;
         private boolean autoFlagIp;
-        private boolean autoPunish;
         private Integer changedBy;
         private LocalDateTime changedAt;
 
@@ -58,7 +56,6 @@ public record PunishmentReason(
             this.reasonText = punishmentReason.reasonText();
             this.durationSecs = punishmentReason.durationSecs();
             this.autoFlagIp = punishmentReason.autoFlagIp();
-            this.autoPunish = punishmentReason.autoPunish();
             this.createdBy = punishmentReason.createdBy();
             this.createdAt = punishmentReason.createdAt();
             this.changedBy = punishmentReason.changedBy();
@@ -85,11 +82,6 @@ public record PunishmentReason(
             return this;
         }
 
-        public Builder autoPunish(boolean autoPunish) {
-            this.autoPunish = autoPunish;
-            return this;
-        }
-
         public Builder changedBy(@Nullable Integer changedBy) {
             this.changedBy = changedBy;
             return this;
@@ -101,7 +93,7 @@ public record PunishmentReason(
         }
 
         public @NotNull PunishmentReason build() {
-            return new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp, autoPunish, createdBy, createdAt, changedBy, changedAt);
+            return new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp, createdBy, createdAt, changedBy, changedAt);
         }
     }
 }
