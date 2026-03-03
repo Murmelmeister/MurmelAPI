@@ -3,7 +3,7 @@ package de.murmelmeister.murmelapi.language.message;
 import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +31,7 @@ public final class MessageService {
         this.messageProvider = provider;
     }
 
-    public @Nullable String getMessage(@NotNull String key, int languageId) {
+    public @NonNull String getMessage(@NotNull String key, int languageId) {
         Objects.requireNonNull(key, "key cannot be null");
 
         Language language = languageProvider.findById(languageId);
@@ -50,10 +50,10 @@ public final class MessageService {
                 return fallback.message();
         }
 
-        return null;
+        throw new IllegalArgumentException("Message with tag '" + key + "' not found in any language.");
     }
 
-    public @Nullable String getMessage(@NotNull String key, @NotNull String code) {
+    public @NotNull String getMessage(@NotNull String key, @NotNull String code) {
         Objects.requireNonNull(key, "key cannot be null");
         Objects.requireNonNull(code, "code cannot be null");
 
@@ -73,6 +73,6 @@ public final class MessageService {
                 return fallback.message();
         }
 
-        return null;
+        throw new IllegalArgumentException("Message with tag '" + key + "' not found in any language.");
     }
 }
