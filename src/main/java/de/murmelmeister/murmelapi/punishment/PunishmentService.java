@@ -123,10 +123,10 @@ public record PunishmentService(
         Objects.requireNonNull(consumer, "consumer must not be null");
 
         return userProvider.findPunishedUser(mojangId, typeId)
-                .flatMap(punish -> auditProvider.findAudit(punish.logId())
+                .flatMap(punish -> auditProvider.findAudit(punish.auditId())
                         .map(audit -> {
                             if (punish.isExpired()) {
-                                unpunishedUser(mojangId, typeId, punish.logId(), CONSOLE_USER_ID);
+                                unpunishedUser(mojangId, typeId, punish.auditId(), CONSOLE_USER_ID);
                                 return false;
                             }
                             consumer.accept(audit);
@@ -141,10 +141,10 @@ public record PunishmentService(
         Objects.requireNonNull(consumer, "consumer must not be null");
 
         return ipProvider.findPunishedIpAddress(inetAddress, typeId)
-                .flatMap(punish -> auditProvider.findAudit(punish.logId())
+                .flatMap(punish -> auditProvider.findAudit(punish.auditId())
                         .map(audit -> {
                             if (punish.isExpired()) {
-                                unpunishedIp(inetAddress, typeId, punish.logId(), CONSOLE_USER_ID);
+                                unpunishedIp(inetAddress, typeId, punish.auditId(), CONSOLE_USER_ID);
                                 return false;
                             }
                             consumer.accept(audit);

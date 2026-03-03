@@ -79,7 +79,7 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
         LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
         Optional<PunishmentUser> optExisting = cache.getByKey(mojangId, typeId);
         if (optExisting.isPresent()) {
-            if (Objects.equals(logId, optExisting.get().logId())
+            if (Objects.equals(logId, optExisting.get().auditId())
                     && Objects.equals(expiresAt, optExisting.get().expiresAt()))
                 return optExisting;
         }

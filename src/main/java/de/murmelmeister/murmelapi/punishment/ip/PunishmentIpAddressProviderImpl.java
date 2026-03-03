@@ -81,7 +81,7 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
         LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
         Optional<PunishmentIpAddress> optExisting = cache.getByKey(inetAddress, typeId);
         if (optExisting.isPresent()) {
-            if (Objects.equals(logId, optExisting.get().logId())
+            if (Objects.equals(logId, optExisting.get().auditId())
                     && Objects.equals(expiresAt, optExisting.get().expiresAt()))
                 return optExisting;
         }

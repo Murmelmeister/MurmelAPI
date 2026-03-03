@@ -10,12 +10,12 @@ import java.util.UUID;
 public record PunishmentUser(
         @NotNull UUID mojangId,
         int typeId,
-        @NotNull UUID logId,
+        @NotNull UUID auditId,
         @Nullable LocalDateTime expiresAt
 ) {
     public PunishmentUser {
         Objects.requireNonNull(mojangId, "mojangId cannot be null");
-        Objects.requireNonNull(logId, "logId cannot be null");
+        Objects.requireNonNull(auditId, "auditId cannot be null");
     }
 
     public boolean isExpired() {
@@ -34,18 +34,18 @@ public record PunishmentUser(
         private final UUID userId;
         private final int typeId;
 
-        private UUID logId;
+        private UUID auditId;
         private LocalDateTime expiresAt;
 
         private Builder(@NotNull PunishmentUser currentUser) {
             this.userId = currentUser.mojangId();
             this.typeId = currentUser.typeId();
-            this.logId = currentUser.logId();
+            this.auditId = currentUser.auditId();
             this.expiresAt = currentUser.expiresAt();
         }
 
-        public Builder logId(@NotNull UUID logId) {
-            this.logId = logId;
+        public Builder auditId(@NotNull UUID auditId) {
+            this.auditId = auditId;
             return this;
         }
 
@@ -55,7 +55,7 @@ public record PunishmentUser(
         }
 
         public @NotNull PunishmentUser build() {
-            return new PunishmentUser(userId, typeId, logId, expiresAt);
+            return new PunishmentUser(userId, typeId, auditId, expiresAt);
         }
     }
 }

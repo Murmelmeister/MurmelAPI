@@ -11,12 +11,12 @@ import java.util.UUID;
 public record PunishmentIpAddress(
         @NotNull InetAddress inetAddress,
         int typeId,
-        @NotNull UUID logId,
+        @NotNull UUID auditId,
         @Nullable LocalDateTime expiresAt
 ) {
     public PunishmentIpAddress {
         Objects.requireNonNull(inetAddress, "inetAddress must not be null");
-        Objects.requireNonNull(logId, "logId must not be null");
+        Objects.requireNonNull(auditId, "auditId must not be null");
     }
 
     public boolean isExpired() {
@@ -35,18 +35,18 @@ public record PunishmentIpAddress(
         private final InetAddress inetAddress;
         private final int typeId;
 
-        private UUID logId;
+        private UUID auditId;
         private LocalDateTime expiresAt;
 
         private Builder(@NotNull PunishmentIpAddress currentIp) {
             this.inetAddress = currentIp.inetAddress();
             this.typeId = currentIp.typeId();
-            this.logId = currentIp.logId();
+            this.auditId = currentIp.auditId();
             this.expiresAt = currentIp.expiresAt();
         }
 
-        public Builder logId(@NotNull UUID logId) {
-            this.logId = logId;
+        public Builder auditId(@NotNull UUID auditId) {
+            this.auditId = auditId;
             return this;
         }
 
@@ -56,7 +56,7 @@ public record PunishmentIpAddress(
         }
 
         public @NotNull PunishmentIpAddress build() {
-            return new PunishmentIpAddress(inetAddress, typeId, logId, expiresAt);
+            return new PunishmentIpAddress(inetAddress, typeId, auditId, expiresAt);
         }
     }
 }
