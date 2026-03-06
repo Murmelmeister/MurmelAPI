@@ -211,26 +211,26 @@ CREATE TABLE IF NOT EXISTS punishment_audit (
 CREATE TABLE IF NOT EXISTS punishment_ip_address (
     ip_address INET6 NOT NULL,
     type_id INT NOT NULL,
-    log_id UUID NOT NULL UNIQUE,
+    audit_id UUID NOT NULL UNIQUE,
 
     expires_at DATETIME NULL,
 
     PRIMARY KEY (ip_address, type_id),
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),
-    FOREIGN KEY (log_id) REFERENCES punishment_logs(id) ON DELETE CASCADE,
+    FOREIGN KEY (audit_id) REFERENCES punishment_audit(id) ON DELETE CASCADE,
     INDEX idx_punish_ip_exp (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS punishment_user (
     mojang_id UUID NOT NULL,
     type_id INT NOT NULL,
-    log_id UUID NOT NULL UNIQUE,
+    audit_id UUID NOT NULL UNIQUE,
 
     expires_at DATETIME NULL,
 
     PRIMARY KEY (mojang_id, type_id),
     FOREIGN KEY (type_id) REFERENCES punishment_types(id),
-    FOREIGN KEY (log_id) REFERENCES punishment_logs(id) ON DELETE CASCADE,
+    FOREIGN KEY (audit_id) REFERENCES punishment_audit(id) ON DELETE CASCADE,
     INDEX idx_punish_user_exp (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

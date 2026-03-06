@@ -227,9 +227,9 @@ public final class ResultSetUtil {
                 throw new RuntimeException(e);
             }
             int typeId = resultSet.getInt("type_id");
-            UUID logId = UUID.fromString(resultSet.getString("log_id"));
+            UUID auditId = UUID.fromString(resultSet.getString("audit_id"));
             LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            return new PunishmentIpAddress(inetAddress, typeId, logId, expiresAt);
+            return new PunishmentIpAddress(inetAddress, typeId, auditId, expiresAt);
         };
     }
 
@@ -237,9 +237,9 @@ public final class ResultSetUtil {
         return resultSet -> {
             UUID mojangId = UUID.fromString(resultSet.getString("mojang_id"));
             int typeId = resultSet.getInt("type_id");
-            UUID logId = UUID.fromString(resultSet.getString("log_id"));
+            UUID auditId = UUID.fromString(resultSet.getString("audit_id"));
             LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            return new PunishmentUser(mojangId, typeId, logId, expiresAt);
+            return new PunishmentUser(mojangId, typeId, auditId, expiresAt);
         };
     }
 
