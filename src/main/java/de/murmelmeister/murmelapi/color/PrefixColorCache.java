@@ -12,7 +12,6 @@ import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,22 +101,20 @@ public class PrefixColorCache implements MurmelCache {
         return Optional.ofNullable(prefixColor);
     }
 
-    public @Nullable PrefixColor getById(@Nullable String id) {
-        if (id == null) return null;
-        Optional<PrefixColor> optColor = cacheById.get(id);
-        return optColor != null && optColor.isPresent() ? optColor.orElse(null) : null;
+    public @NotNull Optional<PrefixColor> getById(@NotNull String id) {
+        return cacheById.get(id);
     }
 
     public @NotNull @Unmodifiable List<PrefixColor> getAll() {
         List<PrefixColor> colors = listCache.get(ALL_KEY);
         if (colors == null || colors.isEmpty())
             return Collections.emptyList();
-        return colors;
+        return List.copyOf(colors);
     }
 
     public void remove(@NotNull PrefixColor color) {
         cacheById.invalidate(color.id());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(color.id()));
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {
