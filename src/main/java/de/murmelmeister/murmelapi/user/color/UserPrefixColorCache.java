@@ -25,11 +25,9 @@ public class UserPrefixColorCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserPrefixColorCache.class);
 
     @Language("MariaDB")
-    private static final String SELECT_ALL = "SELECT * FROM %s";
+    private static final String SELECT_BY_KEY = "SELECT * FROM %s WHERE user_id = ? AND color_id = ?";
     @Language("MariaDB")
-    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE user_id = ? AND color_id = ?";
-
-    private static final String ALL_KEY = "ALL";
+    private static final String SELECT_BY_USER = "SELECT * FROM %s WHERE user_id = ?";
 
     private final Database database;
     private final Gson gson;
@@ -37,8 +35,8 @@ public class UserPrefixColorCache implements MurmelCache {
     private final String tableName;
     private final Long fetchLimit;
 
-    private final LoadingCache<@NotNull ColorKey, Optional<UserPrefixColor>> cache;
-    private final LoadingCache<@NotNull String, List<UserPrefixColor>> listCache;
+    private final LoadingCache<@NotNull ColorKey, Optional<UserPrefixColor>> cacheByKey;
+    private final LoadingCache<@NotNull Integer, List<UserPrefixColor>> cacheByUser;
 
     public UserPrefixColorCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, java.time.Duration refreshInterval) {
         this.database = database;
@@ -46,8 +44,8 @@ public class UserPrefixColorCache implements MurmelCache {
         this.refreshProvider = refreshProvider;
         this.tableName = tableName;
         this.fetchLimit = fetchLimit;
-        this.cache = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
-        this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
+        this.cacheByKey = CacheUtil.buildCacheRefresh(this::loadByKey, cacheCapacity, refreshInterval);
+        this.cacheByUser = CacheUtil.buildCacheRefresh(this::loadByUser, cacheCapacity, refreshInterval);
         this.refreshProvider.register(this);
     }
 
@@ -88,13 +86,8 @@ public class UserPrefixColorCache implements MurmelCache {
         clear();
     }
 
-    private @NotNull List<UserPrefixColor> loadAllFromDatabase() {
-        String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userPrefixColor());
-    }
-
-    private @NotNull Optional<UserPrefixColor> loadById(ColorKey key) {
-        String sql = SELECT_BY_ID.formatted(tableName);
+    private @NotNull Optional<UserPrefixColor> loadByKey(ColorKey key) {
+        String sql = SELECT_BY_KEY.formatted(tableName);
         UserPrefixColor userPrefixColor = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userPrefixColor(), stmt -> {
             stmt.setInt(1, key.userId());
             stmt.setString(2, key.colorId());
@@ -103,28 +96,32 @@ public class UserPrefixColorCache implements MurmelCache {
         return Optional.ofNullable(userPrefixColor);
     }
 
-    public @Nullable UserPrefixColor get(int userId, @NotNull String colorId) {
-        Optional<UserPrefixColor> optColor = cache.get(new ColorKey(userId, colorId));
-        return optColor != null && optColor.isPresent() ? optColor.orElse(null) : null;
+    private @NotNull List<UserPrefixColor> loadByUser(int userId) {
+        String sql = SELECT_BY_USER.formatted(tableName);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userPrefixColor(), stmt -> stmt.setInt(1, userId));
     }
 
-    public @NotNull @Unmodifiable List<UserPrefixColor> getAll() {
-        List<UserPrefixColor> colors = listCache.get(ALL_KEY);
+    public @NotNull Optional<UserPrefixColor> getByKey(int userId, @NotNull String colorId) {
+        return cacheByKey.get(new ColorKey(userId, colorId));
+    }
+
+    public @NotNull @Unmodifiable List<UserPrefixColor> getByUser(int userId) {
+        List<UserPrefixColor> colors = cacheByUser.get(userId);
         if (colors == null || colors.isEmpty())
             return Collections.emptyList();
-        return colors;
+        return List.copyOf(colors);
     }
 
     public void remove(@NotNull ColorKey key) {
-        cache.invalidate(key);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.colorId().equals(key.colorId()));
+        cacheByKey.invalidate(key);
+        cacheByUser.invalidate(key.userId());
     }
 
     public void clear() {
-        cache.invalidateAll();
-        listCache.invalidateAll();
+        cacheByKey.invalidateAll();
+        cacheByUser.invalidateAll();
     }
 
-    public record ColorKey(int userId, @NotNull String colorId) {
+    public record ColorKey(int userId, @Nullable String colorId) {
     }
 }
