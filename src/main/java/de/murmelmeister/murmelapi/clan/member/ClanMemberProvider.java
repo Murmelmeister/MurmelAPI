@@ -16,6 +16,8 @@ public interface ClanMemberProvider {
     @Unmodifiable
     List<ClanMember> findClan(@NotNull UUID clanId);
 
+    @NotNull @Unmodifiable List<ClanMember> findClan(int userId);
+
     @NotNull
     @Unmodifiable
     List<ClanMember> findAll();

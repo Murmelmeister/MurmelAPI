@@ -69,6 +69,11 @@ public final class ClanMemberProviderImpl implements ClanMemberProvider {
     }
 
     @Override
+    public @NotNull @Unmodifiable List<ClanMember> findClan(int userId) {
+        return cache.getByUserId(userId);
+    }
+
+    @Override
     public @NotNull @Unmodifiable List<ClanMember> findAll() {
         return cache.getAll();
     }

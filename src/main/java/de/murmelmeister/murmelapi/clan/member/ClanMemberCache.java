@@ -31,6 +31,8 @@ public class ClanMemberCache implements MurmelCache {
     @Language("MariaDB")
     private static final String SELECT_BY_CLAN = "SELECT * FROM %s WHERE clan_id = ?";
     @Language("MariaDB")
+    private static final String SELECT_BY_USER = "SELECT * FROM %s WHERE user_id = ?";
+    @Language("MariaDB")
     private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE clan_id = ? AND user_id = ?";
 
     private static final String ALL_KEY = "ALL";
@@ -43,6 +45,7 @@ public class ClanMemberCache implements MurmelCache {
 
     private final LoadingCache<@NotNull Member, Optional<ClanMember>> cache;
     private final LoadingCache<@NotNull UUID, List<ClanMember>> cacheByClanId;
+    private final LoadingCache<@NotNull Integer, List<ClanMember>> cacheByUser;
     private final LoadingCache<@NotNull String, List<ClanMember>> listCache;
 
     public ClanMemberCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
@@ -53,6 +56,7 @@ public class ClanMemberCache implements MurmelCache {
         this.fetchLimit = fetchLimit;
         this.cache = CacheUtil.buildCacheRefresh(this::loadFromDatabase, cacheCapacity, refreshInterval);
         this.cacheByClanId = CacheUtil.buildCacheRefresh(this::loadByClanId, cacheCapacity, refreshInterval);
+        this.cacheByUser = CacheUtil.buildCacheRefresh(this::loadByUser, cacheCapacity, refreshInterval);
         this.listCache = CacheUtil.buildCacheRefresh(key -> loadAllFromDatabase(), 1, refreshInterval);
         this.refreshProvider.register(this);
     }
@@ -105,6 +109,12 @@ public class ClanMemberCache implements MurmelCache {
                 stmt -> stmt.setObject(1, clanId));
     }
 
+    private @NotNull List<ClanMember> loadByUser(int userId) {
+        String sql = SELECT_BY_USER.formatted(tableName);
+        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanMember(),
+                stmt -> stmt.setInt(1, userId));
+    }
+
     private @NotNull Optional<ClanMember> loadFromDatabase(Member member) {
         String sql = SELECT_BY_ID.formatted(tableName);
         ClanMember clanMember = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanMember(),
@@ -128,6 +138,13 @@ public class ClanMemberCache implements MurmelCache {
         return List.copyOf(members);
     }
 
+    public @NotNull @Unmodifiable List<ClanMember> getByUserId(int userId) {
+        List<ClanMember> members = cacheByUser.get(userId);
+        if (members == null || members.isEmpty())
+            return Collections.emptyList();
+        return List.copyOf(members);
+    }
+
     public @NotNull @Unmodifiable List<ClanMember> getAll() {
         List<ClanMember> members = listCache.get(ALL_KEY);
         if (members == null || members.isEmpty())
@@ -138,12 +155,14 @@ public class ClanMemberCache implements MurmelCache {
     public void remove(@NotNull Member member) {
         cache.invalidate(member);
         cacheByClanId.invalidate(member.clanId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(member.clanId()));
+        cacheByUser.invalidate(member.userId());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {
         cache.invalidateAll();
         cacheByClanId.invalidateAll();
+        cacheByUser.invalidateAll();
         listCache.invalidateAll();
     }
 
