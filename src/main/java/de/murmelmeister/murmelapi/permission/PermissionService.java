@@ -34,7 +34,7 @@ public record PermissionService(ParentProvider parentProvider, PermissionProvide
         return parentIds.stream()
                 .map(groupProvider::findById)
                 .filter(Objects::nonNull)
-                .min(Comparator.comparingInt(Group::priority))
+                .max(Comparator.comparingInt(Group::priority))
                 .orElse(groupProvider.findById(DEFAULT_GROUP_ID));
     }
 
