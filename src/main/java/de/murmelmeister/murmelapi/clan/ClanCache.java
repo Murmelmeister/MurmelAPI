@@ -29,9 +29,9 @@ public class ClanCache implements MurmelCache {
     @Language("MariaDB")
     private static final String SELECT_ALL = "SELECT * FROM %s";
     @Language("MariaDB")
-    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE clan_id = ?";
+    private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE id = ?";
     @Language("MariaDB")
-    private static final String SELECT_BY_NAME = "SELECT * FROM %s WHERE clan_name = ?";
+    private static final String SELECT_BY_NAME = "SELECT * FROM %s WHERE name = ?";
     @Language("MariaDB")
     private static final String SELECT_BY_OWNER = "SELECT * FROM %s WHERE owner_id = ?";
 
