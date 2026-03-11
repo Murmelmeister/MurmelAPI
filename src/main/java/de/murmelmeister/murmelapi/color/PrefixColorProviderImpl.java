@@ -67,7 +67,6 @@ public final class PrefixColorProviderImpl implements PrefixColorProvider {
         Objects.requireNonNull(id, "id cannot be null");
         Objects.requireNonNull(color, "color cannot be null");
         if (id.length() > 100) throw new IllegalArgumentException("id cannot be longer than 100 characters");
-        if (color.length() > 255) throw new IllegalArgumentException("color cannot be longer than 255 characters");
         if (id.isBlank()) throw new IllegalArgumentException("id cannot be blank");
         if (color.isBlank()) throw new IllegalArgumentException("color cannot be blank");
         if (executorId < CONSOLE_USER_ID)
