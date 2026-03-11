@@ -40,7 +40,7 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
                 reason_auto_flag_ip,
                 created_by
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING id, action, mojang_id, ip_address, reason_id, reason_type_id, reason_text, reason_duration, reason_auto_flag_ip, created_by, created_at
             """.formatted(TABLE_NAME);
 
@@ -95,6 +95,7 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
                     stmt.setString(7, reason.reasonText());
                     stmt.setObject(8, reason.durationSecs(), Types.BIGINT);
                     stmt.setBoolean(9, reason.autoFlagIp());
+                    stmt.setInt(10, executorId);
                 }),
                 PunishmentAuditException::new
         );
@@ -143,6 +144,7 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
                     stmt.setString(7, audit.reasonText());
                     stmt.setObject(8, audit.reasonDuration(), Types.BIGINT);
                     stmt.setBoolean(9, audit.reasonAutoFlagIp());
+                    stmt.setInt(10, executorId);
                 }),
                 PunishmentAuditException::new
         );
