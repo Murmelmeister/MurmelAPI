@@ -138,13 +138,8 @@ public class GroupColorCache implements MurmelCache {
 
     public void remove(@NotNull ColorKey key) {
         cacheByKey.invalidate(key);
-        if (key.typeId() == null) {
-            cacheByGroupId.invalidate(key.groupId());
-            CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == key.groupId());
-        } else {
-            CacheUtil.remove(cacheByGroupId, key.groupId(), v -> v.groupId() == key.groupId() && v.typeId() == key.typeId());
-            CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId() == key.groupId() && v.typeId() == key.typeId());
-        }
+        cacheByGroupId.invalidate(key.groupId());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

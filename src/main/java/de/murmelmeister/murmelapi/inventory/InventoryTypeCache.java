@@ -116,7 +116,7 @@ public class InventoryTypeCache implements MurmelCache {
 
     public void remove(@NotNull InventoryType type) {
         cacheById.invalidate(type.id());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == type.id());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

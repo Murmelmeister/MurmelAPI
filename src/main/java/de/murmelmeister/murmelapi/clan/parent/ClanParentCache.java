@@ -138,8 +138,8 @@ public class ClanParentCache implements MurmelCache {
 
     public void remove(@NotNull ParentKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByGroup, key, v -> v.clanId().equals(key.clanId()) && v.groupId().equals(key.groupId()));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(key.clanId()) && v.groupId().equals(key.groupId()));
+        cacheByGroup.invalidate(key);
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

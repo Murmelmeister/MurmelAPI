@@ -138,8 +138,8 @@ public class ClanPermissionCache implements MurmelCache {
 
     public void remove(@NotNull PermissionKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(cacheByGroup, key, v -> v.groupId().equals(key.groupId()));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.groupId().equals(key.groupId()));
+        cacheByGroup.invalidate(key);
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

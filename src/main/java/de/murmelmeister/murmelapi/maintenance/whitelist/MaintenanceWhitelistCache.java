@@ -150,7 +150,7 @@ public class MaintenanceWhitelistCache implements MurmelCache {
         cacheById.invalidate(whitelist.id());
         cacheByMaintenanceId.invalidate(whitelist.maintenanceId());
         cacheByUserId.invalidate(whitelist.userId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == whitelist.id());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

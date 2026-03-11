@@ -134,7 +134,7 @@ public class UserSessionCache implements MurmelCache {
     public void remove(@NotNull UserSession session) {
         cacheById.invalidate(session.id());
         cacheByUserId.invalidate(session.userId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(session.id()));
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

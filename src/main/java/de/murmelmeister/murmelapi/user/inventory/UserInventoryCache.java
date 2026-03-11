@@ -118,7 +118,7 @@ public class UserInventoryCache implements MurmelCache {
 
     public void remove(@NotNull InventoryKey key) {
         cacheByKey.invalidate(key);
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.userId() == key.userId() && v.inventoryId() == key.inventoryId());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

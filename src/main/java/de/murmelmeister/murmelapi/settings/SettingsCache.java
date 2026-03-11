@@ -117,7 +117,7 @@ public class SettingsCache implements MurmelCache {
 
     public void remove(@NotNull Settings settings) {
         cache.invalidate(settings.tagId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.tagId().equals(settings.tagId()));
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

@@ -115,7 +115,7 @@ public class MaintenanceCache implements MurmelCache {
 
     public void remove(@NotNull Maintenance maintenance) {
         cacheById.invalidate(maintenance.id());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == maintenance.id());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

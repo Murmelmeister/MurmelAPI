@@ -135,7 +135,7 @@ public class LanguageCache implements MurmelCache {
     public void remove(@NotNull Language language) {
         cacheById.invalidate(language.id());
         codeToId.invalidate(toKey(language.code()));
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == language.id());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

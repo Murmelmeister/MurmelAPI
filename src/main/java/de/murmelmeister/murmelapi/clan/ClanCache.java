@@ -156,7 +156,7 @@ public class ClanCache implements MurmelCache {
         cacheById.invalidate(clan.id());
         cacheByName.invalidate(clan.name());
         cacheByOwner.invalidate(clan.ownerId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id().equals(clan.id()));
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

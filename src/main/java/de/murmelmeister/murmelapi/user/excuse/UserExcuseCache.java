@@ -133,7 +133,7 @@ public class UserExcuseCache implements MurmelCache {
     public void remove(@NotNull UserExcuse excuse) {
         cacheById.invalidate(excuse.id());
         cacheByUserId.invalidate(excuse.userId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.id() == excuse.id());
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {

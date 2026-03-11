@@ -137,7 +137,7 @@ public class ClanGroupCache implements MurmelCache {
     public void remove(@NotNull GroupKey key) {
         cacheByKey.invalidate(key);
         cacheByClanId.invalidate(key.clanId());
-        CacheUtil.remove(listCache, ALL_KEY, v -> v.clanId().equals(key.clanId()) && v.groupId().equals(key.groupId()));
+        listCache.invalidate(ALL_KEY);
     }
 
     public void clear() {
