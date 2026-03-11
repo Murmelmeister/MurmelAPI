@@ -27,12 +27,12 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
 
     @Language("MariaDB")
     private static final String UPSERT_SQL = """
-            INSERT INTO %s (ip_address, type_id, log_id, expires_at)
+            INSERT INTO %s (ip_address, type_id, audit_id, expires_at)
             VALUES (?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
-                log_id = VALUES(log_id),
+                audit_id = VALUES(audit_id),
                 expires_at = VALUES(expires_at)
-            RETURNING ip_address, type_id, log_id, expires_at
+            RETURNING ip_address, type_id, audit_id, expires_at
             """.formatted(TABLE_NAME);
 
     @Language("MariaDB")
@@ -73,15 +73,15 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
     }
 
     @Override
-    public @NotNull Optional<PunishmentIpAddress> upsert(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId, @Nullable Long durationSecs) {
+    public @NotNull Optional<PunishmentIpAddress> upsert(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID auditId, @Nullable Long durationSecs) {
         Objects.requireNonNull(inetAddress, "inetAddress must not be null");
-        Objects.requireNonNull(logId, "logId must not be null");
+        Objects.requireNonNull(auditId, "auditId must not be null");
         if (durationSecs != null && durationSecs < 0) throw new IllegalArgumentException("durationSecs must be null or >= 0");
 
         LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
         Optional<PunishmentIpAddress> optExisting = cache.getByKey(inetAddress, typeId);
         if (optExisting.isPresent()) {
-            if (Objects.equals(logId, optExisting.get().auditId())
+            if (Objects.equals(auditId, optExisting.get().auditId())
                     && Objects.equals(expiresAt, optExisting.get().expiresAt()))
                 return optExisting;
         }
@@ -91,7 +91,7 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
                 () -> database.query(UPSERT_SQL, null, ResultSetUtil.punishmentIpAddress(), stmt -> {
                     stmt.setString(1, inetAddress.getHostAddress());
                     stmt.setInt(2, typeId);
-                    stmt.setString(3, logId.toString());
+                    stmt.setString(3, auditId.toString());
                     stmt.setObject(4, expiresAt, Types.TIMESTAMP);
                 }),
                 PunishmentIpAddressException::new

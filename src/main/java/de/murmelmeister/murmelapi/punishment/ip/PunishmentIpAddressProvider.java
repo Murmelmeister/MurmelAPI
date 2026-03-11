@@ -18,7 +18,7 @@ public interface PunishmentIpAddressProvider {
     @Unmodifiable
     List<PunishmentIpAddress> findPunishedIpAddresses(int typeId);
 
-    @NotNull Optional<PunishmentIpAddress> upsert(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID logId, @Nullable Long durationSecs);
+    @NotNull Optional<PunishmentIpAddress> upsert(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID auditId, @Nullable Long durationSecs);
 
     int delete(@NotNull InetAddress inetAddress, int typeId);
 

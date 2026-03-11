@@ -17,7 +17,7 @@ public interface PunishmentUserProvider {
     @Unmodifiable
     List<PunishmentUser> findPunishedUsers(int typeId);
 
-    @NotNull Optional<PunishmentUser> upsert(@NotNull UUID mojangId, int typeId, @NotNull UUID logId, @Nullable Long durationSecs);
+    @NotNull Optional<PunishmentUser> upsert(@NotNull UUID mojangId, int typeId, @NotNull UUID auditId, @Nullable Long durationSecs);
 
     int delete(@NotNull UUID mojangId, int typeId);
 
