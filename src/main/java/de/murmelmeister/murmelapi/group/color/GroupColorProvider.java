@@ -1,10 +1,15 @@
 package de.murmelmeister.murmelapi.group.color;
 
+import com.google.gson.Gson;
+import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Represents a color associated with a group in the MurmelAPI.
@@ -19,7 +24,7 @@ import java.util.List;
 public interface GroupColorProvider {
     void refreshCache();
 
-    @Nullable GroupColor findGroupColor(int groupId, int typeId);
+    @NotNull Optional<GroupColor> findGroupColor(int groupId, int typeId);
 
     @NotNull
     @Unmodifiable
@@ -29,15 +34,16 @@ public interface GroupColorProvider {
     @Unmodifiable
     List<GroupColor> findGroupColors();
 
-    @Nullable GroupColor add(int groupId, int typeId, @NotNull String value, int createdBy);
+    @NotNull Optional<GroupColor> upsert(int groupId, int typeId, @NotNull String value, int executorId);
+
+    @NotNull Optional<GroupColor> upsert(@NotNull GroupColor groupColor, int executorId);
 
     int remove(int groupId, int typeId);
 
     int clear(int groupId);
 
-    @Nullable GroupColor update(int groupId, int typeId, @NotNull String value, int changedBy);
-
-    @Nullable GroupColor upsert(int groupId, int typeId, @NotNull String value, int executorId);
-
-    @Nullable GroupColor upsert(@NotNull GroupColor groupColor, int executorId);
+    @ApiStatus.Internal
+    static @NotNull GroupColorProvider of(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+        return new GroupColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+    }
 }

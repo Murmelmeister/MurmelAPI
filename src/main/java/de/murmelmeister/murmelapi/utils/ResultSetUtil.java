@@ -7,7 +7,6 @@ import de.murmelmeister.murmelapi.clan.member.ClanMember;
 import de.murmelmeister.murmelapi.clan.parent.ClanParent;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
 import de.murmelmeister.murmelapi.group.Group;
-import de.murmelmeister.murmelapi.group.color.GroupColor;
 import de.murmelmeister.murmelapi.inventory.InventoryType;
 import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.message.Message;
@@ -130,19 +129,6 @@ public final class ResultSetUtil {
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             return new Group(id, groupName, priority, isDefault, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<GroupColor> groupColor() {
-        return resultSet -> {
-            int groupId = resultSet.getInt("group_id");
-            int typeId = resultSet.getInt("type_id");
-            String value = resultSet.getString("value");
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new GroupColor(groupId, typeId, value, createdBy, createdAt, changedBy, changedAt);
         };
     }
 

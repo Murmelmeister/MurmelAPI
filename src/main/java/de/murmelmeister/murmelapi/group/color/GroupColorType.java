@@ -1,7 +1,8 @@
 package de.murmelmeister.murmelapi.group.color;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import java.util.*;
 
 /**
  * The GroupColorType enum represents the types of group color customization
@@ -27,9 +28,23 @@ public enum GroupColorType {
     TEAM_SUFFIX(9, "team_suffix"),
     TEAM_COLOR(10, "team_color");
     private static final GroupColorType[] VALUES = values();
-
     private final int id;
     private final String name;
+
+    // fast lookup maps to avoid O(n) searches
+    private static final Map<Integer, GroupColorType> BY_ID;
+    private static final Map<String, GroupColorType> BY_NAME;
+
+    static {
+        Map<Integer, GroupColorType> idMap = new HashMap<>();
+        Map<String, GroupColorType> nameMap = new HashMap<>();
+        for (GroupColorType type : VALUES) {
+            idMap.put(type.id, type);
+            nameMap.put(type.name.toLowerCase(Locale.ROOT), type);
+        }
+        BY_ID = Collections.unmodifiableMap(idMap);
+        BY_NAME = Collections.unmodifiableMap(nameMap);
+    }
 
     GroupColorType(int id, String name) {
         this.id = id;
@@ -44,17 +59,23 @@ public enum GroupColorType {
         return name;
     }
 
-    public static @Nullable GroupColorType fromId(int id) {
-        for (GroupColorType type : VALUES)
-            if (type.getId() == id)
-                return type;
-        return null;
+    /**
+     * Fast lookup that returns an Optional for the given id.
+     */
+    public static @NotNull Optional<GroupColorType> fromId(int id) {
+        return Optional.ofNullable(BY_ID.get(id));
     }
 
-    public static @Nullable GroupColorType fromName(@NotNull String name) {
-        for (GroupColorType type : VALUES)
-            if (type.getName().equalsIgnoreCase(name))
-                return type;
-        return null;
+    /**
+     * Fast lookup that returns an Optional for the given name (case-insensitive).
+     */
+    public static @NotNull Optional<GroupColorType> fromName(@NotNull String name) {
+        Objects.requireNonNull(name, "name must not be null");
+        return Optional.ofNullable(BY_NAME.get(name.toLowerCase(Locale.ROOT)));
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 }

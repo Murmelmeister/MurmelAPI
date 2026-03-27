@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -23,7 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class GroupColorCache implements MurmelCache {
+final class GroupColorCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(GroupColorCache.class);
 
     @Language("MariaDB")
@@ -96,18 +95,18 @@ public class GroupColorCache implements MurmelCache {
 
     private @NotNull List<GroupColor> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupColor());
+        return CacheUtil.loadList(database, sql, fetchLimit, GroupColorAdapter::resultSet);
     }
 
     private @NotNull List<GroupColor> loadByGroupId(int groupId) {
         String sql = SELECT_BY_GROUP_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.groupColor(),
+        return CacheUtil.loadList(database, sql, fetchLimit, GroupColorAdapter::resultSet,
                 stmt -> stmt.setInt(1, groupId));
     }
 
     private @NotNull Optional<GroupColor> loadByKey(ColorKey key) {
         String sql = SELECT_BY_KEY.formatted(tableName);
-        GroupColor groupColor = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.groupColor(),
+        GroupColor groupColor = CacheUtil.loadSingle(database, sql, fetchLimit, GroupColorAdapter::resultSet,
                 stmt -> {
                     stmt.setInt(1, key.groupId());
                     if (key.typeId() != null) stmt.setInt(2, key.typeId());
@@ -117,9 +116,8 @@ public class GroupColorCache implements MurmelCache {
         return Optional.ofNullable(groupColor);
     }
 
-    public @Nullable GroupColor get(int groupId, int typeId) {
-        Optional<GroupColor> optColor = cacheByKey.get(new ColorKey(groupId, typeId));
-        return optColor != null && optColor.isPresent() ? optColor.orElse(null) : null;
+    public @NotNull Optional<GroupColor> get(int groupId, int typeId) {
+        return cacheByKey.get(new ColorKey(groupId, typeId));
     }
 
     public @NotNull @Unmodifiable List<GroupColor> getByGroupId(int groupId) {
@@ -148,6 +146,6 @@ public class GroupColorCache implements MurmelCache {
         listCache.invalidateAll();
     }
 
-    public record ColorKey(int groupId, @Nullable Integer typeId) {
+    record ColorKey(int groupId, @Nullable Integer typeId) {
     }
 }
