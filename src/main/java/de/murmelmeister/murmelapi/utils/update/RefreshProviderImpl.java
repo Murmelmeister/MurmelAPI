@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.*;
 
-public final class RefreshProviderImpl implements RefreshProvider {
+final class RefreshProviderImpl implements RefreshProvider {
     private static final Logger LOGGER = LoggerFactory.getLogger(RefreshProviderImpl.class);
 
     private final CopyOnWriteArrayList<RefreshListener> listeners = new CopyOnWriteArrayList<>();
@@ -52,27 +52,27 @@ public final class RefreshProviderImpl implements RefreshProvider {
 
     @Override
     public <K> void fireSingle(@NotNull String cacheName, @Nullable K key) {
-        fire(new RefreshEvent<>(cacheName, key));
+        fire(new RefreshEventImpl<>(cacheName, key));
     }
 
     @Override
     public <K> void fireSingle(@NotNull RefreshType type, @Nullable K key) {
-        fire(new RefreshEvent<>(type, key));
+        fire(new RefreshEventImpl<>(type, key));
     }
 
     @Override
     public void fireCache(@NotNull String cacheName) {
-        fire(new RefreshEvent<>(cacheName, null));
+        fire(new RefreshEventImpl<>(cacheName, null));
     }
 
     @Override
     public void fireCache(@NotNull RefreshType type) {
-        fire(new RefreshEvent<>(type, null));
+        fire(new RefreshEventImpl<>(type, null));
     }
 
     @Override
     public void fireAll() {
-        fire(new RefreshEvent<>(RefreshType.ALL, null));
+        fire(new RefreshEventImpl<>(RefreshType.ALL, null));
     }
 
     @Override
