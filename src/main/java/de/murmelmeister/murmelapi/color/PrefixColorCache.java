@@ -6,11 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
@@ -21,7 +21,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class PrefixColorCache implements MurmelCache {
+@ApiStatus.Internal
+final class PrefixColorCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(PrefixColorCache.class);
 
     @Language("MariaDB")
@@ -90,15 +91,15 @@ public class PrefixColorCache implements MurmelCache {
 
     private @NotNull List<PrefixColor> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.prefixColor());
+        return CacheUtil.loadList(database, sql, fetchLimit, PrefixColorAdapter::resultSet);
     }
 
     private @NotNull Optional<PrefixColor> loadById(String id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        PrefixColor prefixColor = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.prefixColor(),
+        PrefixColor prefixColor = CacheUtil.loadSingle(database, sql, fetchLimit, PrefixColorAdapter::resultSet,
                 stmt -> stmt.setString(1, id));
 
-        return Optional.ofNullable(prefixColor);
+        return Optional.of(prefixColor);
     }
 
     public @NotNull Optional<PrefixColor> getById(@NotNull String id) {

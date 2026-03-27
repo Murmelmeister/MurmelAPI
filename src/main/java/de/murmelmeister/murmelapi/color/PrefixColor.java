@@ -4,75 +4,36 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
+import java.util.function.Consumer;
 
-import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+public interface PrefixColor {
+    @NotNull String id();
 
-public record PrefixColor(
-        @NotNull String id,
-        @NotNull String color,
-        boolean animated,
-        @NotNull LocalDateTime createdAt,
-        int createdBy,
-        @Nullable LocalDateTime changedAt,
-        @Nullable Integer changedBy
-) {
-    public PrefixColor {
-        Objects.requireNonNull(id, "id must not be null");
-        Objects.requireNonNull(color, "color must not be null");
-        Objects.requireNonNull(createdAt, "createdAt must not be null");
-        if (id.length() > 100) throw new IllegalArgumentException("id cannot be longer than 100 characters");
-        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
-        if (changedBy != null && changedBy < CONSOLE_USER_ID)
-            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
-    }
+    @NotNull String color();
 
-    public static @NotNull Builder builder(@NotNull PrefixColor prefixColor) {
-        return new Builder(prefixColor);
-    }
+    boolean animated();
 
-    public static class Builder {
-        private final String id;
-        private final LocalDateTime createdAt;
-        private final int createdBy;
+    @NotNull LocalDateTime createdAt();
 
-        private String color;
-        private boolean animated;
-        private LocalDateTime changedAt;
-        private Integer changedBy;
+    int createdBy();
 
-        private Builder(@NotNull PrefixColor prefixColor) {
-            this.id = prefixColor.id();
-            this.createdAt = prefixColor.createdAt();
-            this.createdBy = prefixColor.createdBy();
-            this.color = prefixColor.color();
-            this.animated = prefixColor.animated();
-            this.changedAt = prefixColor.changedAt();
-            this.changedBy = prefixColor.changedBy();
-        }
+    @Nullable LocalDateTime changedAt();
 
-        public Builder color(@NotNull String color) {
-            this.color = color;
-            return this;
-        }
+    @Nullable Integer changedBy();
 
-        public Builder animated(boolean animated) {
-            this.animated = animated;
-            return this;
-        }
+    @NotNull Builder builder();
 
-        public Builder changedAt(@Nullable LocalDateTime changedAt) {
-            this.changedAt = changedAt;
-            return this;
-        }
+    @NotNull PrefixColor with(@NotNull Consumer<Builder> consumer);
 
-        public Builder changedBy(@Nullable Integer changedBy) {
-            this.changedBy = changedBy;
-            return this;
-        }
+    interface Builder {
+        @NotNull Builder color(@NotNull String color);
 
-        public @NotNull PrefixColor build() {
-            return new PrefixColor(id, color, animated, createdAt, createdBy, changedAt, changedBy);
-        }
+        @NotNull Builder animated(boolean animated);
+
+        @NotNull Builder changedAt(@Nullable LocalDateTime changedAt);
+
+        @NotNull Builder changedBy(@Nullable Integer changedBy);
+
+        @NotNull PrefixColor build();
     }
 }

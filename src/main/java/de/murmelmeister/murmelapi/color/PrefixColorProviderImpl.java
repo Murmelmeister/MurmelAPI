@@ -4,10 +4,10 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.color.PrefixColorException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
@@ -18,7 +18,7 @@ import java.util.Optional;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
-public final class PrefixColorProviderImpl implements PrefixColorProvider {
+final class PrefixColorProviderImpl implements PrefixColorProvider {
     private static final String TABLE_NAME = "prefix_colors";
 
     @Language("MariaDB")
@@ -41,6 +41,7 @@ public final class PrefixColorProviderImpl implements PrefixColorProvider {
     private final RefreshType all = RefreshType.PREFIX_COLORS;
     private final RefreshType single = RefreshType.SINGLE_PREFIX_COLOR;
 
+    @ApiStatus.Internal
     public PrefixColorProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
@@ -80,7 +81,7 @@ public final class PrefixColorProviderImpl implements PrefixColorProvider {
 
         PrefixColor saved = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert PrefixColor (id=" + id + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.prefixColor(), stmt -> {
+                () -> database.query(UPSERT_SQL, null, PrefixColorAdapter::resultSet, stmt -> {
                     stmt.setString(1, id);
                     stmt.setString(2, color);
                     stmt.setBoolean(3, animated);
