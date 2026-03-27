@@ -30,17 +30,13 @@ public final class PrefixColorAdapter implements TypeAdapterFactory {
                 }
 
                 out.beginObject();
-                out.name("id");
-                out.value(value.id());
-                out.name("color");
-                out.value(value.color());
-                out.name("animated");
-                out.value(value.animated());
+                out.name("id").value(value.id());
+                out.name("color").value(value.color());
+                out.name("animated").value(value.animated());
 
                 out.name("createdAt");
                 ldtAdapter.write(out, value.createdAt());
-                out.name("createdBy");
-                out.value(value.createdBy());
+                out.name("createdBy").value(value.createdBy());
 
                 out.name("changedAt");
                 if (value.changedAt() != null) ldtAdapter.write(out, value.changedAt());
