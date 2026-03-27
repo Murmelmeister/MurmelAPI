@@ -14,8 +14,8 @@ import de.murmelmeister.murmelapi.clan.parent.ClanParentProvider;
 import de.murmelmeister.murmelapi.clan.parent.ClanParentProviderImpl;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProvider;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProviderImpl;
+import de.murmelmeister.murmelapi.color.PrefixColorAdapter;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
-import de.murmelmeister.murmelapi.color.PrefixColorProviderImpl;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
@@ -68,7 +68,6 @@ import de.murmelmeister.murmelapi.user.stats.UserStatsProviderImpl;
 import de.murmelmeister.murmelapi.utils.adapter.LocalDateAdapter;
 import de.murmelmeister.murmelapi.utils.adapter.LocalDateTimeAdapter;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
-import de.murmelmeister.murmelapi.utils.update.RefreshProviderImpl;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -161,13 +160,14 @@ public final class MurmelAPI {
         this.gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+                .registerTypeAdapterFactory(new PrefixColorAdapter())
                 .disableHtmlEscaping()
                 .create();
         this.fetchLimit = fetchLimit;
         this.cacheCapacity = cacheCapacity;
         this.refreshInterval = refreshInterval;
 
-        this.refreshProvider = new RefreshProviderImpl();
+        this.refreshProvider = RefreshProvider.of();
 
         this.settingsProvider = new SettingsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.settingsService = new SettingsService(settingsProvider);
@@ -198,7 +198,7 @@ public final class MurmelAPI {
         this.clanGroupProvider = new ClanGroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanParentProvider = new ClanParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanPermissionProvider = new ClanPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.prefixColorProvider = new PrefixColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.prefixColorProvider = PrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPrefixColorProvider = new UserPrefixColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.inventoryTypeProvider = new InventoryTypeProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userInventoryProvider = new UserInventoryProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
