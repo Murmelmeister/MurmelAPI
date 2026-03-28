@@ -118,20 +118,6 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<Group> group() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            String groupName = resultSet.getString("group_name");
-            int priority = resultSet.getInt("priority");
-            boolean isDefault = resultSet.getBoolean("is_default");
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new Group(id, groupName, priority, isDefault, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
     public static @NotNull ResultSetProcessor<Permission> permission() {
         return resultSet -> {
             int id = resultSet.getInt("id");

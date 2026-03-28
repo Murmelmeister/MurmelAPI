@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class GroupCache implements MurmelCache {
+final class GroupCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(GroupCache.class);
 
     @Language("MariaDB")
@@ -95,12 +93,12 @@ public class GroupCache implements MurmelCache {
 
     private @NotNull List<Group> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.group());
+        return CacheUtil.loadList(database, sql, fetchLimit, GroupAdapter::resultSet);
     }
 
     private @NotNull Optional<Group> loadByName(String name) {
         String sql = SELECT_BY_NAME.formatted(tableName);
-        Group group = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.group(),
+        Group group = CacheUtil.loadSingle(database, sql, fetchLimit, GroupAdapter::resultSet,
                 stmt -> stmt.setString(1, name));
 
         return Optional.ofNullable(group);
@@ -108,21 +106,18 @@ public class GroupCache implements MurmelCache {
 
     private @NotNull Optional<Group> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        Group group = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.group(),
+        Group group = CacheUtil.loadSingle(database, sql, fetchLimit, GroupAdapter::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(group);
     }
 
-    public @Nullable Group getById(int id) {
-        Optional<Group> optGroup = cacheById.get(id);
-        return optGroup != null && optGroup.isPresent() ? optGroup.orElse(null) : null;
+    public @NotNull Optional<Group> getById(int id) {
+        return cacheById.get(id);
     }
 
-    public @Nullable Group getByName(@Nullable String name) {
-        if (name == null) return null;
-        Optional<Group> optGroup = cacheByName.get(name);
-        return optGroup != null && optGroup.isPresent() ? optGroup.orElse(null) : null;
+    public @NotNull Optional<Group> getByName(@NotNull String name) {
+        return cacheByName.get(name);
     }
 
     public @NotNull @Unmodifiable List<Group> getAll() {

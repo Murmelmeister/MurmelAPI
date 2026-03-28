@@ -4,77 +4,38 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
+import java.util.function.Consumer;
 
-import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+public interface Group {
+    int id();
 
-public record Group(
-        int id,
-        @NotNull String groupName,
-        int priority,
-        boolean isDefault,
-        int createdBy,
-        @NotNull LocalDateTime createdAt,
-        @Nullable Integer changedBy,
-        @Nullable LocalDateTime changedAt
-) {
-    public Group {
-        Objects.requireNonNull(groupName, "groupName must not be null");
-        Objects.requireNonNull(createdAt, "createdAt must not be null");
-        if (groupName.length() > 100) throw new IllegalArgumentException("groupName cannot be longer than 100 characters");
-        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
-        if (changedBy != null && changedBy < CONSOLE_USER_ID)
-            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
-    }
+    @NotNull String groupName();
 
-    public static @NotNull Builder builder(@NotNull Group group) {
-        return new Builder(group);
-    }
+    int priority();
 
-    public static class Builder {
-        private final int id;
-        private final boolean isDefault;
-        private final int createdBy;
-        private final LocalDateTime createdAt;
+    boolean isDefault();
 
-        private String groupName;
-        private int priority;
-        private Integer changedBy;
-        private LocalDateTime changedAt;
+    int createdBy();
 
-        private Builder(@NotNull Group group) {
-            this.id = group.id();
-            this.groupName = group.groupName();
-            this.priority = group.priority();
-            this.isDefault = group.isDefault();
-            this.createdBy = group.createdBy();
-            this.createdAt = group.createdAt();
-            this.changedBy = group.changedBy();
-            this.changedAt = group.changedAt();
-        }
+    @NotNull LocalDateTime createdAt();
 
-        public Builder groupName(@NotNull String groupName) {
-            this.groupName = groupName;
-            return this;
-        }
+    @Nullable Integer changedBy();
 
-        public Builder priority(int priority) {
-            this.priority = priority;
-            return this;
-        }
+    @Nullable LocalDateTime changedAt();
 
-        public Builder changedBy(@Nullable Integer changedBy) {
-            this.changedBy = changedBy;
-            return this;
-        }
+    @NotNull Builder builder();
 
-        public Builder changedAt(@Nullable LocalDateTime changedAt) {
-            this.changedAt = changedAt;
-            return this;
-        }
+    @NotNull Group with(@NotNull Consumer<Builder> consumer);
 
-        public @NotNull Group build() {
-            return new Group(id, groupName, priority, isDefault, createdBy, createdAt, changedBy, changedAt);
-        }
+    interface Builder {
+        @NotNull Builder groupName(@NotNull String groupName);
+
+        @NotNull Builder priority(int priority);
+
+        @NotNull Builder changedBy(@Nullable Integer changedBy);
+
+        @NotNull Builder changedAt(@Nullable LocalDateTime changedAt);
+
+        @NotNull Group build();
     }
 }

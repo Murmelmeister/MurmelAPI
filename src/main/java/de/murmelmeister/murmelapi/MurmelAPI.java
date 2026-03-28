@@ -16,8 +16,8 @@ import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProvider;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProviderImpl;
 import de.murmelmeister.murmelapi.color.PrefixColorAdapter;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
+import de.murmelmeister.murmelapi.group.GroupAdapter;
 import de.murmelmeister.murmelapi.group.GroupProvider;
-import de.murmelmeister.murmelapi.group.GroupProviderImpl;
 import de.murmelmeister.murmelapi.group.color.GroupColorAdapter;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
@@ -162,6 +162,7 @@ public final class MurmelAPI {
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                 .registerTypeAdapterFactory(new PrefixColorAdapter())
                 .registerTypeAdapterFactory(new GroupColorAdapter())
+                .registerTypeAdapterFactory(new GroupAdapter())
                 .disableHtmlEscaping()
                 .create();
         this.fetchLimit = fetchLimit;
@@ -180,7 +181,7 @@ public final class MurmelAPI {
         this.userLoginProvider = new UserLoginProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userSessionProvider = new UserSessionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userExcuseProvider = new UserExcuseProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.groupProvider = new GroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.groupProvider = GroupProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupColorProvider = GroupColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
 
         this.parentProvider = new ParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);

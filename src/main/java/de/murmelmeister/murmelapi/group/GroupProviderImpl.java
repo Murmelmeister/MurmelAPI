@@ -5,18 +5,17 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.group.GroupException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
@@ -25,7 +24,7 @@ import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
  * GroupProvider is a class that provides methods to manage groups in the database.
  * It implements the Group interface and uses the Database class to interact with the database.
  */
-public final class GroupProviderImpl implements GroupProvider {
+final class GroupProviderImpl implements GroupProvider {
     private static final String TABLE_NAME = "groups";
 
     @Language("MariaDB")
@@ -68,12 +67,12 @@ public final class GroupProviderImpl implements GroupProvider {
     }
 
     @Override
-    public @Nullable Group findById(int id) {
+    public @NotNull Optional<Group> findById(int id) {
         return cache.getById(id);
     }
 
     @Override
-    public @Nullable Group findByName(@Nullable String groupName) {
+    public @NotNull Optional<Group> findByName(@NotNull String groupName) {
         return cache.getByName(groupName);
     }
 
@@ -88,7 +87,7 @@ public final class GroupProviderImpl implements GroupProvider {
     }
 
     @Override
-    public @Nullable Group create(@NotNull String groupName, int priority, int createdBy) {
+    public @NotNull Optional<Group> create(@NotNull String groupName, int priority, int createdBy) {
         Objects.requireNonNull(groupName, "groupName cannot be null");
         String normalizedGroupName = StringUtil.normalize(groupName);
         if (normalizedGroupName == null || normalizedGroupName.isBlank())
@@ -97,7 +96,7 @@ public final class GroupProviderImpl implements GroupProvider {
 
         Group group = MurmelExceptionWrapper.dbWrap(
                 "Failed to create Group (groupName=" + normalizedGroupName + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.group(), stmt -> {
+                () -> database.query(CREATE_SQL, null, GroupAdapter::resultSet, stmt -> {
                     stmt.setString(1, normalizedGroupName);
                     stmt.setInt(2, priority);
                     stmt.setInt(3, createdBy);
@@ -105,17 +104,17 @@ public final class GroupProviderImpl implements GroupProvider {
                 GroupException::new
         );
 
-        if (group == null) return null;
+        if (group == null) return Optional.empty();
         refreshProvider.fireSingle(single, group);
-        return group;
+        return Optional.of(group);
     }
 
     @Override
     public int delete(int groupId) {
         if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
 
-        Group existing = cache.getById(groupId);
-        if (existing == null) return 0;
+        Optional<Group> existing = cache.getById(groupId);
+        if (existing.isEmpty()) return 0;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete Group (groupId=" + groupId + ")",
@@ -124,24 +123,25 @@ public final class GroupProviderImpl implements GroupProvider {
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing);
+        refreshProvider.fireSingle(single, existing.get());
         return row;
     }
 
     @Override
-    public @Nullable Group update(int groupId, @NotNull String groupName, int priority, int changedBy) {
+    public @NotNull Optional<Group> update(int groupId, @NotNull String groupName, int priority, int changedBy) {
         Objects.requireNonNull(groupName, "groupName cannot be null");
         String normalizedGroupName = StringUtil.normalize(groupName);
         if (normalizedGroupName == null || normalizedGroupName.isBlank())
             throw new IllegalArgumentException("groupName cannot be blank");
         if (changedBy < CONSOLE_USER_ID) throw new IllegalArgumentException("changedBy must be >= " + CONSOLE_USER_ID);
 
-        Group existing = cache.getById(groupId);
-        if (existing == null) return null;
+        Optional<Group> existingOpt = cache.getById(groupId);
+        if (existingOpt.isEmpty()) return Optional.empty();
+        Group existing = existingOpt.get();
 
         if (Objects.equals(normalizedGroupName, existing.groupName())
                 && priority == existing.priority())
-            return existing;
+            return existingOpt;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to update Group (groupId=" + groupId + ")",
@@ -153,7 +153,7 @@ public final class GroupProviderImpl implements GroupProvider {
                 }),
                 GroupException::new
         );
-        if (row != 1) return null;
+        if (row != 1) return Optional.empty();
 
         LocalDateTime changedAt = MurmelExceptionWrapper.dbWrap(
                 "Failed to select changed_at for Group (groupId=" + groupId + ")",
@@ -162,15 +162,15 @@ public final class GroupProviderImpl implements GroupProvider {
                         stmt -> stmt.setInt(1, groupId)),
                 GroupException::new
         );
-        if (changedAt == null) return null;
+        if (changedAt == null) return Optional.empty();
 
-        Group group = Group.builder(existing)
+        Group group = existing.builder()
                 .groupName(groupName)
                 .priority(priority)
                 .changedBy(changedBy)
                 .changedAt(changedAt)
                 .build();
         refreshProvider.fireSingle(single, group);
-        return group;
+        return Optional.of(group);
     }
 }

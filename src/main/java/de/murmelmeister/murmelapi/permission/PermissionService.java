@@ -29,13 +29,14 @@ public record PermissionService(ParentProvider parentProvider, PermissionProvide
                 .map(Parent::parentId)
                 .toList();
         if (parentIds.isEmpty())
-            return groupProvider.findById(DEFAULT_GROUP_ID);
+            return groupProvider.findById(DEFAULT_GROUP_ID).orElse(null);
 
         return parentIds.stream()
                 .map(groupProvider::findById)
-                .filter(Objects::nonNull)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .max(Comparator.comparingInt(Group::priority))
-                .orElse(groupProvider.findById(DEFAULT_GROUP_ID));
+                .orElse(groupProvider.findById(DEFAULT_GROUP_ID).orElse(null));
     }
 
     public @Nullable String getName(@NotNull PermissionTarget target) {
@@ -43,7 +44,7 @@ public record PermissionService(ParentProvider parentProvider, PermissionProvide
             User user = userProvider.findById(target.id());
             return user == null ? null : user.username();
         } else {
-            Group group = groupProvider.findById(target.id());
+            Group group = groupProvider.findById(target.id()).orElse(null);
             return group == null ? null : group.groupName();
         }
     }

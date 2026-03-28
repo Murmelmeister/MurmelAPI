@@ -1,10 +1,15 @@
 package de.murmelmeister.murmelapi.group;
 
+import com.google.gson.Gson;
+import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Represents a group in the MurmelAPI.
@@ -19,17 +24,22 @@ import java.util.List;
 public sealed interface GroupProvider permits GroupProviderImpl {
     void refreshCache();
 
-    @Nullable Group findById(int id);
+    @NotNull Optional<Group> findById(int id);
 
-    @Nullable Group findByName(@Nullable String groupName);
+    @NotNull Optional<Group> findByName(@NotNull String groupName);
 
     @NotNull @Unmodifiable List<Group> findAll();
 
     @NotNull @Unmodifiable List<String> findAllGroupNames();
 
-    @Nullable Group create(@NotNull String groupName, int priority, int createdBy);
+    @NotNull Optional<Group> create(@NotNull String groupName, int priority, int createdBy);
 
     int delete(int groupId);
 
-    @Nullable Group update(int groupId, @NotNull String groupName, int priority, int changedBy);
+    @NotNull Optional<Group> update(int groupId, @NotNull String groupName, int priority, int changedBy);
+
+    @ApiStatus.Internal
+    static @NotNull GroupProvider of(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+        return new GroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+    }
 }
