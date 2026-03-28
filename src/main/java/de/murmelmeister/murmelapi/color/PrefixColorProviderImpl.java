@@ -7,7 +7,6 @@ import de.murmelmeister.murmelapi.exceptions.color.PrefixColorException;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
@@ -41,7 +40,6 @@ final class PrefixColorProviderImpl implements PrefixColorProvider {
     private final RefreshType all = RefreshType.PREFIX_COLORS;
     private final RefreshType single = RefreshType.SINGLE_PREFIX_COLOR;
 
-    @ApiStatus.Internal
     public PrefixColorProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;

@@ -7,7 +7,6 @@ import de.murmelmeister.murmelapi.exceptions.group.GroupColorException;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
@@ -47,7 +46,6 @@ final class GroupColorProviderImpl implements GroupColorProvider {
     private final RefreshType all = RefreshType.GROUP_COLORS;
     private final RefreshType single = RefreshType.SINGLE_GROUP_COLOR;
 
-    @ApiStatus.Internal
     public GroupColorProviderImpl(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.refreshProvider = refreshProvider;
