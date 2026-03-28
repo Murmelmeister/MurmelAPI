@@ -119,6 +119,7 @@ public final class GroupColorAdapter implements TypeAdapterFactory {
                             }
                             changedAt = ldtAdapter.read(in);
                         }
+                        default -> in.skipValue();
                     }
                 }
                 in.endObject();
