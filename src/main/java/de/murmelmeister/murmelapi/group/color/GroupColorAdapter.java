@@ -59,10 +59,10 @@ public final class GroupColorAdapter implements TypeAdapterFactory {
                     return null;
                 }
 
-                int groupId = -1;
-                int typeId = -1;
+                Integer groupId = null;
+                Integer typeId = null;
                 String value = null;
-                int createdBy = -1;
+                Integer createdBy = null;
                 LocalDateTime createdAt = null;
                 Integer changedBy = null;
                 LocalDateTime changedAt = null;
@@ -124,16 +124,14 @@ public final class GroupColorAdapter implements TypeAdapterFactory {
                 }
                 in.endObject();
 
-                if (groupId == -1) throw new JsonParseException("Missing required field 'groupId' for GroupColor");
-                if (typeId == -1) throw new JsonParseException("Missing required field 'typeId' for GroupColor");
+                if (groupId == null) throw new JsonParseException("Missing required field 'groupId' for GroupColor");
+                if (typeId == null) throw new JsonParseException("Missing required field 'typeId' for GroupColor");
                 if (value == null) throw new JsonParseException("Missing required field 'value' for GroupColor");
-                if (createdBy == -1) throw new JsonParseException("Missing required field 'createdBy' for GroupColor");
+                if (createdBy == null)
+                    throw new JsonParseException("Missing required field 'createdBy' for GroupColor");
                 if (createdAt == null)
                     throw new JsonParseException("Missing required field 'createdAt' for GroupColor");
-                if (changedBy == null)
-                    throw new JsonParseException("Missing required field 'changedBy' for GroupColor");
-                if (changedAt == null)
-                    throw new JsonParseException("Missing required field 'changedAt' for GroupColor");
+
                 return new GroupColorImpl(groupId, typeId, value, createdBy, createdAt, changedBy, changedAt);
             }
         };
