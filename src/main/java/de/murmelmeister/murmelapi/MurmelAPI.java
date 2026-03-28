@@ -18,6 +18,7 @@ import de.murmelmeister.murmelapi.color.PrefixColorAdapter;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.GroupProviderImpl;
+import de.murmelmeister.murmelapi.group.color.GroupColorAdapter;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProviderImpl;
@@ -160,6 +161,7 @@ public final class MurmelAPI {
                 .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                 .registerTypeAdapterFactory(new PrefixColorAdapter())
+                .registerTypeAdapterFactory(new GroupColorAdapter())
                 .disableHtmlEscaping()
                 .create();
         this.fetchLimit = fetchLimit;
