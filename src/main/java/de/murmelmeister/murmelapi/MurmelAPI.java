@@ -20,8 +20,8 @@ import de.murmelmeister.murmelapi.group.GroupAdapter;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.color.GroupColorAdapter;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
+import de.murmelmeister.murmelapi.inventory.InventoryTypeAdapter;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
-import de.murmelmeister.murmelapi.inventory.InventoryTypeProviderImpl;
 import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
 import de.murmelmeister.murmelapi.language.LanguageProviderImpl;
@@ -163,6 +163,7 @@ public final class MurmelAPI {
                 .registerTypeAdapterFactory(new PrefixColorAdapter())
                 .registerTypeAdapterFactory(new GroupColorAdapter())
                 .registerTypeAdapterFactory(new GroupAdapter())
+                .registerTypeAdapterFactory(new InventoryTypeAdapter())
                 .disableHtmlEscaping()
                 .create();
         this.fetchLimit = fetchLimit;
@@ -202,7 +203,7 @@ public final class MurmelAPI {
         this.clanPermissionProvider = new ClanPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.prefixColorProvider = PrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPrefixColorProvider = new UserPrefixColorProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.inventoryTypeProvider = new InventoryTypeProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.inventoryTypeProvider = InventoryTypeProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userInventoryProvider = new UserInventoryProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.maintenanceProvider = new MaintenanceProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.maintenanceWhitelistProvider = new MaintenanceWhitelistProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);

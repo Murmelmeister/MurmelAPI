@@ -293,14 +293,6 @@ public final class ResultSetUtil {
         };
     }
 
-    public static @NotNull ResultSetProcessor<InventoryType> inventoryType() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            String name = resultSet.getString("inventory_name");
-            return new InventoryType(id, name);
-        };
-    }
-
     public static @NotNull ResultSetProcessor<UserInventory> userInventory() {
         return resultSet -> {
             int userId = resultSet.getInt("user_id");

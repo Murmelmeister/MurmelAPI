@@ -5,19 +5,18 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.inventory.InventoryException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
-public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
+final class InventoryTypeProviderImpl implements InventoryTypeProvider {
     private static final String TABLE_NAME = "inventory_type";
 
     @Language("MariaDB")
@@ -48,7 +47,7 @@ public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
     }
 
     @Override
-    public @Nullable InventoryType findById(int id) {
+    public @NotNull Optional<InventoryType> findById(int id) {
         return cache.getById(id);
     }
 
@@ -58,7 +57,7 @@ public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
     }
 
     @Override
-    public @Nullable InventoryType create(@NotNull String name) {
+    public @NotNull Optional<InventoryType> create(@NotNull String name) {
         Objects.requireNonNull(name, "name cannot be null");
         String normalizedName = StringUtil.normalize(name);
         if (normalizedName == null || normalizedName.isBlank())
@@ -66,20 +65,20 @@ public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
 
         InventoryType type = MurmelExceptionWrapper.dbWrap(
                 "Failed to create InventoryType (name=" + normalizedName + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.inventoryType(),
+                () -> database.query(CREATE_SQL, null, InventoryTypeAdapter::resultSet,
                         stmt -> stmt.setString(1, normalizedName)),
                 InventoryException::new
         );
 
-        if (type == null) return null;
+        if (type == null) return Optional.empty();
         refreshProvider.fireSingle(single, type);
-        return type;
+        return Optional.of(type);
     }
 
     @Override
     public int delete(int id) {
-        InventoryType existing = cache.getById(id);
-        if (existing == null) return 0;
+        Optional<InventoryType> existing = cache.getById(id);
+        if (existing.isEmpty()) return 0;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete InventoryType (id=" + id + ")",
@@ -88,7 +87,7 @@ public final class InventoryTypeProviderImpl implements InventoryTypeProvider {
         );
 
         if (row < 1) return 0;
-        refreshProvider.fireSingle(single, existing);
+        refreshProvider.fireSingle(single, existing.get());
         return row;
     }
 }

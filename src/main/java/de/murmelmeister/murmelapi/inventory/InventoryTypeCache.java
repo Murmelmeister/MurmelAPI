@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class InventoryTypeCache implements MurmelCache {
+final class InventoryTypeCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(InventoryTypeCache.class);
 
     @Language("MariaDB")
@@ -91,20 +89,19 @@ public class InventoryTypeCache implements MurmelCache {
 
     private @NotNull List<InventoryType> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.inventoryType());
+        return CacheUtil.loadList(database, sql, fetchLimit, InventoryTypeAdapter::resultSet);
     }
 
     private @NotNull Optional<InventoryType> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        InventoryType inventoryType = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.inventoryType(),
+        InventoryType inventoryType = CacheUtil.loadSingle(database, sql, fetchLimit, InventoryTypeAdapter::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(inventoryType);
     }
 
-    public @Nullable InventoryType getById(int id) {
-        Optional<InventoryType> optType = cacheById.get(id);
-        return optType != null && optType.isPresent() ? optType.orElse(null) : null;
+    public @NotNull Optional<InventoryType> getById(int id) {
+        return cacheById.get(id);
     }
 
     public @NotNull @Unmodifiable List<InventoryType> getAll() {
