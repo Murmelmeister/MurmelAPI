@@ -25,10 +25,7 @@ import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
 import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.language.LanguageProvider;
 import de.murmelmeister.murmelapi.language.LanguageProviderImpl;
-import de.murmelmeister.murmelapi.language.message.MessageProvider;
-import de.murmelmeister.murmelapi.language.message.MessageProviderImpl;
-import de.murmelmeister.murmelapi.language.message.MessageService;
-import de.murmelmeister.murmelapi.language.message.MurmelMessage;
+import de.murmelmeister.murmelapi.language.message.*;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceProvider;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceProviderImpl;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelistProvider;
@@ -164,6 +161,7 @@ public final class MurmelAPI {
                 .registerTypeAdapterFactory(new GroupColorAdapter())
                 .registerTypeAdapterFactory(new GroupAdapter())
                 .registerTypeAdapterFactory(new InventoryTypeAdapter())
+                .registerTypeAdapterFactory(new MessageAdapter())
                 .disableHtmlEscaping()
                 .create();
         this.fetchLimit = fetchLimit;
@@ -175,7 +173,7 @@ public final class MurmelAPI {
         this.settingsProvider = new SettingsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.settingsService = new SettingsService(settingsProvider);
         this.languageProvider = new LanguageProviderImpl(database, gson, refreshProvider, cacheCapacity);
-        this.messageProvider = new MessageProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.messageProvider = MessageProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.messageService = new MessageService(languageProvider, messageProvider);
         this.userProvider = new UserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userStatsProvider = new UserStatsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);

@@ -5,7 +5,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.language.MessageException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -16,7 +15,7 @@ import org.jetbrains.annotations.Unmodifiable;
 import java.time.Duration;
 import java.util.*;
 
-public final class MessageProviderImpl implements MessageProvider {
+final class MessageProviderImpl implements MessageProvider {
     private static final String TABLE_NAME = "messages";
 
     @Language("MariaDB")
@@ -56,12 +55,12 @@ public final class MessageProviderImpl implements MessageProvider {
     }
 
     @Override
-    public @Nullable Message get(int messageId) {
+    public @NotNull Optional<Message> get(int messageId) {
         return cache.getById(messageId);
     }
 
     @Override
-    public @Nullable Message get(@NotNull String tagId, int languageId) {
+    public @NotNull Optional<Message> get(@NotNull String tagId, int languageId) {
         return cache.getByTag(tagId, languageId);
     }
 
@@ -81,7 +80,7 @@ public final class MessageProviderImpl implements MessageProvider {
 
         Message msg = MurmelExceptionWrapper.dbWrap(
                 "Failed to create Message (tagId=" + normalizedTagId + ", languageId=" + languageId + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.message(), stmt -> {
+                () -> database.query(CREATE_SQL, null, MessageAdapter::resultSet, stmt -> {
                     stmt.setString(1, normalizedTagId);
                     stmt.setInt(2, languageId);
                     stmt.setString(3, message);
@@ -96,8 +95,9 @@ public final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public int delete(int id) {
-        Message existing = cache.getById(id);
-        if (existing == null) return 0;
+        Optional<Message> existingOpt = cache.getById(id);
+        if (existingOpt.isEmpty()) return 0;
+        Message existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete Message (id=" + id + ")",
@@ -155,8 +155,9 @@ public final class MessageProviderImpl implements MessageProvider {
             throw new IllegalArgumentException("tagId cannot be blank");
         if (message.isBlank()) throw new IllegalArgumentException("message cannot be blank");
 
-        Message existing = cache.getById(id);
-        if (existing == null) return null;
+        Optional<Message> existingOpt = cache.getById(id);
+        if (existingOpt.isEmpty()) return null;
+        Message existing = existingOpt.get();
 
         if (Objects.equals(normalizedTagId, existing.tagId()) &&
                 languageId == existing.languageId() &&
@@ -175,7 +176,7 @@ public final class MessageProviderImpl implements MessageProvider {
         );
         if (rows < 1) return null;
 
-        Message msg = Message.builder(existing)
+        Message msg = existing.builder()
                 .tagId(tagId)
                 .languageId(languageId)
                 .message(message)

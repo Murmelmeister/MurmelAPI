@@ -6,10 +6,7 @@ import de.murmelmeister.murmelapi.clan.group.ClanGroup;
 import de.murmelmeister.murmelapi.clan.member.ClanMember;
 import de.murmelmeister.murmelapi.clan.parent.ClanParent;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
-import de.murmelmeister.murmelapi.group.Group;
-import de.murmelmeister.murmelapi.inventory.InventoryType;
 import de.murmelmeister.murmelapi.language.Language;
-import de.murmelmeister.murmelapi.language.message.Message;
 import de.murmelmeister.murmelapi.maintenance.Maintenance;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
@@ -52,16 +49,6 @@ public final class ResultSetUtil {
             int id = resultSet.getInt("id");
             String code = resultSet.getString("code");
             return new Language(id, code != null && !code.isBlank() ? code : ENGLISH_CODE);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<Message> message() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            String tag = resultSet.getString("tag_id");
-            int languageId = resultSet.getInt("language_id");
-            String message = resultSet.getString("message");
-            return new Message(id, tag, languageId, message);
         };
     }
 

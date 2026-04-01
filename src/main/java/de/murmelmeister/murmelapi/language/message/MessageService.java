@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
+import java.util.Optional;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
 
@@ -35,18 +36,18 @@ public final class MessageService {
 
         Language language = languageProvider.findById(languageId);
         if (language != null) {
-            Message message = messageProvider.get(key, language.id());
-            if (message != null)
-                return message.message();
+            Optional<Message> message = messageProvider.get(key, language.id());
+            if (message.isPresent())
+                return message.get().message();
 
             logger.warn("Message with tag '{}' and language ID '{}' not found.", key, language.id());
         }
 
         Language defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
         if (defaultLanguage != null) {
-            Message fallback = messageProvider.get(key, defaultLanguage.id());
-            if (fallback != null)
-                return fallback.message();
+            Optional<Message> fallback = messageProvider.get(key, defaultLanguage.id());
+            if (fallback.isPresent())
+                return fallback.get().message();
         }
 
         throw new IllegalArgumentException("Message with tag '" + key + "' not found in any language.");
@@ -58,18 +59,18 @@ public final class MessageService {
 
         Language language = languageProvider.findByCode(code);
         if (language != null) {
-            Message message = messageProvider.get(key, language.id());
-            if (message != null)
-                return message.message();
+            Optional<Message> message = messageProvider.get(key, language.id());
+            if (message.isPresent())
+                return message.get().message();
 
             logger.warn("Message with tag '{}' and language ID '{}' not found.", key, language.id());
         }
 
         Language defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
         if (defaultLanguage != null) {
-            Message fallback = messageProvider.get(key, defaultLanguage.id());
-            if (fallback != null)
-                return fallback.message();
+            Optional<Message> fallback = messageProvider.get(key, defaultLanguage.id());
+            if (fallback.isPresent())
+                return fallback.get().message();
         }
 
         throw new IllegalArgumentException("Message with tag '" + key + "' not found in any language.");

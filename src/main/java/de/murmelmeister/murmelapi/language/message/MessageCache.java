@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -26,7 +25,7 @@ import java.util.Optional;
  * MessageCache is a thread-safe cache for storing messages by their ID and tag.
  * It allows for quick retrieval and management of messages based on their unique identifiers.
  */
-public class MessageCache implements MurmelCache {
+final class MessageCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageCache.class);
 
     @Language("MariaDB")
@@ -97,13 +96,13 @@ public class MessageCache implements MurmelCache {
 
     private @NotNull List<Message> loadByLanguage(LanguageKey key) {
         String sql = SELECT_BY_LANGUAGE.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.message(),
+        return CacheUtil.loadList(database, sql, fetchLimit, MessageAdapter::resultSet,
                 stmt -> stmt.setInt(1, key.languageId()));
     }
 
     private @NotNull Optional<Message> loadByTag(TagKey key) {
         String sql = SELECT_BY_TAG.formatted(tableName);
-        Message message = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.message(),
+        Message message = CacheUtil.loadSingle(database, sql, fetchLimit, MessageAdapter::resultSet,
                 stmt -> {
                     stmt.setString(1, key.tagId());
                     stmt.setInt(2, key.languageId());
@@ -114,20 +113,18 @@ public class MessageCache implements MurmelCache {
 
     private @NotNull Optional<Message> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        Message message = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.message(),
+        Message message = CacheUtil.loadSingle(database, sql, fetchLimit, MessageAdapter::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(message);
     }
 
-    public @Nullable Message getById(int id) {
-        Optional<Message> optMessage = cacheById.get(id);
-        return optMessage != null && optMessage.isPresent() ? optMessage.orElse(null) : null;
+    public @NotNull Optional<Message> getById(int id) {
+        return cacheById.get(id);
     }
 
-    public @Nullable Message getByTag(@NotNull String tagId, int languageId) {
-        Optional<Message> optMessage = cacheByTag.get(new TagKey(tagId, languageId));
-        return optMessage != null && optMessage.isPresent() ? optMessage.orElse(null) : null;
+    public @NotNull Optional<Message> getByTag(@NotNull String tagId, int languageId) {
+        return cacheByTag.get(new TagKey(tagId, languageId));
     }
 
     public @NotNull @Unmodifiable List<Message> getByLanguage(int languageId) {

@@ -2,58 +2,32 @@ package de.murmelmeister.murmelapi.language.message;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * Represents a message in the Murmel API.
  * Each message has an ID, a tag, a language ID, and the actual message content.
  */
-public record Message(
-        int id,
-        @NotNull String tagId,
-        int languageId,
-        @NotNull String message
-) {
-    public Message {
-        Objects.requireNonNull(tagId, "tagId must not be null");
-        Objects.requireNonNull(message, "message must not be null");
-        if (tagId.length() > 255) throw new IllegalArgumentException("tagId cannot be longer than 255 characters");
-    }
+public interface Message {
+    int id();
 
-    public static @NotNull Builder builder(@NotNull Message message) {
-        return new Builder(message);
-    }
+    @NotNull String tagId();
 
-    public static class Builder {
-        private final int id;
-        private String tagId;
-        private int languageId;
-        private String message;
+    int languageId();
 
-        private Builder(@NotNull Message message) {
-            this.id = message.id();
-            this.tagId = message.tagId();
-            this.languageId = message.languageId();
-            this.message = message.message();
-        }
+    @NotNull String message();
 
-        public Builder tagId(@NotNull String tagId) {
-            this.tagId = tagId;
-            return this;
-        }
+    @NotNull Builder builder();
 
-        public Builder languageId(int languageId) {
-            this.languageId = languageId;
-            return this;
-        }
+    @NotNull Message with(@NotNull Consumer<Builder> consumer);
 
-        public Builder message(@NotNull String message) {
-            this.message = message;
-            return this;
-        }
+    interface Builder {
+        @NotNull Builder tagId(@NotNull String tagId);
 
-        public @NotNull Message build() {
-            return new Message(id, tagId, languageId, message);
-        }
+        @NotNull Builder languageId(int languageId);
+
+        @NotNull Builder message(@NotNull String message);
+
+        @NotNull Message build();
     }
 }
