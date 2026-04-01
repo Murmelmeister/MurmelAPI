@@ -21,6 +21,10 @@ public interface Message {
 
     @NotNull Message with(@NotNull Consumer<Builder> consumer);
 
+    static @NotNull Message of(int id, @NotNull String tagId, int languageId, @NotNull String message) {
+        return new MessageImpl(id, tagId, languageId, message);
+    }
+
     interface Builder {
         @NotNull Builder tagId(@NotNull String tagId);
 
