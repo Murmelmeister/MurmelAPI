@@ -27,6 +27,10 @@ public interface Group {
 
     @NotNull Group with(@NotNull Consumer<Builder> consumer);
 
+    static @NotNull Group of(int id, @NotNull String groupName, int priority, boolean isDefault, int createdBy, @NotNull LocalDateTime createdAt) {
+        return new GroupImpl(id, groupName, priority, isDefault, createdBy, createdAt, null, null);
+    }
+
     interface Builder {
         @NotNull Builder groupName(@NotNull String groupName);
 
