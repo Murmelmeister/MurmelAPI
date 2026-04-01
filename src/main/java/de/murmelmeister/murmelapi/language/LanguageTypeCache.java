@@ -6,12 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
+import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,17 +19,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * LanguageCache provides a Caffeine-backed cache for language lookups by id and language code.
- */
-public class LanguageCache implements MurmelCache {
-    private static final Logger LOGGER = LoggerFactory.getLogger(LanguageCache.class);
+final class LanguageTypeCache implements MurmelCache {
+    private static final Logger LOGGER = LoggerFactory.getLogger(LanguageTypeCache.class);
 
-    @org.intellij.lang.annotations.Language(value = "MariaDB")
+    @Language(value = "MariaDB")
     private static final String SELECT_ALL = "SELECT id, code FROM %s";
-    @org.intellij.lang.annotations.Language(value = "MariaDB")
+    @Language(value = "MariaDB")
     private static final String SELECT_BY_ID = "SELECT * FROM %s WHERE id = ?";
-    @org.intellij.lang.annotations.Language(value = "MariaDB")
+    @Language(value = "MariaDB")
     private static final String SELECT_BY_CODE = "SELECT id FROM %s WHERE LOWER(code) = ?";
 
     private static final String ALL_KEY = "ALL";
@@ -40,11 +36,11 @@ public class LanguageCache implements MurmelCache {
     private final RefreshProvider refreshProvider;
     private final String tableName;
 
-    private final LoadingCache<@NotNull Integer, Optional<Language>> cacheById;
+    private final LoadingCache<@NotNull Integer, Optional<LanguageType>> cacheById;
     private final LoadingCache<@NotNull String, Optional<Integer>> codeToId;
-    private final LoadingCache<@NotNull String, List<Language>> listCache;
+    private final LoadingCache<@NotNull String, List<LanguageType>> listCache;
 
-    public LanguageCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, long cacheCapacity) {
+    public LanguageTypeCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, long cacheCapacity) {
         this.database = database;
         this.gson = gson;
         this.refreshProvider = refreshProvider;
@@ -67,11 +63,11 @@ public class LanguageCache implements MurmelCache {
 
         if (RefreshType.SINGLE_LANGUAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof Language language)
+            if (key instanceof LanguageType language)
                 remove(language);
             else if (key instanceof String json) {
                 try {
-                    final Language language = gson.fromJson(json, Language.class);
+                    final LanguageType language = gson.fromJson(json, LanguageType.class);
 
                     if (language == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -92,9 +88,9 @@ public class LanguageCache implements MurmelCache {
         clear();
     }
 
-    private @NotNull List<Language> loadAllFromDatabase() {
+    private @NotNull List<LanguageType> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, null, ResultSetUtil.language());
+        return CacheUtil.loadList(database, sql, null, LanguageTypeAdapter::resultSet);
     }
 
     private @NotNull Optional<Integer> loadByCodeKey(String key) {
@@ -106,33 +102,31 @@ public class LanguageCache implements MurmelCache {
         return Optional.ofNullable(id);
     }
 
-    private @NotNull Optional<Language> loadById(int id) {
+    private @NotNull Optional<LanguageType> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        Language language = CacheUtil.loadSingle(database, sql, null, ResultSetUtil.language(),
+        LanguageType language = CacheUtil.loadSingle(database, sql, null, LanguageTypeAdapter::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(language);
     }
 
-    public @Nullable Language getById(int id) {
-        Optional<Language> optLang = cacheById.get(id);
-        return optLang != null && optLang.isPresent() ? optLang.orElse(null) : null;
+    public @NotNull Optional<LanguageType> getById(int id) {
+        return cacheById.get(id);
     }
 
-    public @Nullable Language getByCode(@Nullable String code) {
-        if (code == null) return null;
+    public @NotNull Optional<LanguageType> getByCode(@NotNull String code) {
         Optional<Integer> optId = codeToId.get(toKey(code));
-        return optId != null && optId.isPresent() ? getById(optId.get()) : null;
+        return optId != null && optId.isPresent() ? getById(optId.get()) : Optional.empty();
     }
 
-    public @NotNull @Unmodifiable List<Language> getAll() {
-        List<Language> languages = listCache.get(ALL_KEY);
+    public @NotNull @Unmodifiable List<LanguageType> getAll() {
+        List<LanguageType> languages = listCache.get(ALL_KEY);
         if (languages == null || languages.isEmpty())
             return Collections.emptyList();
         return List.copyOf(languages);
     }
 
-    public void remove(@NotNull Language language) {
+    public void remove(@NotNull LanguageType language) {
         cacheById.invalidate(language.id());
         codeToId.invalidate(toKey(language.code()));
         listCache.invalidate(ALL_KEY);

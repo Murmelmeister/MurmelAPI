@@ -6,7 +6,6 @@ import de.murmelmeister.murmelapi.clan.group.ClanGroup;
 import de.murmelmeister.murmelapi.clan.member.ClanMember;
 import de.murmelmeister.murmelapi.clan.parent.ClanParent;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
-import de.murmelmeister.murmelapi.language.Language;
 import de.murmelmeister.murmelapi.maintenance.Maintenance;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
@@ -32,8 +31,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
-
 public final class ResultSetUtil {
     public static @NotNull ResultSetProcessor<Settings> settings() {
         return resultSet -> {
@@ -41,14 +38,6 @@ public final class ResultSetUtil {
             String json = resultSet.getString("value_json");
             LocalDateTime updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime();
             return new Settings(tagId, json, updatedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<Language> language() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            String code = resultSet.getString("code");
-            return new Language(id, code != null && !code.isBlank() ? code : ENGLISH_CODE);
         };
     }
 

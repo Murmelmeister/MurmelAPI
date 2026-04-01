@@ -22,10 +22,13 @@ import de.murmelmeister.murmelapi.group.color.GroupColorAdapter;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeAdapter;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
-import de.murmelmeister.murmelapi.language.Language;
-import de.murmelmeister.murmelapi.language.LanguageProvider;
-import de.murmelmeister.murmelapi.language.LanguageProviderImpl;
-import de.murmelmeister.murmelapi.language.message.*;
+import de.murmelmeister.murmelapi.language.LanguageType;
+import de.murmelmeister.murmelapi.language.LanguageTypeAdapter;
+import de.murmelmeister.murmelapi.language.LanguageTypeProvider;
+import de.murmelmeister.murmelapi.language.message.MessageAdapter;
+import de.murmelmeister.murmelapi.language.message.MessageProvider;
+import de.murmelmeister.murmelapi.language.message.MessageService;
+import de.murmelmeister.murmelapi.language.message.MurmelMessage;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceProvider;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceProviderImpl;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelistProvider;
@@ -105,7 +108,7 @@ public final class MurmelAPI {
     private final SettingsProvider settingsProvider;
     private final SettingsService settingsService;
 
-    private final LanguageProvider languageProvider;
+    private final LanguageTypeProvider languageProvider;
     private final MessageProvider messageProvider;
     private final MessageService messageService;
 
@@ -161,6 +164,7 @@ public final class MurmelAPI {
                 .registerTypeAdapterFactory(new GroupColorAdapter())
                 .registerTypeAdapterFactory(new GroupAdapter())
                 .registerTypeAdapterFactory(new InventoryTypeAdapter())
+                .registerTypeAdapterFactory(new LanguageTypeAdapter())
                 .registerTypeAdapterFactory(new MessageAdapter())
                 .disableHtmlEscaping()
                 .create();
@@ -172,7 +176,7 @@ public final class MurmelAPI {
 
         this.settingsProvider = new SettingsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.settingsService = new SettingsService(settingsProvider);
-        this.languageProvider = new LanguageProviderImpl(database, gson, refreshProvider, cacheCapacity);
+        this.languageProvider = LanguageTypeProvider.of(database, gson, refreshProvider, cacheCapacity);
         this.messageProvider = MessageProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.messageService = new MessageService(languageProvider, messageProvider);
         this.userProvider = new UserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -293,15 +297,12 @@ public final class MurmelAPI {
 
     public @NotNull DateTimeFormatter getDateTimeFormatter(int languageId) {
         String pattern = messageService.getMessage(MurmelMessage.DATE_TIME_FORMAT.getTag(), languageId);
-        if (pattern == null)
-            throw new IllegalArgumentException("No pattern for language " + languageId + " found!");
         return DateTimeFormatter.ofPattern(pattern);
     }
 
     public @NotNull DecimalFormat getDecimalFormat(int languageId, @NotNull String pattern) {
-        Language language = getLanguageProvider().findById(languageId);
-        if (language == null)
-            throw new IllegalArgumentException("No language for id " + languageId + " found!");
+        LanguageType language = getLanguageProvider().findById(languageId)
+                .orElseThrow(() -> new IllegalArgumentException("No language for id " + languageId + " found!"));
         Locale locale = Locale.of(language.code());
         DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(locale);
         return new DecimalFormat(pattern, symbols);
@@ -331,7 +332,7 @@ public final class MurmelAPI {
         return settingsService;
     }
 
-    public LanguageProvider getLanguageProvider() {
+    public LanguageTypeProvider getLanguageProvider() {
         return languageProvider;
     }
 

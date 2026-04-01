@@ -1,7 +1,7 @@
 package de.murmelmeister.murmelapi.language.message;
 
-import de.murmelmeister.murmelapi.language.Language;
-import de.murmelmeister.murmelapi.language.LanguageProvider;
+import de.murmelmeister.murmelapi.language.LanguageType;
+import de.murmelmeister.murmelapi.language.LanguageTypeProvider;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +23,10 @@ import static de.murmelmeister.murmelapi.MurmelAPI.ENGLISH_CODE;
  */
 public final class MessageService {
     private final Logger logger = LoggerFactory.getLogger(MessageService.class);
-    private final LanguageProvider languageProvider;
+    private final LanguageTypeProvider languageProvider;
     private final MessageProvider messageProvider;
 
-    public MessageService(@NotNull LanguageProvider languageProvider, @NotNull MessageProvider provider) {
+    public MessageService(@NotNull LanguageTypeProvider languageProvider, @NotNull MessageProvider provider) {
         this.languageProvider = languageProvider;
         this.messageProvider = provider;
     }
@@ -34,18 +34,19 @@ public final class MessageService {
     public @NotNull String getMessage(@NotNull String key, int languageId) {
         Objects.requireNonNull(key, "key cannot be null");
 
-        Language language = languageProvider.findById(languageId);
-        if (language != null) {
-            Optional<Message> message = messageProvider.findMessage(key, language.id());
+        Optional<LanguageType> language = languageProvider.findById(languageId);
+        if (language.isPresent()) {
+            LanguageType languageType = language.get();
+            Optional<Message> message = messageProvider.findMessage(key, languageType.id());
             if (message.isPresent())
                 return message.get().message();
 
-            logger.warn("Message with tag '{}' and language ID '{}' not found.", key, language.id());
+            logger.warn("Message with tag '{}' and language ID '{}' not found.", key, languageType.id());
         }
 
-        Language defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
-        if (defaultLanguage != null) {
-            Optional<Message> fallback = messageProvider.findMessage(key, defaultLanguage.id());
+        Optional<LanguageType> defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
+        if (defaultLanguage.isPresent()) {
+            Optional<Message> fallback = messageProvider.findMessage(key, defaultLanguage.get().id());
             if (fallback.isPresent())
                 return fallback.get().message();
         }
@@ -57,18 +58,19 @@ public final class MessageService {
         Objects.requireNonNull(key, "key cannot be null");
         Objects.requireNonNull(code, "code cannot be null");
 
-        Language language = languageProvider.findByCode(code);
-        if (language != null) {
-            Optional<Message> message = messageProvider.findMessage(key, language.id());
+        Optional<LanguageType> language = languageProvider.findByCode(code);
+        if (language.isPresent()) {
+            LanguageType languageType = language.get();
+            Optional<Message> message = messageProvider.findMessage(key, languageType.id());
             if (message.isPresent())
                 return message.get().message();
 
-            logger.warn("Message with tag '{}' and language ID '{}' not found.", key, language.id());
+            logger.warn("Message with tag '{}' and language ID '{}' not found.", key, languageType.id());
         }
 
-        Language defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
-        if (defaultLanguage != null) {
-            Optional<Message> fallback = messageProvider.findMessage(key, defaultLanguage.id());
+        Optional<LanguageType> defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
+        if (defaultLanguage.isPresent()) {
+            Optional<Message> fallback = messageProvider.findMessage(key, defaultLanguage.get().id());
             if (fallback.isPresent())
                 return fallback.get().message();
         }
