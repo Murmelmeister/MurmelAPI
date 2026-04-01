@@ -25,6 +25,10 @@ public interface GroupColor {
 
     @NotNull GroupColor with(@NotNull Consumer<Builder> consumer);
 
+    static @NotNull GroupColor of(int groupId, int typeId, @NotNull String value, int createdBy, @NotNull LocalDateTime createdAt) {
+        return new GroupColorImpl(groupId, typeId, value, createdBy, createdAt, null, null);
+    }
+
     interface Builder {
         @NotNull Builder value(@NotNull String value);
 
