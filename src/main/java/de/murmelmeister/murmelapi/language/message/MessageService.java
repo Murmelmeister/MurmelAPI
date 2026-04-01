@@ -36,7 +36,7 @@ public final class MessageService {
 
         Language language = languageProvider.findById(languageId);
         if (language != null) {
-            Optional<Message> message = messageProvider.get(key, language.id());
+            Optional<Message> message = messageProvider.findMessage(key, language.id());
             if (message.isPresent())
                 return message.get().message();
 
@@ -45,7 +45,7 @@ public final class MessageService {
 
         Language defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
         if (defaultLanguage != null) {
-            Optional<Message> fallback = messageProvider.get(key, defaultLanguage.id());
+            Optional<Message> fallback = messageProvider.findMessage(key, defaultLanguage.id());
             if (fallback.isPresent())
                 return fallback.get().message();
         }
@@ -59,7 +59,7 @@ public final class MessageService {
 
         Language language = languageProvider.findByCode(code);
         if (language != null) {
-            Optional<Message> message = messageProvider.get(key, language.id());
+            Optional<Message> message = messageProvider.findMessage(key, language.id());
             if (message.isPresent())
                 return message.get().message();
 
@@ -68,7 +68,7 @@ public final class MessageService {
 
         Language defaultLanguage = languageProvider.findByCode(ENGLISH_CODE);
         if (defaultLanguage != null) {
-            Optional<Message> fallback = messageProvider.get(key, defaultLanguage.id());
+            Optional<Message> fallback = messageProvider.findMessage(key, defaultLanguage.id());
             if (fallback.isPresent())
                 return fallback.get().message();
         }

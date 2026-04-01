@@ -146,7 +146,7 @@ final class MessageCache implements MurmelCache {
         cacheByLanguage.invalidateAll();
     }
 
-    public record MessageKey(int languageId, @Nullable String tagId) {
+    record MessageKey(int languageId, @Nullable String tagId) {
     }
 
     private record TagKey(@NotNull String tagId, int languageId) {

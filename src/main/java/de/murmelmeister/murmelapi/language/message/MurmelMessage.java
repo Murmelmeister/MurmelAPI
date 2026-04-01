@@ -1,8 +1,6 @@
 package de.murmelmeister.murmelapi.language.message;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static de.murmelmeister.murmelapi.language.message.MurmelMessage.LocalizedMessage.of;
 
@@ -72,13 +70,24 @@ public enum MurmelMessage {
     }
 
     public static void loadMessages(MessageProvider provider) {
+        Collection<Message> messages = new ArrayList<>(Collections.emptyList());
+
         for (MurmelMessage message : VALUES) {
             String tag = message.getTag();
-            message.getMessages().forEach((languageId, msg) -> {
-                if (provider.get(tag, languageId) == null)
-                    provider.create(tag, languageId, msg);
-            });
+            for (Map.Entry<Integer, String> entry : message.getMessages().entrySet()) {
+                int languageId = entry.getKey();
+                String msg = entry.getValue();
+
+                messages.add(Message.of(
+                        0, // We don't want to create/update existing messages, so we can use a dummy ID here
+                        tag,
+                        languageId,
+                        msg
+                ));
+            }
         }
+
+        provider.upsertAll(messages);
     }
 
     record LocalizedMessage(int languageId, String message) {
