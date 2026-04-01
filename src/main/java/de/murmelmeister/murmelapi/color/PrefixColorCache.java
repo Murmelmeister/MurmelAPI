@@ -10,7 +10,6 @@ import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
-import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
@@ -21,7 +20,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-@ApiStatus.Internal
 final class PrefixColorCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(PrefixColorCache.class);
 
