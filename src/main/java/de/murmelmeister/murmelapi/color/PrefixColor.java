@@ -25,6 +25,10 @@ public interface PrefixColor {
 
     @NotNull PrefixColor with(@NotNull Consumer<Builder> consumer);
 
+    static @NotNull PrefixColor of(@NotNull String id, @NotNull String color, boolean animated, @NotNull LocalDateTime createdAt, int createdBy) {
+        return new PrefixColorImpl(id, color, animated, createdAt, createdBy, null, null);
+    }
+
     interface Builder {
         @NotNull Builder color(@NotNull String color);
 
