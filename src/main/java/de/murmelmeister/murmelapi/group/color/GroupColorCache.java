@@ -95,18 +95,18 @@ final class GroupColorCache implements MurmelCache {
 
     private @NotNull List<GroupColor> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, GroupColorAdapter::resultSet);
+        return CacheUtil.loadList(database, sql, fetchLimit, GroupColorRowMapper::resultSet);
     }
 
     private @NotNull List<GroupColor> loadByGroupId(int groupId) {
         String sql = SELECT_BY_GROUP_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, GroupColorAdapter::resultSet,
+        return CacheUtil.loadList(database, sql, fetchLimit, GroupColorRowMapper::resultSet,
                 stmt -> stmt.setInt(1, groupId));
     }
 
     private @NotNull Optional<GroupColor> loadByKey(ColorKey key) {
         String sql = SELECT_BY_KEY.formatted(tableName);
-        GroupColor groupColor = CacheUtil.loadSingle(database, sql, fetchLimit, GroupColorAdapter::resultSet,
+        GroupColor groupColor = CacheUtil.loadSingle(database, sql, fetchLimit, GroupColorRowMapper::resultSet,
                 stmt -> {
                     stmt.setInt(1, key.groupId());
                     if (key.typeId() != null) stmt.setInt(2, key.typeId());

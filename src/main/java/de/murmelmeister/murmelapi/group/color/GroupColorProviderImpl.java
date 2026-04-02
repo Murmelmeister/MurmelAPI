@@ -87,7 +87,7 @@ final class GroupColorProviderImpl implements GroupColorProvider {
 
         GroupColor saved = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert GroupColor (groupId=" + groupId + ", typeId=" + typeId + ")",
-                () -> database.query(UPSERT_SQL, null, GroupColorAdapter::resultSet, stmt -> {
+                () -> database.query(UPSERT_SQL, null, GroupColorRowMapper::resultSet, stmt -> {
                     stmt.setInt(1, groupId);
                     stmt.setInt(2, typeId);
                     stmt.setString(3, value);
