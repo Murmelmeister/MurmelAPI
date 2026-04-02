@@ -49,7 +49,6 @@ import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
 import de.murmelmeister.murmelapi.user.inventory.UserInventoryProvider;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
-import de.murmelmeister.murmelapi.user.session.UserSessionProviderImpl;
 import de.murmelmeister.murmelapi.user.stats.UserStatsProvider;
 import de.murmelmeister.murmelapi.user.stats.UserStatsProviderImpl;
 import de.murmelmeister.murmelapi.utils.adapter.LocalDateAdapter;
@@ -163,7 +162,7 @@ public final class MurmelAPI {
         this.userProvider = new UserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userStatsProvider = new UserStatsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userLoginProvider = UserLoginProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userSessionProvider = new UserSessionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userSessionProvider = UserSessionProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userExcuseProvider = UserExcuseProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupProvider = GroupProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupColorProvider = GroupColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);

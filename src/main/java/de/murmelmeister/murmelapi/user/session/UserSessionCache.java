@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class UserSessionCache implements MurmelCache {
+final class UserSessionCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserSessionCache.class);
 
     @Language("MariaDB")
@@ -69,11 +67,11 @@ public class UserSessionCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER_SESSION.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof UserSession session)
+            if (key instanceof SessionKey session)
                 remove(session);
             else if (key instanceof String json) {
                 try {
-                    final UserSession session = gson.fromJson(json, UserSession.class);
+                    final SessionKey session = gson.fromJson(json, SessionKey.class);
 
                     if (session == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -96,32 +94,29 @@ public class UserSessionCache implements MurmelCache {
 
     private @NotNull List<UserSession> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userSession());
+        return CacheUtil.loadList(database, sql, fetchLimit, UserSessionRowMapper::resultSet);
     }
 
     private @NotNull Optional<UserSession> loadByUserId(int userId) {
         String sql = SELECT_BY_USER_ID.formatted(tableName);
-        UserSession session = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
+        UserSession session = CacheUtil.loadSingle(database, sql, fetchLimit, UserSessionRowMapper::resultSet,
                 stmt -> stmt.setInt(1, userId));
         return Optional.ofNullable(session);
     }
 
     private @NotNull Optional<UserSession> loadById(UUID sessionId) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        UserSession session = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userSession(),
+        UserSession session = CacheUtil.loadSingle(database, sql, fetchLimit, UserSessionRowMapper::resultSet,
                 stmt -> stmt.setString(1, sessionId.toString()));
         return Optional.ofNullable(session);
     }
 
-    public @Nullable UserSession getById(@Nullable UUID sessionId) {
-        if (sessionId == null) return null;
-        Optional<UserSession> optSession = cacheById.get(sessionId);
-        return optSession != null && optSession.isPresent() ? optSession.orElse(null) : null;
+    public @NotNull Optional<UserSession> getById(@NotNull UUID sessionId) {
+        return cacheById.get(sessionId);
     }
 
-    public @Nullable UserSession getByUserId(int userId) {
-        Optional<UserSession> optSession = cacheByUserId.get(userId);
-        return optSession != null && optSession.isPresent() ? optSession.orElse(null) : null;
+    public @NotNull Optional<UserSession> getByUserId(int userId) {
+        return cacheByUserId.get(userId);
     }
 
     public @NotNull @Unmodifiable List<UserSession> getAll() {
@@ -131,7 +126,7 @@ public class UserSessionCache implements MurmelCache {
         return List.copyOf(sessions);
     }
 
-    public void remove(@NotNull UserSession session) {
+    public void remove(@NotNull SessionKey session) {
         cacheById.invalidate(session.id());
         cacheByUserId.invalidate(session.userId());
         listCache.invalidate(ALL_KEY);
@@ -141,5 +136,8 @@ public class UserSessionCache implements MurmelCache {
         cacheById.invalidateAll();
         cacheByUserId.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record SessionKey(UUID id, int userId) {
     }
 }

@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
@@ -52,8 +53,9 @@ public record UserService(
         if (userId < 1)
             throw new IllegalArgumentException("User ID must be >= 1");
 
-        UserSession session = sessionProvider.findByUserId(userId);
-        if (session != null) {
+        Optional<UserSession> sessionOpt = sessionProvider.findByUserId(userId);
+        if (sessionOpt.isPresent()) {
+            UserSession session = sessionOpt.get();
             loginProvider.create(session);
             if (sessionProvider.delete(session.id()) < 1)
                 throw new UserSessionException("Failed to delete existing session for userId: " + userId);
@@ -65,8 +67,9 @@ public record UserService(
         if (userId < 1)
             throw new IllegalArgumentException("userId must be >= 1");
 
-        UserSession session = sessionProvider.findByUserId(userId);
-        if (session != null) {
+        Optional<UserSession> sessionOpt = sessionProvider.findByUserId(userId);
+        if (sessionOpt.isPresent()) {
+            UserSession session = sessionOpt.get();
             loginProvider.create(session);
             if (sessionProvider.delete(session.id()) < 1)
                 throw new UserSessionException("Failed to delete session for userId: " + userId);

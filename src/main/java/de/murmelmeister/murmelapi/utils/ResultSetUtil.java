@@ -14,7 +14,6 @@ import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.stats.UserStats;
 import org.jetbrains.annotations.NotNull;
 
@@ -36,25 +35,6 @@ public final class ResultSetUtil {
             boolean isDebugActive = resultSet.getBoolean("debug_enabled");
             int languageId = resultSet.getInt("language_id");
             return new User(id, mojangId, username, firstJoin, isSystemUser, isDebugUser, isDebugActive, languageId);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<UserSession> userSession() {
-        return resultSet -> {
-            UUID id = UUID.fromString(resultSet.getString("id"));
-            int userId = resultSet.getInt("user_id");
-            LocalDateTime loginTime = resultSet.getTimestamp("login_time").toLocalDateTime();
-            String ipAddress = resultSet.getString("ip_address");
-            InetAddress inetAddress;
-            try {
-                inetAddress = InetAddress.getByName(ipAddress);
-            } catch (UnknownHostException e) {
-                throw new RuntimeException(e);
-            }
-            String clientBrand = resultSet.getString("client_brand");
-            int protocolVersion = resultSet.getInt("protocol_version");
-
-            return new UserSession(id, userId, loginTime, inetAddress, clientBrand, protocolVersion);
         };
     }
 

@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.user.UserSessionException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -16,9 +15,10 @@ import java.net.InetAddress;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
-public final class UserSessionProviderImpl implements UserSessionProvider {
+final class UserSessionProviderImpl implements UserSessionProvider {
     private static final String TABLE_NAME = "user_session";
 
     @Language("MariaDB")
@@ -49,12 +49,12 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
-    public @Nullable UserSession findById(@Nullable UUID sessionId) {
+    public @NotNull Optional<UserSession> findById(@NotNull UUID sessionId) {
         return cache.getById(sessionId);
     }
 
     @Override
-    public @Nullable UserSession findByUserId(int userId) {
+    public @NotNull Optional<UserSession> findByUserId(int userId) {
         return cache.getByUserId(userId);
     }
 
@@ -64,7 +64,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
-    public @Nullable UserSession create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
+    public @NotNull Optional<UserSession> create(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
         Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
         if (clientBrand != null && clientBrand.length() > 50)
@@ -73,7 +73,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
         UUID sessionId = UUID.randomUUID();
         UserSession session = MurmelExceptionWrapper.dbWrap(
                 "Failed to create UserSession (userId=" + userId + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.userSession(), stmt -> {
+                () -> database.query(CREATE_SQL, null, UserSessionRowMapper::resultSet, stmt -> {
                     stmt.setString(1, sessionId.toString());
                     stmt.setInt(2, userId);
                     stmt.setString(3, inetAddress.getHostAddress());
@@ -83,17 +83,18 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
                 UserSessionException::new
         );
 
-        if (session == null) return null;
-        refreshProvider.fireSingle(single, session);
-        return session;
+        if (session == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new UserSessionCache.SessionKey(session.id(), session.userId()));
+        return Optional.of(session);
     }
 
     @Override
     public int delete(@NotNull UUID sessionId) {
         Objects.requireNonNull(sessionId, "sessionId cannot be null");
 
-        UserSession existing = findById(sessionId);
-        if (existing == null) return 0;
+        Optional<UserSession> existingOpt = findById(sessionId);
+        if (existingOpt.isEmpty()) return 0;
+        UserSession existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete UserSession (sessionId=" + sessionId + ")",
@@ -102,7 +103,7 @@ public final class UserSessionProviderImpl implements UserSessionProvider {
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing);
+        refreshProvider.fireSingle(single, new UserSessionCache.SessionKey(existing.id(), existing.userId()));
         return row;
     }
 }
