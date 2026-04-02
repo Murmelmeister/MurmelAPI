@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class ClanGroupCache implements MurmelCache {
+final class ClanGroupCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClanGroupCache.class);
 
     @Language("MariaDB")
@@ -96,17 +94,17 @@ public class ClanGroupCache implements MurmelCache {
 
     private @NotNull List<ClanGroup> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanGroup());
+        return CacheUtil.loadList(database, sql, fetchLimit, ClanGroupRowMapper::resultSet);
     }
 
     private @NotNull List<ClanGroup> loadByClanId(UUID clanId) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanGroup(), stmt -> stmt.setString(1, clanId.toString()));
+        return CacheUtil.loadList(database, sql, fetchLimit, ClanGroupRowMapper::resultSet, stmt -> stmt.setString(1, clanId.toString()));
     }
 
     private @NotNull Optional<ClanGroup> loadByKey(GroupKey key) {
         String sql = SELECT_BY_KEY.formatted(tableName);
-        ClanGroup clanGroup = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanGroup(), stmt -> {
+        ClanGroup clanGroup = CacheUtil.loadSingle(database, sql, fetchLimit, ClanGroupRowMapper::resultSet, stmt -> {
             stmt.setString(1, key.clanId().toString());
             stmt.setString(2, key.groupId().toString());
         });
@@ -114,10 +112,8 @@ public class ClanGroupCache implements MurmelCache {
         return Optional.ofNullable(clanGroup);
     }
 
-    public @Nullable ClanGroup getByKey(@Nullable UUID clanId, @Nullable UUID groupId) {
-        if (clanId == null || groupId == null) return null;
-        Optional<ClanGroup> optGroup = cacheByKey.get(new GroupKey(clanId, groupId));
-        return optGroup != null && optGroup.isPresent() ? optGroup.orElse(null) : null;
+    public @NotNull Optional<ClanGroup> getByKey(@NotNull UUID clanId, @NotNull UUID groupId) {
+        return cacheByKey.get(new GroupKey(clanId, groupId));
     }
 
     public @NotNull @Unmodifiable List<ClanGroup> getByClanId(@NotNull UUID clanId) {

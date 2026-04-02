@@ -1,16 +1,21 @@
 package de.murmelmeister.murmelapi.clan.group;
 
+import com.google.gson.Gson;
+import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ClanGroupProvider {
     void refreshCache();
 
-    @Nullable ClanGroup findById(@Nullable UUID clanId, @Nullable UUID groupId);
+    @NotNull Optional<ClanGroup> findById(@NotNull UUID clanId, @NotNull UUID groupId);
 
     @NotNull
     @Unmodifiable
@@ -20,11 +25,12 @@ public interface ClanGroupProvider {
     @Unmodifiable
     List<ClanGroup> findAll();
 
-    @Nullable ClanGroup create(@NotNull UUID clanId, @NotNull String groupName, int priority, boolean defaultGroup, int createdBy);
+    @NotNull Optional<ClanGroup> upsert(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String groupName, int priority, boolean defaultGroup, int executorId);
 
     int delete(@NotNull UUID clanId, @NotNull UUID groupId);
 
-    @Nullable ClanGroup update(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String groupName, int priority, boolean defaultGroup, int changedBy);
-
-    @Nullable ClanGroup upsert(@NotNull UUID clanId, @NotNull UUID groupId, @NotNull String groupName, int priority, boolean defaultGroup, int executorId);
+    @ApiStatus.Internal
+    static @NotNull ClanGroupProvider of(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+        return new ClanGroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+    }
 }

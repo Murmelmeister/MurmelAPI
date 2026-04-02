@@ -2,7 +2,6 @@ package de.murmelmeister.murmelapi.utils;
 
 import de.murmelmeister.library.database.ResultSetProcessor;
 import de.murmelmeister.murmelapi.clan.Clan;
-import de.murmelmeister.murmelapi.clan.group.ClanGroup;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -94,21 +93,6 @@ public final class ResultSetUtil {
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             return new Clan(id, clanName, tag, sign, description, ownerId, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<ClanGroup> clanGroup() {
-        return resultSet -> {
-            UUID clanId = UUID.fromString(resultSet.getString("clan_id"));
-            UUID groupId = UUID.fromString(resultSet.getString("group_id"));
-            String groupName = resultSet.getString("group_name");
-            int priority = resultSet.getInt("priority");
-            boolean isDefault = resultSet.getBoolean("is_default");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            return new ClanGroup(clanId, groupId, groupName, priority, isDefault, createdBy, createdAt, changedBy, changedAt);
         };
     }
 }

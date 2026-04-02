@@ -7,7 +7,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.clan.ClanProvider;
 import de.murmelmeister.murmelapi.clan.ClanProviderImpl;
 import de.murmelmeister.murmelapi.clan.group.ClanGroupProvider;
-import de.murmelmeister.murmelapi.clan.group.ClanGroupProviderImpl;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProvider;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
 import de.murmelmeister.murmelapi.group.GroupProvider;
@@ -169,7 +168,7 @@ public final class MurmelAPI {
                 userExcuseProvider, punishUserProvider, punishAuditProvider);
         this.clanProvider = new ClanProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanMemberProvider = ClanMemberProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.clanGroupProvider = new ClanGroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanGroupProvider = ClanGroupProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.prefixColorProvider = PrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPrefixColorProvider = UserPrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.inventoryTypeProvider = InventoryTypeProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
