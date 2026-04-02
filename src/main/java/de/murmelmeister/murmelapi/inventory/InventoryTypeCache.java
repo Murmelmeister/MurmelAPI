@@ -62,11 +62,11 @@ final class InventoryTypeCache implements MurmelCache {
 
         if (RefreshType.SINGLE_INVENTORY_TYPE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof InventoryType type)
+            if (key instanceof TypeKey type)
                 remove(type);
             else if (key instanceof String json) {
                 try {
-                    final InventoryType type = gson.fromJson(json, InventoryType.class);
+                    final TypeKey type = gson.fromJson(json, TypeKey.class);
 
                     if (type == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -89,12 +89,12 @@ final class InventoryTypeCache implements MurmelCache {
 
     private @NotNull List<InventoryType> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, InventoryTypeAdapter::resultSet);
+        return CacheUtil.loadList(database, sql, fetchLimit, InventoryTypeRowMapper::resultSet);
     }
 
     private @NotNull Optional<InventoryType> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        InventoryType inventoryType = CacheUtil.loadSingle(database, sql, fetchLimit, InventoryTypeAdapter::resultSet,
+        InventoryType inventoryType = CacheUtil.loadSingle(database, sql, fetchLimit, InventoryTypeRowMapper::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(inventoryType);
@@ -111,7 +111,7 @@ final class InventoryTypeCache implements MurmelCache {
         return types;
     }
 
-    public void remove(@NotNull InventoryType type) {
+    public void remove(@NotNull TypeKey type) {
         cacheById.invalidate(type.id());
         listCache.invalidate(ALL_KEY);
     }
@@ -119,5 +119,8 @@ final class InventoryTypeCache implements MurmelCache {
     public void clear() {
         cacheById.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record TypeKey(int id) {
     }
 }

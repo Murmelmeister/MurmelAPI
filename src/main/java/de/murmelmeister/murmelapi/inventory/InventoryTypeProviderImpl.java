@@ -65,20 +65,21 @@ final class InventoryTypeProviderImpl implements InventoryTypeProvider {
 
         InventoryType type = MurmelExceptionWrapper.dbWrap(
                 "Failed to create InventoryType (name=" + normalizedName + ")",
-                () -> database.query(CREATE_SQL, null, InventoryTypeAdapter::resultSet,
+                () -> database.query(CREATE_SQL, null, InventoryTypeRowMapper::resultSet,
                         stmt -> stmt.setString(1, normalizedName)),
                 InventoryException::new
         );
 
         if (type == null) return Optional.empty();
-        refreshProvider.fireSingle(single, type);
+        refreshProvider.fireSingle(single, new InventoryTypeCache.TypeKey(type.id()));
         return Optional.of(type);
     }
 
     @Override
     public int delete(int id) {
-        Optional<InventoryType> existing = cache.getById(id);
-        if (existing.isEmpty()) return 0;
+        Optional<InventoryType> existingOpt = cache.getById(id);
+        if (existingOpt.isEmpty()) return 0;
+        InventoryType existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete InventoryType (id=" + id + ")",
@@ -87,7 +88,7 @@ final class InventoryTypeProviderImpl implements InventoryTypeProvider {
         );
 
         if (row < 1) return 0;
-        refreshProvider.fireSingle(single, existing.get());
+        refreshProvider.fireSingle(single, new InventoryTypeCache.TypeKey(existing.id()));
         return row;
     }
 }
