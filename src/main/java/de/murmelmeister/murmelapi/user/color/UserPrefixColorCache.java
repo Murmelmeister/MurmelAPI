@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -21,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class UserPrefixColorCache implements MurmelCache {
+final class UserPrefixColorCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserPrefixColorCache.class);
 
     @Language("MariaDB")
@@ -88,7 +87,7 @@ public class UserPrefixColorCache implements MurmelCache {
 
     private @NotNull Optional<UserPrefixColor> loadByKey(ColorKey key) {
         String sql = SELECT_BY_KEY.formatted(tableName);
-        UserPrefixColor userPrefixColor = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userPrefixColor(), stmt -> {
+        UserPrefixColor userPrefixColor = CacheUtil.loadSingle(database, sql, fetchLimit, UserPrefixColorRowMapper::resultSet, stmt -> {
             stmt.setInt(1, key.userId());
             stmt.setString(2, key.colorId());
         });
@@ -98,7 +97,7 @@ public class UserPrefixColorCache implements MurmelCache {
 
     private @NotNull List<UserPrefixColor> loadByUser(int userId) {
         String sql = SELECT_BY_USER.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userPrefixColor(), stmt -> stmt.setInt(1, userId));
+        return CacheUtil.loadList(database, sql, fetchLimit, UserPrefixColorRowMapper::resultSet, stmt -> stmt.setInt(1, userId));
     }
 
     public @NotNull Optional<UserPrefixColor> getByKey(int userId, @NotNull String colorId) {

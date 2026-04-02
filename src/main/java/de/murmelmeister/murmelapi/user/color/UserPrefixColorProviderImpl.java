@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.user.UserPrefixColorException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -16,7 +15,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public final class UserPrefixColorProviderImpl implements UserPrefixColorProvider {
+final class UserPrefixColorProviderImpl implements UserPrefixColorProvider {
     private static final String TABLE_NAME = "user_prefix_colors";
 
     @Language("MariaDB")
@@ -79,7 +78,7 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
 
         UserPrefixColor color = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert UserPrefixColor (userId=" + userId + ", colorId=" + colorId + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.userPrefixColor(), stmt -> {
+                () -> database.query(UPSERT_SQL, null, UserPrefixColorRowMapper::resultSet, stmt -> {
                     stmt.setInt(1, userId);
                     stmt.setString(2, colorId);
                     stmt.setBoolean(3, active);
@@ -99,6 +98,10 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
         if (colorId.length() > 100) throw new IllegalArgumentException("colorId cannot be longer than 100 characters");
         if (colorId.isBlank()) throw new IllegalArgumentException("colorId cannot be blank");
 
+        Optional<UserPrefixColor> optExisting = cache.getByKey(userId, colorId);
+        if (optExisting.isEmpty()) return 0;
+        UserPrefixColor existing = optExisting.get();
+
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete UserPrefixColor (userId=" + userId + ", colorId=" + colorId + ")",
                 () -> database.update(DELETE_SQL, stmt -> {
@@ -109,7 +112,7 @@ public final class UserPrefixColorProviderImpl implements UserPrefixColorProvide
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, new UserPrefixColorCache.ColorKey(userId, colorId));
+        refreshProvider.fireSingle(single, new UserPrefixColorCache.ColorKey(existing.userId(), existing.colorId()));
         return row;
     }
 }
