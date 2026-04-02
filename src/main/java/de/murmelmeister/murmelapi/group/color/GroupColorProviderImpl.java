@@ -112,6 +112,10 @@ final class GroupColorProviderImpl implements GroupColorProvider {
         if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
         if (typeId < 1) throw new IllegalArgumentException("typeId must be >= 1");
 
+        Optional<GroupColor> existingOpt = cache.get(groupId, typeId);
+        if (existingOpt.isEmpty()) return 0;
+        GroupColor existing = existingOpt.get();
+
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to remove GroupColor (groupId=" + groupId + ", typeId=" + typeId + ")",
                 () -> database.update(REMOVE_SQL, stmt -> {
@@ -122,13 +126,16 @@ final class GroupColorProviderImpl implements GroupColorProvider {
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(groupId, typeId));
+        refreshProvider.fireSingle(single, new GroupColorCache.ColorKey(existing.groupId(), existing.typeId()));
         return row;
     }
 
     @Override
     public int clear(int groupId) {
         if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
+
+        List<GroupColor> groupColors = cache.getByGroupId(groupId);
+        if (groupColors.isEmpty()) return 0;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to clear GroupColors (groupId=" + groupId + ")",
