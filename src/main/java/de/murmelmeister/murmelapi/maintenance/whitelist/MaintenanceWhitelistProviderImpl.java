@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.maintenance.MaintenanceWhitelistException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -17,8 +16,9 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
-public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitelistProvider {
+final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitelistProvider {
     private static final String TABLE_NAME = "maintenance_whitelist";
 
     @Language("MariaDB")
@@ -62,7 +62,7 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
     }
 
     @Override
-    public @Nullable MaintenanceWhitelist findById(int id) {
+    public @NotNull Optional<MaintenanceWhitelist> findById(int id) {
         return cache.getById(id);
     }
 
@@ -82,10 +82,10 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
     }
 
     @Override
-    public @Nullable MaintenanceWhitelist create(int maintenanceId, int userId, @Nullable LocalDateTime startAt, @Nullable LocalDateTime endAt, @Nullable String note, int createdBy) {
+    public @NotNull Optional<MaintenanceWhitelist> create(int maintenanceId, int userId, @Nullable LocalDateTime startAt, @Nullable LocalDateTime endAt, @Nullable String note, int createdBy) {
         MaintenanceWhitelist whitelist = MurmelExceptionWrapper.dbWrap(
                 "Failed to create MaintenanceWhitelist",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.maintenanceWhitelist(), stmt -> {
+                () -> database.query(CREATE_SQL, null, MaintenanceWhitelistRowMapper::resultSet, stmt -> {
                     stmt.setInt(1, maintenanceId);
                     stmt.setInt(2, userId);
                     stmt.setObject(3, startAt, Types.TIMESTAMP);
@@ -96,15 +96,16 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
                 MaintenanceWhitelistException::new
         );
 
-        if (whitelist == null) return null;
-        refreshProvider.fireSingle(single, whitelist);
-        return whitelist;
+        if (whitelist == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new MaintenanceWhitelistCache.WhitelistKey(whitelist.id(), whitelist.maintenanceId(), whitelist.userId()));
+        return Optional.of(whitelist);
     }
 
     @Override
     public int delete(int id) {
-        MaintenanceWhitelist whitelist = cache.getById(id);
-        if (whitelist == null) return 0;
+        Optional<MaintenanceWhitelist> whitelistOpt = cache.getById(id);
+        if (whitelistOpt.isEmpty()) return 0;
+        MaintenanceWhitelist whitelist = whitelistOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete MaintenanceWhitelist (id=" + id + ")",
@@ -113,19 +114,20 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
         );
 
         if (row < 1) return 0;
-        refreshProvider.fireSingle(single, whitelist);
+        refreshProvider.fireSingle(single, new MaintenanceWhitelistCache.WhitelistKey(whitelist.id(), whitelist.maintenanceId(), whitelist.userId()));
         return row;
     }
 
     @Override
-    public @Nullable MaintenanceWhitelist update(int id, @Nullable LocalDateTime startAt, @Nullable LocalDateTime endAt, @Nullable String note, int changedBy) {
-        MaintenanceWhitelist existing = cache.getById(id);
-        if (existing == null) return null;
+    public @NotNull Optional<MaintenanceWhitelist> update(int id, @Nullable LocalDateTime startAt, @Nullable LocalDateTime endAt, @Nullable String note, int changedBy) {
+        Optional<MaintenanceWhitelist> existingOpt = cache.getById(id);
+        if (existingOpt.isEmpty()) return Optional.empty();
+        MaintenanceWhitelist existing = existingOpt.get();
 
         if (Objects.equals(startAt, existing.startAt()) &&
                 Objects.equals(endAt, existing.endAt()) &&
                 Objects.equals(note, existing.note()))
-            return existing;
+            return existingOpt;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to update MaintenanceWhitelist (id=" + id + ")",
@@ -138,7 +140,7 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
                 }),
                 MaintenanceWhitelistException::new
         );
-        if (row != 1) return null;
+        if (row != 1) return Optional.empty();
 
         LocalDateTime changedAt = MurmelExceptionWrapper.dbWrap(
                 "Failed to get changedAt for MaintenanceWhitelist (id=" + id + ")",
@@ -147,16 +149,16 @@ public final class MaintenanceWhitelistProviderImpl implements MaintenanceWhitel
                         stmt -> stmt.setInt(1, id)),
                 MaintenanceWhitelistException::new
         );
-        if (changedAt == null) return null;
+        if (changedAt == null) return Optional.empty();
 
-        MaintenanceWhitelist updated = MaintenanceWhitelist.builder(existing)
+        MaintenanceWhitelist updated = existing.builder()
                 .startAt(startAt)
                 .endAt(endAt)
                 .note(note)
                 .changedBy(changedBy)
                 .changedAt(changedAt)
                 .build();
-        refreshProvider.fireSingle(single, updated);
-        return updated;
+        refreshProvider.fireSingle(single, new MaintenanceWhitelistCache.WhitelistKey(updated.id(), updated.maintenanceId(), updated.userId()));
+        return Optional.of(updated);
     }
 }

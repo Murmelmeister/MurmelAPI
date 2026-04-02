@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class MaintenanceWhitelistCache implements MurmelCache {
+final class MaintenanceWhitelistCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(MaintenanceWhitelistCache.class);
 
     @Language("MariaDB")
@@ -72,11 +70,11 @@ public class MaintenanceWhitelistCache implements MurmelCache {
 
         if (RefreshType.SINGLE_MAINTENANCE_WHITELIST.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof MaintenanceWhitelist whitelist)
+            if (key instanceof WhitelistKey whitelist)
                 remove(whitelist);
             else if (key instanceof String json) {
                 try {
-                    final MaintenanceWhitelist whitelist = gson.fromJson(json, MaintenanceWhitelist.class);
+                    final WhitelistKey whitelist = gson.fromJson(json, WhitelistKey.class);
 
                     if (whitelist == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -99,30 +97,29 @@ public class MaintenanceWhitelistCache implements MurmelCache {
 
     private @NotNull List<MaintenanceWhitelist> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.maintenanceWhitelist());
+        return CacheUtil.loadList(database, sql, fetchLimit, MaintenanceWhitelistRowMapper::resultSet);
     }
 
     private @NotNull List<MaintenanceWhitelist> loadByMaintenanceId(int maintenanceId) {
         String sql = SELECT_BY_MAINTENANCE.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.maintenanceWhitelist(), stmt -> stmt.setInt(1, maintenanceId));
+        return CacheUtil.loadList(database, sql, fetchLimit, MaintenanceWhitelistRowMapper::resultSet, stmt -> stmt.setInt(1, maintenanceId));
     }
 
     private @NotNull List<MaintenanceWhitelist> loadByUserId(int userId) {
         String sql = SELECT_BY_USER.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.maintenanceWhitelist(), stmt -> stmt.setInt(1, userId));
+        return CacheUtil.loadList(database, sql, fetchLimit, MaintenanceWhitelistRowMapper::resultSet, stmt -> stmt.setInt(1, userId));
     }
 
     private @NotNull Optional<MaintenanceWhitelist> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        MaintenanceWhitelist maintenanceWhitelist = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.maintenanceWhitelist(),
+        MaintenanceWhitelist maintenanceWhitelist = CacheUtil.loadSingle(database, sql, fetchLimit, MaintenanceWhitelistRowMapper::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(maintenanceWhitelist);
     }
 
-    public @Nullable MaintenanceWhitelist getById(int id) {
-        Optional<MaintenanceWhitelist> optWhitelist = cacheById.get(id);
-        return optWhitelist != null && optWhitelist.isPresent() ? optWhitelist.orElse(null) : null;
+    public @NotNull Optional<MaintenanceWhitelist> getById(int id) {
+        return cacheById.get(id);
     }
 
     public @NotNull @Unmodifiable List<MaintenanceWhitelist> getByMaintenanceId(int maintenanceId) {
@@ -146,7 +143,7 @@ public class MaintenanceWhitelistCache implements MurmelCache {
         return List.copyOf(list);
     }
 
-    public void remove(@NotNull MaintenanceWhitelist whitelist) {
+    public void remove(@NotNull WhitelistKey whitelist) {
         cacheById.invalidate(whitelist.id());
         cacheByMaintenanceId.invalidate(whitelist.maintenanceId());
         cacheByUserId.invalidate(whitelist.userId());
@@ -158,5 +155,8 @@ public class MaintenanceWhitelistCache implements MurmelCache {
         cacheByMaintenanceId.invalidateAll();
         cacheByUserId.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record WhitelistKey(int id, int maintenanceId, int userId) {
     }
 }

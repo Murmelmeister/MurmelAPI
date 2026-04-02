@@ -8,7 +8,6 @@ import de.murmelmeister.murmelapi.clan.parent.ClanParent;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
 import de.murmelmeister.murmelapi.maintenance.Maintenance;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
-import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -169,22 +168,6 @@ public final class ResultSetUtil {
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             return new Maintenance(id, title, reason, status, startAt, endAt, createdAt, createdBy, changedAt, changedBy);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<MaintenanceWhitelist> maintenanceWhitelist() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            int maintenanceId = resultSet.getInt("maintenance_id");
-            int userId = resultSet.getInt("user_id");
-            LocalDateTime startAt = resultSet.getObject("start_at", LocalDateTime.class);
-            LocalDateTime endAt = resultSet.getObject("end_at", LocalDateTime.class);
-            String note = resultSet.getString("note");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            return new MaintenanceWhitelist(id, maintenanceId, userId, startAt, endAt, note, createdAt, createdBy, changedAt, changedBy);
         };
     }
 }
