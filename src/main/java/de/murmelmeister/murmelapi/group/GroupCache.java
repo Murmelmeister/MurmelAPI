@@ -66,11 +66,11 @@ final class GroupCache implements MurmelCache {
 
         if (RefreshType.SINGLE_GROUP.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof Group group)
+            if (key instanceof GroupKey group)
                 remove(group);
             else if (key instanceof String json) {
                 try {
-                    final Group group = gson.fromJson(json, Group.class);
+                    final GroupKey group = gson.fromJson(json, GroupKey.class);
 
                     if (group == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -93,12 +93,12 @@ final class GroupCache implements MurmelCache {
 
     private @NotNull List<Group> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, GroupAdapter::resultSet);
+        return CacheUtil.loadList(database, sql, fetchLimit, GroupRowMapper::resultSet);
     }
 
     private @NotNull Optional<Group> loadByName(String name) {
         String sql = SELECT_BY_NAME.formatted(tableName);
-        Group group = CacheUtil.loadSingle(database, sql, fetchLimit, GroupAdapter::resultSet,
+        Group group = CacheUtil.loadSingle(database, sql, fetchLimit, GroupRowMapper::resultSet,
                 stmt -> stmt.setString(1, name));
 
         return Optional.ofNullable(group);
@@ -106,7 +106,7 @@ final class GroupCache implements MurmelCache {
 
     private @NotNull Optional<Group> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        Group group = CacheUtil.loadSingle(database, sql, fetchLimit, GroupAdapter::resultSet,
+        Group group = CacheUtil.loadSingle(database, sql, fetchLimit, GroupRowMapper::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(group);
@@ -127,7 +127,7 @@ final class GroupCache implements MurmelCache {
         return List.copyOf(groups);
     }
 
-    public void remove(@NotNull Group group) {
+    public void remove(@NotNull GroupKey group) {
         cacheById.invalidate(group.id());
         cacheByName.invalidate(group.groupName());
         listCache.invalidate(ALL_KEY);
@@ -137,5 +137,8 @@ final class GroupCache implements MurmelCache {
         cacheById.invalidateAll();
         cacheByName.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record GroupKey(int id, @NotNull String groupName) {
     }
 }

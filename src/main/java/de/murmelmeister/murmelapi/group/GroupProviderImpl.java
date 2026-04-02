@@ -96,7 +96,7 @@ final class GroupProviderImpl implements GroupProvider {
 
         Group group = MurmelExceptionWrapper.dbWrap(
                 "Failed to create Group (groupName=" + normalizedGroupName + ")",
-                () -> database.query(CREATE_SQL, null, GroupAdapter::resultSet, stmt -> {
+                () -> database.query(CREATE_SQL, null, GroupRowMapper::resultSet, stmt -> {
                     stmt.setString(1, normalizedGroupName);
                     stmt.setInt(2, priority);
                     stmt.setInt(3, createdBy);
@@ -105,7 +105,7 @@ final class GroupProviderImpl implements GroupProvider {
         );
 
         if (group == null) return Optional.empty();
-        refreshProvider.fireSingle(single, group);
+        refreshProvider.fireSingle(single, new GroupCache.GroupKey(group.id(), group.groupName()));
         return Optional.of(group);
     }
 
@@ -113,8 +113,9 @@ final class GroupProviderImpl implements GroupProvider {
     public int delete(int groupId) {
         if (groupId < 1) throw new IllegalArgumentException("groupId must be >= 1");
 
-        Optional<Group> existing = cache.getById(groupId);
-        if (existing.isEmpty()) return 0;
+        Optional<Group> existingOpt = cache.getById(groupId);
+        if (existingOpt.isEmpty()) return 0;
+        Group existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete Group (groupId=" + groupId + ")",
@@ -123,7 +124,7 @@ final class GroupProviderImpl implements GroupProvider {
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing.get());
+        refreshProvider.fireSingle(single, new GroupCache.GroupKey(existing.id(), existing.groupName()));
         return row;
     }
 
@@ -170,7 +171,7 @@ final class GroupProviderImpl implements GroupProvider {
                 .changedBy(changedBy)
                 .changedAt(changedAt)
                 .build();
-        refreshProvider.fireSingle(single, group);
+        refreshProvider.fireSingle(single, new GroupCache.GroupKey(group.id(), group.groupName()));
         return Optional.of(group);
     }
 }
