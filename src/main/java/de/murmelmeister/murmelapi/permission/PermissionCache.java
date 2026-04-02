@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -22,7 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class PermissionCache implements MurmelCache {
+final class PermissionCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(PermissionCache.class);
 
     @Language("MariaDB")
@@ -98,7 +97,7 @@ public class PermissionCache implements MurmelCache {
             sql = SELECT_BY_USER_AND_PERMISSION.formatted(tableName);
         else sql = SELECT_BY_GROUP_AND_PERMISSION.formatted(tableName);
 
-        Permission permission = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.permission(), stmt -> {
+        Permission permission = CacheUtil.loadSingle(database, sql, fetchLimit, PermissionRowMapper::resultSet, stmt -> {
             stmt.setInt(1, key.target().id());
             stmt.setString(2, key.permission());
         });
@@ -112,7 +111,7 @@ public class PermissionCache implements MurmelCache {
             sql = SELECT_BY_USER.formatted(tableName);
         else sql = SELECT_BY_GROUP.formatted(tableName);
 
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.permission(), stmt -> stmt.setInt(1, target.id()));
+        return CacheUtil.loadList(database, sql, fetchLimit, PermissionRowMapper::resultSet, stmt -> stmt.setInt(1, target.id()));
     }
 
     public @NotNull Optional<Permission> getByKey(@NotNull PermissionTarget target, @NotNull String permission) {

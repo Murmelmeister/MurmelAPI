@@ -9,7 +9,6 @@ import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
 import de.murmelmeister.murmelapi.maintenance.Maintenance;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
-import de.murmelmeister.murmelapi.permission.Permission;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -90,21 +89,6 @@ public final class ResultSetUtil {
             int protocolVersion = resultSet.getInt("protocol_version");
 
             return new UserLogin(id, userId, loginTime, logoutTime, inetAddress, clientBrand, protocolVersion);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<Permission> permission() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            Integer userId = resultSet.getObject("user_id", Integer.class);
-            Integer groupId = resultSet.getObject("group_id", Integer.class);
-            String permission = resultSet.getString("permission");
-            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new Permission(id, userId, groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
         };
     }
 

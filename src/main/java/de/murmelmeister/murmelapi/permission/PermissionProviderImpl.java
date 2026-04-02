@@ -5,7 +5,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.permission.PermissionException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -21,7 +20,7 @@ import java.util.Optional;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
-public final class PermissionProviderImpl implements PermissionProvider {
+final class PermissionProviderImpl implements PermissionProvider {
     private static final String TABLE_NAME = "permissions";
 
     @Language("MariaDB")
@@ -99,7 +98,7 @@ public final class PermissionProviderImpl implements PermissionProvider {
 
         Permission permissionEntry = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert Permission (target=" + target + ", permission=" + normalizedPermission + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.permission(), stmt -> {
+                () -> database.query(UPSERT_SQL, null, PermissionRowMapper::resultSet, stmt -> {
                     if (target.type() == PermissionTarget.TargetType.USER) {
                         stmt.setInt(1, target.id());
                         stmt.setNull(2, Types.INTEGER);
