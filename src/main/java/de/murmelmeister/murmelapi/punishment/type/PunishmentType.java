@@ -1,7 +1,8 @@
 package de.murmelmeister.murmelapi.punishment.type;
 
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+
+import java.util.*;
 
 public enum PunishmentType {
     BAN(1, "Ban", false),
@@ -17,6 +18,20 @@ public enum PunishmentType {
     private final int id;
     private final String name;
     private final boolean ipType;
+
+    private static final Map<Integer, PunishmentType> BY_ID;
+    private static final Map<String, PunishmentType> BY_NAME;
+
+    static {
+        Map<Integer, PunishmentType> idMap = new HashMap<>();
+        Map<String, PunishmentType> nameMap = new HashMap<>();
+        for (PunishmentType type : VALUES) {
+            idMap.put(type.id, type);
+            nameMap.put(type.name.toLowerCase(Locale.ROOT), type);
+        }
+        BY_ID = Collections.unmodifiableMap(idMap);
+        BY_NAME = Collections.unmodifiableMap(nameMap);
+    }
 
     PunishmentType(int id, String name, boolean ipType) {
         this.id = id;
@@ -36,17 +51,17 @@ public enum PunishmentType {
         return ipType;
     }
 
-    public static @Nullable PunishmentType fromId(int id) {
-        for (PunishmentType type : VALUES)
-            if (type.getId() == id)
-                return type;
-        return null;
+    public static @NotNull Optional<PunishmentType> fromId(int id) {
+        return Optional.ofNullable(BY_ID.get(id));
     }
 
-    public static @Nullable PunishmentType fromName(@NotNull String name) {
-        for (PunishmentType type : VALUES)
-            if (type.getName().equalsIgnoreCase(name))
-                return type;
-        return null;
+    public static @NotNull Optional<PunishmentType> fromName(@NotNull String name) {
+        Objects.requireNonNull(name, "name");
+        return Optional.ofNullable(BY_NAME.get(name.toLowerCase(Locale.ROOT)));
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 }
