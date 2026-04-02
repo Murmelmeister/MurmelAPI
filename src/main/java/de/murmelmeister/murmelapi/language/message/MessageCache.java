@@ -96,13 +96,13 @@ final class MessageCache implements MurmelCache {
 
     private @NotNull List<Message> loadByLanguage(LanguageKey key) {
         String sql = SELECT_BY_LANGUAGE.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, MessageAdapter::resultSet,
+        return CacheUtil.loadList(database, sql, fetchLimit, MessageRowMapper::resultSet,
                 stmt -> stmt.setInt(1, key.languageId()));
     }
 
     private @NotNull Optional<Message> loadByTag(TagKey key) {
         String sql = SELECT_BY_TAG.formatted(tableName);
-        Message message = CacheUtil.loadSingle(database, sql, fetchLimit, MessageAdapter::resultSet,
+        Message message = CacheUtil.loadSingle(database, sql, fetchLimit, MessageRowMapper::resultSet,
                 stmt -> {
                     stmt.setString(1, key.tagId());
                     stmt.setInt(2, key.languageId());
@@ -113,7 +113,7 @@ final class MessageCache implements MurmelCache {
 
     private @NotNull Optional<Message> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        Message message = CacheUtil.loadSingle(database, sql, fetchLimit, MessageAdapter::resultSet,
+        Message message = CacheUtil.loadSingle(database, sql, fetchLimit, MessageRowMapper::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(message);

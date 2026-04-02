@@ -21,7 +21,6 @@ import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
 import de.murmelmeister.murmelapi.language.LanguageType;
 import de.murmelmeister.murmelapi.language.LanguageTypeAdapter;
 import de.murmelmeister.murmelapi.language.LanguageTypeProvider;
-import de.murmelmeister.murmelapi.language.message.MessageAdapter;
 import de.murmelmeister.murmelapi.language.message.MessageProvider;
 import de.murmelmeister.murmelapi.language.message.MessageService;
 import de.murmelmeister.murmelapi.language.message.MurmelMessage;
@@ -157,7 +156,6 @@ public final class MurmelAPI {
                 .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
                 .registerTypeAdapterFactory(new LanguageTypeAdapter())
-                .registerTypeAdapterFactory(new MessageAdapter())
                 .disableHtmlEscaping()
                 .create();
         this.fetchLimit = fetchLimit;

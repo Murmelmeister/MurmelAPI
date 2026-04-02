@@ -90,7 +90,7 @@ final class MessageProviderImpl implements MessageProvider {
 
         Message saved = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert Message (tagId=" + normalizedTagId + ", languageId=" + languageId + ")",
-                () -> database.query(UPSERT_SQL, null, MessageAdapter::resultSet, stmt -> {
+                () -> database.query(UPSERT_SQL, null, MessageRowMapper::resultSet, stmt -> {
                     stmt.setString(1, normalizedTagId);
                     stmt.setInt(2, languageId);
                     stmt.setString(3, message);
