@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -25,7 +24,7 @@ import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
-public class UserCache implements MurmelCache {
+final class UserCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserCache.class);
 
     @Language("MariaDB")
@@ -77,11 +76,11 @@ public class UserCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof User user)
+            if (key instanceof UserKey user)
                 remove(user);
             else if (key instanceof String json) {
                 try {
-                    final User user = gson.fromJson(json, User.class);
+                    final UserKey user = gson.fromJson(json, UserKey.class);
 
                     if (user == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -104,12 +103,12 @@ public class UserCache implements MurmelCache {
 
     private @NotNull List<User> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.user());
+        return CacheUtil.loadList(database, sql, fetchLimit, UserRowMapper::resultSet);
     }
 
     private Optional<User> loadByName(String name) {
         String sql = SELECT_BY_NAME.formatted(tableName);
-        User user = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+        User user = CacheUtil.loadSingle(database, sql, fetchLimit, UserRowMapper::resultSet,
                 stmt -> stmt.setString(1, name));
 
         return isBlocked(user) ? Optional.empty() : Optional.of(user);
@@ -117,7 +116,7 @@ public class UserCache implements MurmelCache {
 
     private Optional<User> loadByUUID(UUID uuid) {
         String sql = SELECT_BY_UUID.formatted(tableName);
-        User user = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+        User user = CacheUtil.loadSingle(database, sql, fetchLimit, UserRowMapper::resultSet,
                 stmt -> stmt.setString(1, uuid.toString()));
 
         return isBlocked(user) ? Optional.empty() : Optional.of(user);
@@ -125,27 +124,22 @@ public class UserCache implements MurmelCache {
 
     private @NotNull Optional<User> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        User user = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.user(),
+        User user = CacheUtil.loadSingle(database, sql, fetchLimit, UserRowMapper::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(user);
     }
 
-    public @Nullable User getById(int id) {
-        Optional<User> optUser = cacheById.get(id);
-        return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
+    public @NotNull Optional<User> getById(int id) {
+        return cacheById.get(id);
     }
 
-    public @Nullable User getByUUID(@Nullable UUID uuid) {
-        if (uuid == null) return null;
-        Optional<User> optUser = cacheByUUID.get(uuid);
-        return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
+    public @NotNull Optional<User> getByUUID(@NotNull UUID uuid) {
+        return cacheByUUID.get(uuid);
     }
 
-    public @Nullable User getByName(@Nullable String name) {
-        if (name == null) return null;
-        Optional<User> optUser = cacheByName.get(name);
-        return optUser != null && optUser.isPresent() ? optUser.orElse(null) : null;
+    public @NotNull Optional<User> getByName(@NotNull String name) {
+        return cacheByName.get(name);
     }
 
     public @NotNull @Unmodifiable List<User> getAll() {
@@ -155,7 +149,7 @@ public class UserCache implements MurmelCache {
         return List.copyOf(users);
     }
 
-    public void remove(@NotNull User user) {
+    public void remove(@NotNull UserKey user) {
         cacheById.invalidate(user.id());
         cacheByUUID.invalidate(user.mojangId());
         cacheByName.invalidate(user.username());
@@ -171,5 +165,8 @@ public class UserCache implements MurmelCache {
 
     private boolean isBlocked(@Nullable User user) {
         return user == null || user.id() == CONSOLE_USER_ID || user.systemUser();
+    }
+
+    record UserKey(int id, UUID mojangId, String username) {
     }
 }

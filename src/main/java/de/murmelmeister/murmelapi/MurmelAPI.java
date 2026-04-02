@@ -42,7 +42,6 @@ import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProviderImpl;
 import de.murmelmeister.murmelapi.settings.SettingsProvider;
 import de.murmelmeister.murmelapi.settings.SettingsService;
 import de.murmelmeister.murmelapi.user.UserProvider;
-import de.murmelmeister.murmelapi.user.UserProviderImpl;
 import de.murmelmeister.murmelapi.user.UserService;
 import de.murmelmeister.murmelapi.user.color.UserPrefixColorProvider;
 import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
@@ -158,7 +157,7 @@ public final class MurmelAPI {
         this.languageProvider = LanguageTypeProvider.of(database, gson, refreshProvider, cacheCapacity);
         this.messageProvider = MessageProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.messageService = new MessageService(languageProvider, messageProvider);
-        this.userProvider = new UserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userProvider = UserProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userStatsProvider = UserStatsProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userLoginProvider = UserLoginProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userSessionProvider = UserSessionProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);

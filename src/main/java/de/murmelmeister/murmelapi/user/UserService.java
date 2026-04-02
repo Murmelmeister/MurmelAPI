@@ -105,13 +105,15 @@ public record UserService(
         Objects.requireNonNull(username, "username must not be null");
 
         // TODO: Update not working
-        User user = userProvider.findByMojangId(uuid);
-        if (user == null) {
-            user = userProvider.create(uuid, username);
-            if (user == null)
+        Optional<User> userOpt = userProvider.findByMojangId(uuid);
+        if (userOpt.isEmpty()) {
+            userOpt = userProvider.create(uuid, username);
+            if (userOpt.isEmpty())
                 throw new UserException("Failed to create user with UUID: " + uuid);
+            User user = userOpt.get();
             userProvider.update(user.id(), username, LocalDateTime.now(), user.debugUser(), user.debugEnabled(), user.languageId());
         }
+        User user = userOpt.get();
 
         Optional<UserStats> statsOpt = statsProvider.findByUserId(user.id());
         if (statsOpt.isEmpty()) {
@@ -138,10 +140,10 @@ public record UserService(
                 throw new UserStatsException("Failed to update stats for user with ID: " + user.id());
         }
 
-        User updated = userProvider.findById(user.id());
-        if (updated == null)
+        Optional<User> updated = userProvider.findById(user.id());
+        if (updated.isEmpty())
             throw new UserException("Failed to update user with ID: " + user.id());
-        return updated;
+        return updated.get();
     }
 
     public boolean isOnline(int userId) {
@@ -181,9 +183,10 @@ public record UserService(
         Objects.requireNonNull(isForgivenDay, "isForgivenDay must not be null");
         Objects.requireNonNull(isPermanentlyBlocked, "isPermanentlyBlocked must not be null");
 
-        User user = userProvider.findById(userId);
-        if (user == null)
+        Optional<User> userOpt = userProvider.findById(userId);
+        if (userOpt.isEmpty())
             throw new UserException("User not found for ID: " + userId);
+        User user = userOpt.get();
 
         Optional<UserStats> statsOpt = statsProvider.findByUserId(userId);
         if (statsOpt.isEmpty())

@@ -41,7 +41,7 @@ public record PermissionService(ParentProvider parentProvider, PermissionProvide
 
     public @Nullable String getName(@NotNull PermissionTarget target) {
         if (target.type() == PermissionTarget.TargetType.USER) {
-            User user = userProvider.findById(target.id());
+            User user = userProvider.findById(target.id()).orElse(null);
             return user == null ? null : user.username();
         } else {
             Group group = groupProvider.findById(target.id()).orElse(null);

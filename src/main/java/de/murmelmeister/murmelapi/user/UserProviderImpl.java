@@ -5,7 +5,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -18,13 +17,14 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * UserProvider class to manage users in the database.
  * This class implements the User interface and provides methods to interact with user data.
  */
-public final class UserProviderImpl implements UserProvider {
+final class UserProviderImpl implements UserProvider {
     private static final String TABLE_NAME = "users";
 
     @Language("MariaDB")
@@ -66,17 +66,17 @@ public final class UserProviderImpl implements UserProvider {
     }
 
     @Override
-    public @Nullable User findById(int userId) {
+    public @NotNull Optional<User> findById(int userId) {
         return cache.getById(userId);
     }
 
     @Override
-    public @Nullable User findByMojangId(@Nullable UUID uuid) {
+    public @NotNull Optional<User> findByMojangId(@NotNull UUID uuid) {
         return cache.getByUUID(uuid);
     }
 
     @Override
-    public @Nullable User findByUsername(@Nullable String username) {
+    public @NotNull Optional<User> findByUsername(@NotNull String username) {
         return cache.getByName(username);
     }
 
@@ -100,7 +100,7 @@ public final class UserProviderImpl implements UserProvider {
     }
 
     @Override
-    public @Nullable User create(@NotNull UUID uuid, @NotNull String username) {
+    public @NotNull Optional<User> create(@NotNull UUID uuid, @NotNull String username) {
         Objects.requireNonNull(uuid, "uuid must not be null");
         Objects.requireNonNull(username, "username must not be null");
 
@@ -110,24 +110,25 @@ public final class UserProviderImpl implements UserProvider {
 
         User user = MurmelExceptionWrapper.dbWrap(
                 "Failed to create User (uuid=" + uuid + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.user(), stmt -> {
+                () -> database.query(CREATE_SQL, null, UserRowMapper::resultSet, stmt -> {
                     stmt.setString(1, uuid.toString());
                     stmt.setString(2, normalizedUsername);
                 }),
                 UserException::new
         );
 
-        if (user == null) return null;
-        refreshProvider.fireSingle(single, user);
-        return user;
+        if (user == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new UserCache.UserKey(user.id(), user.mojangId(), user.username()));
+        return Optional.of(user);
     }
 
     @Override
     public int delete(int userId) {
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
 
-        User existing = cache.getById(userId);
-        if (existing == null) return 0;
+        Optional<User> existingOpt = cache.getById(userId);
+        if (existingOpt.isEmpty()) return 0;
+        User existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete User (id=" + userId + ")",
@@ -136,12 +137,12 @@ public final class UserProviderImpl implements UserProvider {
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing);
+        refreshProvider.fireSingle(single, new UserCache.UserKey(existing.id(), existing.mojangId(), existing.username()));
         return row;
     }
 
     @Override
-    public @Nullable User update(int userId, @NotNull String username, @Nullable LocalDateTime firstLogin, boolean debugUser, boolean debugEnabled, int languageId) {
+    public @NotNull Optional<User> update(int userId, @NotNull String username, @Nullable LocalDateTime firstLogin, boolean debugUser, boolean debugEnabled, int languageId) {
         Objects.requireNonNull(username, "username must not be null");
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
         if (languageId < 1) throw new IllegalArgumentException("languageId must be >= 1");
@@ -150,15 +151,16 @@ public final class UserProviderImpl implements UserProvider {
         if (normalizedUsername == null || normalizedUsername.isBlank())
             throw new IllegalArgumentException("username must not be blank");
 
-        User existing = cache.getById(userId);
-        if (existing == null) return null;
+        Optional<User> existingOpt = cache.getById(userId);
+        if (existingOpt.isEmpty()) return Optional.empty();
+        User existing = existingOpt.get();
 
         if (Objects.equals(normalizedUsername, existing.username()) &&
                 Objects.equals(firstLogin, existing.firstLogin()) &&
                 debugUser == existing.debugUser() &&
                 debugEnabled == existing.debugEnabled() &&
                 languageId == existing.languageId())
-            return existing;
+            return existingOpt;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to update User (id=" + userId + ")",
@@ -172,16 +174,16 @@ public final class UserProviderImpl implements UserProvider {
                 }),
                 UserException::new
         );
-        if (row != 1) return null;
+        if (row != 1) return Optional.empty();
 
-        User user = User.builder(existing)
+        User user = existing.builder()
                 .username(normalizedUsername)
                 .firstLogin(firstLogin)
                 .debugUser(debugUser)
                 .debugEnabled(debugEnabled)
                 .languageId(languageId)
                 .build();
-        refreshProvider.fireSingle(single, user);
-        return user;
+        refreshProvider.fireSingle(single, new UserCache.UserKey(user.id(), user.mojangId(), user.username()));
+        return Optional.of(user);
     }
 }

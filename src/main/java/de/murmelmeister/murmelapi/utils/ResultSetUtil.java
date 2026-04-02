@@ -13,7 +13,6 @@ import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
-import de.murmelmeister.murmelapi.user.User;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
@@ -22,20 +21,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public final class ResultSetUtil {
-    public static @NotNull ResultSetProcessor<User> user() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            UUID mojangId = UUID.fromString(resultSet.getString("mojang_id"));
-            String username = resultSet.getString("username");
-            LocalDateTime firstJoin = resultSet.getObject("first_login", LocalDateTime.class);
-            boolean isSystemUser = resultSet.getBoolean("system_user");
-            boolean isDebugUser = resultSet.getBoolean("debug_user");
-            boolean isDebugActive = resultSet.getBoolean("debug_enabled");
-            int languageId = resultSet.getInt("language_id");
-            return new User(id, mojangId, username, firstJoin, isSystemUser, isDebugUser, isDebugActive, languageId);
-        };
-    }
-
     public static @NotNull ResultSetProcessor<PunishmentAudit> punishmentAudit() {
         return resultSet -> {
             UUID id = UUID.fromString(resultSet.getString("id"));
