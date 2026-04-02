@@ -5,7 +5,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.permission.ParentException;
 import de.murmelmeister.murmelapi.permission.PermissionTarget;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -21,7 +20,7 @@ import java.util.Optional;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
-public final class ParentProviderImpl implements ParentProvider {
+final class ParentProviderImpl implements ParentProvider {
     private static final String TABLE_NAME = "parents";
 
     @Language("MariaDB")
@@ -94,7 +93,7 @@ public final class ParentProviderImpl implements ParentProvider {
 
         Parent parentEntry = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert Parent (target=" + target + ", parentId=" + parentId + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.parent(), stmt -> {
+                () -> database.query(UPSERT_SQL, null, ParentRowMapper::resultSet, stmt -> {
                     if (target.type() == PermissionTarget.TargetType.USER) {
                         stmt.setInt(1, target.id());
                         stmt.setNull(2, Types.INTEGER);

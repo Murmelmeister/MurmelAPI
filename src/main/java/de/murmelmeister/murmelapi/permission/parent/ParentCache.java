@@ -7,7 +7,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.permission.PermissionTarget;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -24,7 +23,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class ParentCache implements MurmelCache {
+final class ParentCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(ParentCache.class);
 
     @Language("MariaDB")
@@ -100,7 +99,7 @@ public class ParentCache implements MurmelCache {
             sql = SELECT_BY_USER_AND_PARENT.formatted(tableName);
         else sql = SELECT_BY_GROUP_AND_PARENT.formatted(tableName);
 
-        Parent parent = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.parent(), stmt -> {
+        Parent parent = CacheUtil.loadSingle(database, sql, fetchLimit, ParentRowMapper::resultSet, stmt -> {
             stmt.setInt(1, key.target().id());
             stmt.setObject(2, key.parentId(), Types.INTEGER);
         });
@@ -114,7 +113,7 @@ public class ParentCache implements MurmelCache {
             sql = SELECT_BY_USER.formatted(tableName);
         else sql = SELECT_BY_GROUP.formatted(tableName);
 
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.parent(), stmt -> stmt.setInt(1, target.id()));
+        return CacheUtil.loadList(database, sql, fetchLimit, ParentRowMapper::resultSet, stmt -> stmt.setInt(1, target.id()));
     }
 
     public @NotNull Optional<Parent> getByKey(@NotNull PermissionTarget target, int parentId) {
@@ -138,6 +137,6 @@ public class ParentCache implements MurmelCache {
         cacheByTarget.invalidateAll();
     }
 
-    public record ParentKey(@NotNull PermissionTarget target, @Nullable Integer parentId) {
+    record ParentKey(@NotNull PermissionTarget target, @Nullable Integer parentId) {
     }
 }

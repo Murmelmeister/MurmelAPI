@@ -31,7 +31,6 @@ import de.murmelmeister.murmelapi.permission.PermissionProvider;
 import de.murmelmeister.murmelapi.permission.PermissionProviderImpl;
 import de.murmelmeister.murmelapi.permission.PermissionService;
 import de.murmelmeister.murmelapi.permission.parent.ParentProvider;
-import de.murmelmeister.murmelapi.permission.parent.ParentProviderImpl;
 import de.murmelmeister.murmelapi.punishment.PunishmentService;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAuditProvider;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAuditProviderImpl;
@@ -175,7 +174,7 @@ public final class MurmelAPI {
         this.groupProvider = GroupProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.groupColorProvider = GroupColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
 
-        this.parentProvider = new ParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.parentProvider = ParentProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.permissionProvider = new PermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.permissionService = new PermissionService(parentProvider, permissionProvider, groupProvider, userProvider);
 

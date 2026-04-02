@@ -10,7 +10,6 @@ import de.murmelmeister.murmelapi.maintenance.Maintenance;
 import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
 import de.murmelmeister.murmelapi.maintenance.whitelist.MaintenanceWhitelist;
 import de.murmelmeister.murmelapi.permission.Permission;
-import de.murmelmeister.murmelapi.permission.parent.Parent;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -106,21 +105,6 @@ public final class ResultSetUtil {
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             return new Permission(id, userId, groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<Parent> parent() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            Integer userId = resultSet.getObject("user_id", Integer.class);
-            Integer groupId = resultSet.getObject("group_id", Integer.class);
-            int parentId = resultSet.getInt("parent_id");
-            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new Parent(id, userId, groupId, parentId, expiresAt, createdBy, createdAt, changedBy, changedAt);
         };
     }
 
