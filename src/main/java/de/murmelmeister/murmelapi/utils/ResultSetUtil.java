@@ -6,8 +6,6 @@ import de.murmelmeister.murmelapi.clan.group.ClanGroup;
 import de.murmelmeister.murmelapi.clan.member.ClanMember;
 import de.murmelmeister.murmelapi.clan.parent.ClanParent;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
-import de.murmelmeister.murmelapi.maintenance.Maintenance;
-import de.murmelmeister.murmelapi.maintenance.MaintenanceType;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -152,22 +150,6 @@ public final class ResultSetUtil {
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             return new ClanPermission(clanId, groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<Maintenance> maintenance() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            String title = resultSet.getString("title");
-            String reason = resultSet.getString("reason");
-            MaintenanceType status = MaintenanceType.valueOf(resultSet.getString("status"));
-            LocalDateTime startAt = resultSet.getTimestamp("start_at").toLocalDateTime();
-            LocalDateTime endAt = resultSet.getTimestamp("end_at").toLocalDateTime();
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            return new Maintenance(id, title, reason, status, startAt, endAt, createdAt, createdBy, changedAt, changedBy);
         };
     }
 }

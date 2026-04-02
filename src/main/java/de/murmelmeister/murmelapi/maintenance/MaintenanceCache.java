@@ -5,13 +5,11 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class MaintenanceCache implements MurmelCache {
+final class MaintenanceCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(MaintenanceCache.class);
 
     @Language("MariaDB")
@@ -63,11 +61,11 @@ public class MaintenanceCache implements MurmelCache {
 
         if (RefreshType.SINGLE_MAINTENANCE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof Maintenance maintenance)
+            if (key instanceof MaintenanceKey maintenance)
                 remove(maintenance);
             else if (key instanceof String json) {
                 try {
-                    final Maintenance maintenance = gson.fromJson(json, Maintenance.class);
+                    final MaintenanceKey maintenance = gson.fromJson(json, MaintenanceKey.class);
 
                     if (maintenance == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -90,20 +88,19 @@ public class MaintenanceCache implements MurmelCache {
 
     private @NotNull List<Maintenance> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.maintenance());
+        return CacheUtil.loadList(database, sql, fetchLimit, MaintenanceRowMapper::resultSet);
     }
 
     private @NotNull Optional<Maintenance> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        Maintenance maintenance = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.maintenance(),
+        Maintenance maintenance = CacheUtil.loadSingle(database, sql, fetchLimit, MaintenanceRowMapper::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(maintenance);
     }
 
-    public @Nullable Maintenance getById(int id) {
-        Optional<Maintenance> optMaintenance = cacheById.get(id);
-        return optMaintenance != null && optMaintenance.isPresent() ? optMaintenance.orElse(null) : null;
+    public @NotNull Optional<Maintenance> getById(int id) {
+        return cacheById.get(id);
     }
 
     public @NotNull @Unmodifiable List<Maintenance> getAll() {
@@ -113,7 +110,7 @@ public class MaintenanceCache implements MurmelCache {
         return List.copyOf(list);
     }
 
-    public void remove(@NotNull Maintenance maintenance) {
+    public void remove(@NotNull MaintenanceKey maintenance) {
         cacheById.invalidate(maintenance.id());
         listCache.invalidate(ALL_KEY);
     }
@@ -121,5 +118,8 @@ public class MaintenanceCache implements MurmelCache {
     public void clear() {
         cacheById.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record MaintenanceKey(int id) {
     }
 }
