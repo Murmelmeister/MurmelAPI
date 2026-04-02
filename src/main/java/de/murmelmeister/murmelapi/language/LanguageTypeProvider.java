@@ -21,13 +21,9 @@ public interface LanguageTypeProvider {
     @Unmodifiable
     List<LanguageType> findAll();
 
-    @NotNull Optional<LanguageType> create(@NotNull String code);
+    @NotNull Optional<LanguageType> upsert(int id, @NotNull String code);
 
     int delete(int id);
-
-    @NotNull Optional<LanguageType> update(int id, @NotNull String code);
-
-    @NotNull Optional<LanguageType> upsert(@NotNull LanguageType language);
 
     @ApiStatus.Internal
     static @NotNull LanguageTypeProvider of(Database database, Gson gson, RefreshProvider refreshProvider, long cacheCapacity) {

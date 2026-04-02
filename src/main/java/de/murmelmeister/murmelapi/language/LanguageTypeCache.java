@@ -63,11 +63,11 @@ final class LanguageTypeCache implements MurmelCache {
 
         if (RefreshType.SINGLE_LANGUAGE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof LanguageType language)
+            if (key instanceof LanguageKey language)
                 remove(language);
             else if (key instanceof String json) {
                 try {
-                    final LanguageType language = gson.fromJson(json, LanguageType.class);
+                    final LanguageKey language = gson.fromJson(json, LanguageKey.class);
 
                     if (language == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -90,7 +90,7 @@ final class LanguageTypeCache implements MurmelCache {
 
     private @NotNull List<LanguageType> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, null, LanguageTypeAdapter::resultSet);
+        return CacheUtil.loadList(database, sql, null, LanguageTypeRowMapper::resultSet);
     }
 
     private @NotNull Optional<Integer> loadByCodeKey(String key) {
@@ -104,7 +104,7 @@ final class LanguageTypeCache implements MurmelCache {
 
     private @NotNull Optional<LanguageType> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        LanguageType language = CacheUtil.loadSingle(database, sql, null, LanguageTypeAdapter::resultSet,
+        LanguageType language = CacheUtil.loadSingle(database, sql, null, LanguageTypeRowMapper::resultSet,
                 stmt -> stmt.setInt(1, id));
 
         return Optional.ofNullable(language);
@@ -126,7 +126,7 @@ final class LanguageTypeCache implements MurmelCache {
         return List.copyOf(languages);
     }
 
-    public void remove(@NotNull LanguageType language) {
+    public void remove(@NotNull LanguageKey language) {
         cacheById.invalidate(language.id());
         codeToId.invalidate(toKey(language.code()));
         listCache.invalidate(ALL_KEY);
@@ -140,5 +140,8 @@ final class LanguageTypeCache implements MurmelCache {
 
     private static @NotNull String toKey(@NotNull String code) {
         return code.toLowerCase();
+    }
+
+    record LanguageKey(int id, @NotNull String code) {
     }
 }

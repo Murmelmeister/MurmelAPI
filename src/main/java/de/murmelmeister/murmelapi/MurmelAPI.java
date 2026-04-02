@@ -19,7 +19,6 @@ import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
 import de.murmelmeister.murmelapi.language.LanguageType;
-import de.murmelmeister.murmelapi.language.LanguageTypeAdapter;
 import de.murmelmeister.murmelapi.language.LanguageTypeProvider;
 import de.murmelmeister.murmelapi.language.message.MessageProvider;
 import de.murmelmeister.murmelapi.language.message.MessageService;
@@ -155,7 +154,6 @@ public final class MurmelAPI {
         this.gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
-                .registerTypeAdapterFactory(new LanguageTypeAdapter())
                 .disableHtmlEscaping()
                 .create();
         this.fetchLimit = fetchLimit;
