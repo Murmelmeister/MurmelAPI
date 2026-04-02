@@ -3,47 +3,29 @@ package de.murmelmeister.murmelapi.clan.member;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 
-public record ClanMember(
-        @NotNull UUID clanId,
-        int userId,
-        @NotNull LocalDateTime joinedAt,
-        @NotNull UUID groupId
-) {
-    public ClanMember {
-        Objects.requireNonNull(clanId, "clanId must not be null");
-        Objects.requireNonNull(joinedAt, "joinedAt must not be null");
-        Objects.requireNonNull(groupId, "groupId must not be null");
-        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
+public interface ClanMember {
+    @NotNull UUID clanId();
+
+    int userId();
+
+    @NotNull LocalDateTime joinedAt();
+
+    @NotNull UUID groupId();
+
+    @NotNull Builder builder();
+
+    @NotNull ClanMember with(@NotNull Consumer<Builder> consumer);
+
+    static @NotNull ClanMember of(@NotNull UUID clanId, int userId, @NotNull LocalDateTime joinedAt, @NotNull UUID groupId) {
+        return new ClanMemberImpl(clanId, userId, joinedAt, groupId);
     }
 
-    public static @NotNull Builder builder(@NotNull ClanMember clanMember) {
-        return new Builder(clanMember);
-    }
+    interface Builder {
+        @NotNull Builder groupId(@NotNull UUID groupId);
 
-    public static class Builder {
-        private final UUID clanId;
-        private final int userId;
-        private final LocalDateTime joinedAt;
-
-        private UUID groupId;
-
-        private Builder(@NotNull ClanMember clanMember) {
-            this.clanId = clanMember.clanId();
-            this.userId = clanMember.userId();
-            this.joinedAt = clanMember.joinedAt();
-            this.groupId = clanMember.groupId();
-        }
-
-        public Builder groupId(@NotNull UUID groupId) {
-            this.groupId = groupId;
-            return this;
-        }
-
-        public @NotNull ClanMember build() {
-            return new ClanMember(clanId, userId, joinedAt, groupId);
-        }
+        @NotNull ClanMember build();
     }
 }

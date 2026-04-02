@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class ClanMemberCache implements MurmelCache {
+final class ClanMemberCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClanMemberCache.class);
 
     @Language("MariaDB")
@@ -100,24 +98,24 @@ public class ClanMemberCache implements MurmelCache {
 
     private @NotNull List<ClanMember> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanMember());
+        return CacheUtil.loadList(database, sql, fetchLimit, ClanMemberRowMapper::resultSet);
     }
 
     private @NotNull List<ClanMember> loadByClanId(UUID clanId) {
         String sql = SELECT_BY_CLAN.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanMember(),
+        return CacheUtil.loadList(database, sql, fetchLimit, ClanMemberRowMapper::resultSet,
                 stmt -> stmt.setObject(1, clanId));
     }
 
     private @NotNull List<ClanMember> loadByUser(int userId) {
         String sql = SELECT_BY_USER.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clanMember(),
+        return CacheUtil.loadList(database, sql, fetchLimit, ClanMemberRowMapper::resultSet,
                 stmt -> stmt.setInt(1, userId));
     }
 
     private @NotNull Optional<ClanMember> loadFromDatabase(Member member) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        ClanMember clanMember = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clanMember(),
+        ClanMember clanMember = CacheUtil.loadSingle(database, sql, fetchLimit, ClanMemberRowMapper::resultSet,
                 stmt -> {
                     stmt.setObject(1, member.clanId());
                     stmt.setInt(2, member.userId());
@@ -126,9 +124,8 @@ public class ClanMemberCache implements MurmelCache {
         return Optional.ofNullable(clanMember);
     }
 
-    public @Nullable ClanMember get(@NotNull UUID clanId, int userId) {
-        Optional<ClanMember> optMember = cache.get(new Member(clanId, userId));
-        return optMember != null && optMember.isPresent() ? optMember.orElse(null) : null;
+    public @NotNull Optional<ClanMember> get(@NotNull UUID clanId, int userId) {
+        return cache.get(new Member(clanId, userId));
     }
 
     public @NotNull @Unmodifiable List<ClanMember> getByClanId(@NotNull UUID clanId) {

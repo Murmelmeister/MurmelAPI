@@ -1,32 +1,40 @@
 package de.murmelmeister.murmelapi.clan.member;
 
+import com.google.gson.Gson;
+import de.murmelmeister.library.database.Database;
+import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ClanMemberProvider {
     void refreshCache();
 
-    @Nullable ClanMember findMember(@NotNull UUID clanId, int userId);
+    @NotNull Optional<ClanMember> findMember(@NotNull UUID clanId, int userId);
 
     @NotNull
     @Unmodifiable
     List<ClanMember> findClan(@NotNull UUID clanId);
 
-    @NotNull @Unmodifiable List<ClanMember> findClan(int userId);
+    @NotNull
+    @Unmodifiable
+    List<ClanMember> findClan(int userId);
 
     @NotNull
     @Unmodifiable
     List<ClanMember> findAll();
 
-    @Nullable ClanMember create(@NotNull UUID clanId, int userId, @NotNull UUID groupId);
+    @NotNull Optional<ClanMember> upsert(@NotNull UUID clanId, int userId, @NotNull UUID groupId);
 
     int delete(@NotNull UUID clanId, int userId);
 
-    @Nullable ClanMember update(@NotNull UUID clanId, int userId, @NotNull UUID groupId);
-
-    @Nullable ClanMember upsert(@NotNull UUID clanId, int userId, @NotNull UUID groupId);
+    @ApiStatus.Internal
+    static @NotNull ClanMemberProvider of(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+        return new ClanMemberProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+    }
 }

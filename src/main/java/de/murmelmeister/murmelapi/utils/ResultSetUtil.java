@@ -3,7 +3,6 @@ package de.murmelmeister.murmelapi.utils;
 import de.murmelmeister.library.database.ResultSetProcessor;
 import de.murmelmeister.murmelapi.clan.Clan;
 import de.murmelmeister.murmelapi.clan.group.ClanGroup;
-import de.murmelmeister.murmelapi.clan.member.ClanMember;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -95,16 +94,6 @@ public final class ResultSetUtil {
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             return new Clan(id, clanName, tag, sign, description, ownerId, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<ClanMember> clanMember() {
-        return resultSet -> {
-            UUID clanId = UUID.fromString(resultSet.getString("clan_id"));
-            int userId = resultSet.getInt("user_id");
-            LocalDateTime joinedAt = resultSet.getTimestamp("joined_at").toLocalDateTime();
-            UUID clan_group_id = UUID.fromString(resultSet.getString("group_id"));
-            return new ClanMember(clanId, userId, joinedAt, clan_group_id);
         };
     }
 
