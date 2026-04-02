@@ -79,7 +79,7 @@ final class PrefixColorProviderImpl implements PrefixColorProvider {
 
         PrefixColor saved = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert PrefixColor (id=" + id + ")",
-                () -> database.query(UPSERT_SQL, null, PrefixColorAdapter::resultSet, stmt -> {
+                () -> database.query(UPSERT_SQL, null, PrefixColorRowMapper::resultSet, stmt -> {
                     stmt.setString(1, id);
                     stmt.setString(2, color);
                     stmt.setBoolean(3, animated);
@@ -90,7 +90,7 @@ final class PrefixColorProviderImpl implements PrefixColorProvider {
         );
 
         if (saved == null) return Optional.empty();
-        refreshProvider.fireSingle(single, saved);
+        refreshProvider.fireSingle(single, new PrefixColorCache.PrefixKey(saved.id()));
         return Optional.of(saved);
     }
 
@@ -105,8 +105,9 @@ final class PrefixColorProviderImpl implements PrefixColorProvider {
         if (id.length() > 100) throw new IllegalArgumentException("id cannot be longer than 100 characters");
         if (id.isBlank()) throw new IllegalArgumentException("id cannot be blank");
 
-        Optional<PrefixColor> existing = cache.getById(id);
-        if (existing.isEmpty()) return 0;
+        Optional<PrefixColor> existingOpt = cache.getById(id);
+        if (existingOpt.isEmpty()) return 0;
+        PrefixColor existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete PrefixColor (id=" + id + ")",
@@ -115,7 +116,7 @@ final class PrefixColorProviderImpl implements PrefixColorProvider {
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing.get());
+        refreshProvider.fireSingle(single, new PrefixColorCache.PrefixKey(existing.id()));
         return row;
     }
 }

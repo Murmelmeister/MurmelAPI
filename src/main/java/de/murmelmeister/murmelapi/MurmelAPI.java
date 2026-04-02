@@ -14,7 +14,6 @@ import de.murmelmeister.murmelapi.clan.parent.ClanParentProvider;
 import de.murmelmeister.murmelapi.clan.parent.ClanParentProviderImpl;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProvider;
 import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProviderImpl;
-import de.murmelmeister.murmelapi.color.PrefixColorAdapter;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
@@ -158,7 +157,6 @@ public final class MurmelAPI {
         this.gson = new GsonBuilder()
                 .registerTypeAdapter(LocalDate.class, new LocalDateAdapter())
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
-                .registerTypeAdapterFactory(new PrefixColorAdapter())
                 .registerTypeAdapterFactory(new InventoryTypeAdapter())
                 .registerTypeAdapterFactory(new LanguageTypeAdapter())
                 .registerTypeAdapterFactory(new MessageAdapter())

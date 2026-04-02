@@ -62,11 +62,11 @@ final class PrefixColorCache implements MurmelCache {
 
         if (RefreshType.SINGLE_PREFIX_COLOR.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof PrefixColor color)
+            if (key instanceof PrefixKey color)
                 remove(color);
             else if (key instanceof String json) {
                 try {
-                    final PrefixColor color = gson.fromJson(json, PrefixColor.class);
+                    final PrefixKey color = gson.fromJson(json, PrefixKey.class);
 
                     if (color == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -89,12 +89,12 @@ final class PrefixColorCache implements MurmelCache {
 
     private @NotNull List<PrefixColor> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, PrefixColorAdapter::resultSet);
+        return CacheUtil.loadList(database, sql, fetchLimit, PrefixColorRowMapper::resultSet);
     }
 
     private @NotNull Optional<PrefixColor> loadById(String id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        PrefixColor prefixColor = CacheUtil.loadSingle(database, sql, fetchLimit, PrefixColorAdapter::resultSet,
+        PrefixColor prefixColor = CacheUtil.loadSingle(database, sql, fetchLimit, PrefixColorRowMapper::resultSet,
                 stmt -> stmt.setString(1, id));
 
         return Optional.of(prefixColor);
@@ -111,7 +111,7 @@ final class PrefixColorCache implements MurmelCache {
         return List.copyOf(colors);
     }
 
-    public void remove(@NotNull PrefixColor color) {
+    public void remove(@NotNull PrefixKey color) {
         cacheById.invalidate(color.id());
         listCache.invalidate(ALL_KEY);
     }
@@ -119,5 +119,8 @@ final class PrefixColorCache implements MurmelCache {
     public void clear() {
         cacheById.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record PrefixKey(@NotNull String id) {
     }
 }
