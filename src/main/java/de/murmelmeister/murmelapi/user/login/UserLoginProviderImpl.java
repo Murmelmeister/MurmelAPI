@@ -5,7 +5,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.user.UserLoginException;
 import de.murmelmeister.murmelapi.user.session.UserSession;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -19,9 +18,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
-public final class UserLoginProviderImpl implements UserLoginProvider {
+final class UserLoginProviderImpl implements UserLoginProvider {
     private static final String TABLE_NAME = "user_login";
 
     @Language("MariaDB")
@@ -52,7 +52,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public @Nullable UserLogin findById(@Nullable UUID id) {
+    public @NotNull Optional<UserLogin> findById(@NotNull UUID id) {
         return cache.getById(id);
     }
 
@@ -72,7 +72,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     }
 
     @Override
-    public @Nullable UserLogin create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
+    public @NotNull Optional<UserLogin> create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
         Objects.requireNonNull(sessionId, "sessionId cannot be null");
         Objects.requireNonNull(loginTime, "loginTime cannot be null");
         Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
@@ -82,7 +82,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
 
         UserLogin login = MurmelExceptionWrapper.dbWrap(
                 "Failed to create UserLogin (sessionId=" + sessionId + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.userLogin(), stmt -> {
+                () -> database.query(CREATE_SQL, null, UserLoginRowMapper::resultSet, stmt -> {
                     stmt.setString(1, sessionId.toString());
                     stmt.setInt(2, userId);
                     stmt.setTimestamp(3, Timestamp.valueOf(loginTime));
@@ -93,13 +93,13 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
                 UserLoginException::new
         );
 
-        if (login == null) return null;
-        refreshProvider.fireSingle(single, login);
-        return login;
+        if (login == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new UserLoginCache.LoginKey(login.id(), login.userId(), login.inetAddress()));
+        return Optional.of(login);
     }
 
     @Override
-    public @Nullable UserLogin create(@NotNull UserSession session) {
+    public @NotNull Optional<UserLogin> create(@NotNull UserSession session) {
         Objects.requireNonNull(session, "session cannot be null");
         return create(session.id(), session.userId(), session.loginTime(),
                 session.inetAddress(), session.clientBrand(), session.protocolVersion());
@@ -109,8 +109,9 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
     public int delete(@NotNull UUID sessionId) {
         Objects.requireNonNull(sessionId, "sessionId cannot be null");
 
-        UserLogin existing = cache.getById(sessionId);
-        if (existing == null) return 0;
+        Optional<UserLogin> existingOpt = cache.getById(sessionId);
+        if (existingOpt.isEmpty()) return 0;
+        UserLogin existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete (sessionId=" + sessionId + ")",
@@ -119,7 +120,7 @@ public final class UserLoginProviderImpl implements UserLoginProvider {
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing);
+        refreshProvider.fireSingle(single, new UserLoginCache.LoginKey(existing.id(), existing.userId(), existing.inetAddress()));
         return row;
     }
 }

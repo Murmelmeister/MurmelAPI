@@ -14,7 +14,6 @@ import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.stats.UserStats;
 import org.jetbrains.annotations.NotNull;
@@ -56,26 +55,6 @@ public final class ResultSetUtil {
             int protocolVersion = resultSet.getInt("protocol_version");
 
             return new UserSession(id, userId, loginTime, inetAddress, clientBrand, protocolVersion);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<UserLogin> userLogin() {
-        return resultSet -> {
-            UUID id = UUID.fromString(resultSet.getString("id"));
-            int userId = resultSet.getInt("user_id");
-            LocalDateTime loginTime = resultSet.getTimestamp("login_time").toLocalDateTime();
-            LocalDateTime logoutTime = resultSet.getTimestamp("logout_time").toLocalDateTime();
-            String ipAddress = resultSet.getString("ip_address");
-            InetAddress inetAddress;
-            try {
-                inetAddress = InetAddress.getByName(ipAddress);
-            } catch (UnknownHostException e) {
-                throw new RuntimeException(e);
-            }
-            String clientBrand = resultSet.getString("client_brand");
-            int protocolVersion = resultSet.getInt("protocol_version");
-
-            return new UserLogin(id, userId, loginTime, logoutTime, inetAddress, clientBrand, protocolVersion);
         };
     }
 

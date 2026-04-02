@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -24,7 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class UserLoginCache implements MurmelCache {
+final class UserLoginCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserLoginCache.class);
 
     @Language("MariaDB")
@@ -74,11 +73,11 @@ public class UserLoginCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER_LOGIN.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof UserLogin login)
+            if (key instanceof LoginKey login)
                 remove(login);
             else if (key instanceof String json) {
                 try {
-                    final UserLogin login = gson.fromJson(json, UserLogin.class);
+                    final LoginKey login = gson.fromJson(json, LoginKey.class);
 
                     if (login == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -101,32 +100,30 @@ public class UserLoginCache implements MurmelCache {
 
     private @NotNull List<UserLogin> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userLogin());
+        return CacheUtil.loadList(database, sql, fetchLimit, UserLoginRowMapper::resultSet);
     }
 
     private @NotNull List<UserLogin> loadByUserId(int userId) {
         String sql = SELECT_BY_USER_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userLogin(),
+        return CacheUtil.loadList(database, sql, fetchLimit, UserLoginRowMapper::resultSet,
                 stmt -> stmt.setInt(1, userId));
     }
 
     private @NotNull List<UserLogin> loadByIpAddress(InetAddress inetAddress) {
         String sql = SELECT_BY_IP_ADDRESS.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userLogin(),
+        return CacheUtil.loadList(database, sql, fetchLimit, UserLoginRowMapper::resultSet,
                 stmt -> stmt.setString(1, inetAddress.getHostAddress()));
     }
 
     private @NotNull Optional<UserLogin> loadById(UUID id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        UserLogin login = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userLogin(),
+        UserLogin login = CacheUtil.loadSingle(database, sql, fetchLimit, UserLoginRowMapper::resultSet,
                 stmt -> stmt.setString(1, id.toString()));
         return Optional.ofNullable(login);
     }
 
-    public @Nullable UserLogin getById(@Nullable UUID id) {
-        if (id == null) return null;
-        Optional<UserLogin> optLogin = cacheById.get(id);
-        return optLogin != null && optLogin.isPresent() ? optLogin.orElse(null) : null;
+    public @NotNull Optional<UserLogin> getById(@NotNull UUID id) {
+        return cacheById.get(id);
     }
 
     public @NotNull @Unmodifiable List<UserLogin> getByUserId(int userId) {
@@ -151,7 +148,7 @@ public class UserLoginCache implements MurmelCache {
         return List.copyOf(logins);
     }
 
-    public void remove(@NotNull UserLogin login) {
+    public void remove(@NotNull LoginKey login) {
         cacheById.invalidate(login.id());
         cacheByUserId.invalidate(login.userId());
         cacheByIpAddress.invalidate(login.inetAddress());
@@ -163,5 +160,8 @@ public class UserLoginCache implements MurmelCache {
         cacheByUserId.invalidateAll();
         cacheByIpAddress.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record LoginKey(@NotNull UUID id, int userId, @NotNull InetAddress inetAddress) {
     }
 }
