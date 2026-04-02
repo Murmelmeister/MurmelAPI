@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class UserExcuseCache implements MurmelCache {
+final class UserExcuseCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserExcuseCache.class);
 
     @Language("MariaDB")
@@ -68,11 +66,11 @@ public class UserExcuseCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER_EXCUSE.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof UserExcuse excuse)
+            if (key instanceof UserKey excuse)
                 remove(excuse);
             else if (key instanceof String json) {
                 try {
-                    final UserExcuse excuse = gson.fromJson(json, UserExcuse.class);
+                    final UserKey excuse = gson.fromJson(json, UserKey.class);
 
                     if (excuse == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -95,25 +93,24 @@ public class UserExcuseCache implements MurmelCache {
 
     private @NotNull List<UserExcuse> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userExcuse());
+        return CacheUtil.loadList(database, sql, fetchLimit, UserExcuseRowMapper::resultSet);
     }
 
     private @NotNull List<UserExcuse> loadByUserId(int userId) {
         String sql = SELECT_BY_USER_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userExcuse(),
+        return CacheUtil.loadList(database, sql, fetchLimit, UserExcuseRowMapper::resultSet,
                 stmt -> stmt.setInt(1, userId));
     }
 
     private @NotNull Optional<UserExcuse> loadById(int id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        UserExcuse excuse = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userExcuse(),
+        UserExcuse excuse = CacheUtil.loadSingle(database, sql, fetchLimit, UserExcuseRowMapper::resultSet,
                 stmt -> stmt.setInt(1, id));
         return Optional.ofNullable(excuse);
     }
 
-    public @Nullable UserExcuse getById(int id) {
-        Optional<UserExcuse> optExcuse = cacheById.get(id);
-        return optExcuse != null && optExcuse.isPresent() ? optExcuse.orElse(null) : null;
+    public @NotNull Optional<UserExcuse> getById(int id) {
+        return cacheById.get(id);
     }
 
     public @NotNull @Unmodifiable List<UserExcuse> getByUserId(int userId) {
@@ -130,7 +127,7 @@ public class UserExcuseCache implements MurmelCache {
         return List.copyOf(list);
     }
 
-    public void remove(@NotNull UserExcuse excuse) {
+    public void remove(@NotNull UserKey excuse) {
         cacheById.invalidate(excuse.id());
         cacheByUserId.invalidate(excuse.userId());
         listCache.invalidate(ALL_KEY);
@@ -140,5 +137,8 @@ public class UserExcuseCache implements MurmelCache {
         cacheById.invalidateAll();
         cacheByUserId.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record UserKey(int id, int userId) {
     }
 }

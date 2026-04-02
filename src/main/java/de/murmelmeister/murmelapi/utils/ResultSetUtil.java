@@ -14,7 +14,6 @@ import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.user.excuse.UserExcuse;
 import de.murmelmeister.murmelapi.user.inventory.UserInventory;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.session.UserSession;
@@ -265,21 +264,6 @@ public final class ResultSetUtil {
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             return new MaintenanceWhitelist(id, maintenanceId, userId, startAt, endAt, note, createdAt, createdBy, changedAt, changedBy);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<UserExcuse> userExcuse() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            int userId = resultSet.getInt("user_id");
-            LocalDateTime startAt = resultSet.getTimestamp("start_at").toLocalDateTime();
-            LocalDateTime endAt = resultSet.getTimestamp("end_at").toLocalDateTime();
-            String reason = resultSet.getString("reason");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            return new UserExcuse(id, userId, startAt, endAt, reason, createdAt, createdBy, changedAt, changedBy);
         };
     }
 }

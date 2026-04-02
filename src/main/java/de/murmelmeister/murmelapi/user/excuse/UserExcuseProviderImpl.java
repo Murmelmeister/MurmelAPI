@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.user.UserExcuseException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -17,8 +16,9 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
-public final class UserExcuseProviderImpl implements UserExcuseProvider {
+final class UserExcuseProviderImpl implements UserExcuseProvider {
     private static final String TABLE_NAME = "user_excuses";
 
     @Language("MariaDB")
@@ -59,7 +59,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
     }
 
     @Override
-    public @Nullable UserExcuse findById(int id) {
+    public @NotNull Optional<UserExcuse> findById(int id) {
         return cache.getById(id);
     }
 
@@ -74,7 +74,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
     }
 
     @Override
-    public @Nullable UserExcuse create(int userId, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, @Nullable String reason, int createdBy) {
+    public @NotNull Optional<UserExcuse> create(int userId, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, @Nullable String reason, int createdBy) {
         Objects.requireNonNull(startAt, "startAt cannot be null");
         Objects.requireNonNull(endAt, "endAt cannot be null");
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
@@ -84,7 +84,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
 
         UserExcuse userExcuse = MurmelExceptionWrapper.dbWrap(
                 "Failed to create UserExcuse (userId=" + userId + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.userExcuse(), stmt -> {
+                () -> database.query(CREATE_SQL, null, UserExcuseRowMapper::resultSet, stmt -> {
                     stmt.setInt(1, userId);
                     stmt.setTimestamp(2, Timestamp.valueOf(startAt));
                     stmt.setTimestamp(3, Timestamp.valueOf(endAt));
@@ -94,26 +94,27 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
                 UserExcuseException::new
         );
 
-        if (userExcuse == null) return null;
-        refreshProvider.fireSingle(single, userExcuse);
-        return userExcuse;
+        if (userExcuse == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new UserExcuseCache.UserKey(userExcuse.id(), userExcuse.userId()));
+        return Optional.of(userExcuse);
     }
 
     @Override
-    public @Nullable UserExcuse update(int id, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, @Nullable String reason, int changedBy) {
+    public @NotNull Optional<UserExcuse> update(int id, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, @Nullable String reason, int changedBy) {
         Objects.requireNonNull(startAt, "startAt cannot be null");
         Objects.requireNonNull(endAt, "endAt cannot be null");
         if (startAt.isAfter(endAt)) throw new IllegalArgumentException("startAt cannot be after endAt");
         if (reason != null && reason.isBlank()) throw new IllegalArgumentException("reason cannot be blank");
         if (changedBy < 1) throw new IllegalArgumentException("changedBy must be >= 1");
 
-        UserExcuse existing = cache.getById(id);
-        if (existing == null) return null;
+        Optional<UserExcuse> existingOpt = cache.getById(id);
+        if (existingOpt.isEmpty()) return Optional.empty();
+        UserExcuse existing = existingOpt.get();
 
         if (Objects.equals(startAt, existing.startAt()) &&
                 Objects.equals(endAt, existing.endAt()) &&
                 Objects.equals(reason, existing.reason()))
-            return existing;
+            return existingOpt;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to update UserExcuse (id=" + id + ")",
@@ -126,7 +127,7 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
                 }),
                 UserExcuseException::new
         );
-        if (row != 1) return null;
+        if (row != 1) return Optional.empty();
 
         LocalDateTime changedAt = MurmelExceptionWrapper.dbWrap(
                 "Failed to get changedAt for UserExcuse (id=" + id + ")",
@@ -137,16 +138,16 @@ public final class UserExcuseProviderImpl implements UserExcuseProvider {
                         }),
                 UserExcuseException::new
         );
-        if (changedAt == null) return null;
+        if (changedAt == null) return Optional.empty();
 
-        UserExcuse updated = UserExcuse.builder(existing)
+        UserExcuse updated = existing.builder()
                 .startAt(startAt)
                 .endAt(endAt)
                 .reason(reason)
                 .changedAt(changedAt)
                 .changedBy(changedBy)
                 .build();
-        refreshProvider.fireSingle(single, updated);
-        return updated;
+        refreshProvider.fireSingle(single, new UserExcuseCache.UserKey(updated.id(), updated.userId()));
+        return Optional.of(updated);
     }
 }
