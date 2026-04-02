@@ -5,62 +5,36 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.function.Consumer;
 
-public record UserStats(
-        int userId,
-        int playTime,
-        int dailyStreak,
-        @Nullable LocalDate dailyStreakLastDay,
-        @Nullable LocalDateTime lastSeenAt
-) {
-    public UserStats {
-        if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
-        if (playTime < 0) throw new IllegalArgumentException("playTime must be >= 0");
-        if (dailyStreak < 0) throw new IllegalArgumentException("dailyStreak must be >= 0");
+public interface UserStats {
+    int userId();
+
+    int playTime();
+
+    int dailyStreak();
+
+    @Nullable LocalDate dailyStreakLastDay();
+
+    @Nullable LocalDateTime lastSeenAt();
+
+    @NotNull Builder builder();
+
+    @NotNull UserStats with(@NotNull Consumer<Builder> consumer);
+
+    static @NotNull UserStats of(int userId, int playTime, int dailyStreak, @Nullable LocalDate dailyStreakLastDay, @Nullable LocalDateTime lastSeenAt) {
+        return new UserStatsImpl(userId, playTime, dailyStreak, dailyStreakLastDay, lastSeenAt);
     }
 
-    public static @NotNull Builder builder(@NotNull UserStats userStats) {
-        return new Builder(userStats);
-    }
+    interface Builder {
+        @NotNull Builder playTime(int playTime);
 
-    public static class Builder {
-        private final int userId;
+        @NotNull Builder dailyStreak(int dailyStreak);
 
-        private int playTime;
-        private int dailyStreak;
-        private LocalDate dailyStreakLastDay;
-        private LocalDateTime lastSeenAt;
+        @NotNull Builder dailyStreakLastDay(@Nullable LocalDate dailyStreakLastDay);
 
-        private Builder(@NotNull UserStats userStats) {
-            this.userId = userStats.userId();
-            this.playTime = userStats.playTime();
-            this.dailyStreak = userStats.dailyStreak();
-            this.dailyStreakLastDay = userStats.dailyStreakLastDay();
-            this.lastSeenAt = userStats.lastSeenAt();
-        }
+        @NotNull Builder lastSeenAt(@Nullable LocalDateTime lastSeenAt);
 
-        public Builder playTime(int playTime) {
-            this.playTime = playTime;
-            return this;
-        }
-
-        public Builder dailyStreak(int dailyStreak) {
-            this.dailyStreak = dailyStreak;
-            return this;
-        }
-
-        public Builder dailyStreakLastDay(@Nullable LocalDate dailyStreakLastDay) {
-            this.dailyStreakLastDay = dailyStreakLastDay;
-            return this;
-        }
-
-        public Builder lastSeenAt(@Nullable LocalDateTime lastSeenAt) {
-            this.lastSeenAt = lastSeenAt;
-            return this;
-        }
-
-        public @NotNull UserStats build() {
-            return new UserStats(userId, playTime, dailyStreak, dailyStreakLastDay, lastSeenAt);
-        }
+        @NotNull UserStats build();
     }
 }

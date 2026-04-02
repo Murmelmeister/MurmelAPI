@@ -50,7 +50,6 @@ import de.murmelmeister.murmelapi.user.inventory.UserInventoryProvider;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
 import de.murmelmeister.murmelapi.user.stats.UserStatsProvider;
-import de.murmelmeister.murmelapi.user.stats.UserStatsProviderImpl;
 import de.murmelmeister.murmelapi.utils.adapter.LocalDateAdapter;
 import de.murmelmeister.murmelapi.utils.adapter.LocalDateTimeAdapter;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
@@ -160,7 +159,7 @@ public final class MurmelAPI {
         this.messageProvider = MessageProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.messageService = new MessageService(languageProvider, messageProvider);
         this.userProvider = new UserProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userStatsProvider = new UserStatsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userStatsProvider = UserStatsProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userLoginProvider = UserLoginProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userSessionProvider = UserSessionProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userExcuseProvider = UserExcuseProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);

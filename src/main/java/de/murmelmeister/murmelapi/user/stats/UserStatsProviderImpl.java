@@ -4,10 +4,10 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.user.UserStatsException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.sql.Types;
@@ -15,8 +15,9 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.Optional;
 
-public final class UserStatsProviderImpl implements UserStatsProvider {
+final class UserStatsProviderImpl implements UserStatsProvider {
     private static final String TABLE_NAME = "user_stats";
 
     @Language("MariaDB")
@@ -57,32 +58,33 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
     }
 
     @Override
-    public @Nullable UserStats findByUserId(int userId) {
+    public @NotNull Optional<UserStats> findByUserId(int userId) {
         return cache.getById(userId);
     }
 
     @Override
-    public @Nullable UserStats create(int userId) {
+    public @NotNull Optional<UserStats> create(int userId) {
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
 
         UserStats userStats = MurmelExceptionWrapper.dbWrap(
                 "Failed to create UserStats (userId=" + userId + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.userStats(),
+                () -> database.query(CREATE_SQL, null, UserStatsRowMapper::resultSet,
                         stmt -> stmt.setInt(1, userId)),
                 UserStatsException::new
         );
 
-        if (userStats == null) return null;
-        refreshProvider.fireSingle(single, userStats);
-        return userStats;
+        if (userStats == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new UserStatsCache.StatsKey(userStats.userId()));
+        return Optional.of(userStats);
     }
 
     @Override
     public int delete(int userId) {
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
 
-        UserStats existing = cache.getById(userId);
-        if (existing == null) return 0;
+        Optional<UserStats> existingOpt = cache.getById(userId);
+        if (existingOpt.isEmpty()) return 0;
+        UserStats existing = existingOpt.get();
 
         int rows = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete UserStats (userId=" + userId + ")",
@@ -91,24 +93,25 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
         );
 
         if (rows != 1) return 0;
-        refreshProvider.fireSingle(single, existing);
+        refreshProvider.fireSingle(single, new UserStatsCache.StatsKey(existing.userId()));
         return rows;
     }
 
     @Override
-    public @Nullable UserStats update(int userId, int playTime, int dailyStreak, @Nullable LocalDate lastDay, @Nullable LocalDateTime lastSeen) {
+    public @NotNull Optional<UserStats> update(int userId, int playTime, int dailyStreak, @Nullable LocalDate lastDay, @Nullable LocalDateTime lastSeen) {
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
         if (playTime < 0) throw new IllegalArgumentException("playTime must be >= 0");
         if (dailyStreak < 0) throw new IllegalArgumentException("dailyStreak must be >= 0");
 
-        UserStats existing = cache.getById(userId);
-        if (existing == null) return null;
+        Optional<UserStats> existingOpt = cache.getById(userId);
+        if (existingOpt.isEmpty()) return Optional.empty();
+        UserStats existing = existingOpt.get();
 
         if (Objects.equals(existing.dailyStreakLastDay(), lastDay)
                 && Objects.equals(existing.lastSeenAt(), lastSeen)
                 && existing.playTime() == playTime
                 && existing.dailyStreak() == dailyStreak)
-            return existing;
+            return existingOpt;
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to update UserStats (userId=" + userId + ")",
@@ -121,15 +124,15 @@ public final class UserStatsProviderImpl implements UserStatsProvider {
                 }),
                 UserStatsException::new
         );
-        if (row != 1) return null;
+        if (row != 1) return Optional.empty();
 
-        UserStats updated = UserStats.builder(existing)
+        UserStats updated = existing.builder()
                 .playTime(playTime)
                 .dailyStreak(dailyStreak)
                 .dailyStreakLastDay(lastDay)
                 .lastSeenAt(lastSeen)
                 .build();
-        refreshProvider.fireSingle(single, updated);
-        return updated;
+        refreshProvider.fireSingle(single, new UserStatsCache.StatsKey(updated.userId()));
+        return Optional.of(updated);
     }
 }

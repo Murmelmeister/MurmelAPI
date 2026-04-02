@@ -113,12 +113,13 @@ public record UserService(
             userProvider.update(user.id(), username, LocalDateTime.now(), user.debugUser(), user.debugEnabled(), user.languageId());
         }
 
-        UserStats stats = statsProvider.findByUserId(user.id());
-        if (stats == null) {
-            stats = statsProvider.create(user.id());
-            if (stats == null)
+        Optional<UserStats> statsOpt = statsProvider.findByUserId(user.id());
+        if (statsOpt.isEmpty()) {
+            statsOpt = statsProvider.create(user.id());
+            if (statsOpt.isEmpty())
                 throw new UserStatsException("Failed to create stats for user with ID: " + user.id());
         }
+        UserStats stats = statsOpt.get();
 
         String currentUsername = user.username();
         if (!currentUsername.equals(username))
@@ -133,7 +134,7 @@ public record UserService(
             LocalDateTime lastLogin = userLogin == null ? null : userLogin.loginTime();
             LocalDate lastSeen = lastLogin != null ? lastLogin.toLocalDate() : LocalDate.now();
 
-            if (statsProvider.update(user.id(), stats.playTime(), stats.dailyStreak(), lastSeen, stats.lastSeenAt()) == null)
+            if (statsProvider.update(user.id(), stats.playTime(), stats.dailyStreak(), lastSeen, stats.lastSeenAt()).isEmpty())
                 throw new UserStatsException("Failed to update stats for user with ID: " + user.id());
         }
 
@@ -145,7 +146,7 @@ public record UserService(
 
     public boolean isOnline(int userId) {
         if (userId < 1) return false;
-        return sessionProvider.findByUserId(userId) != null;
+        return sessionProvider.findByUserId(userId).isPresent();
     }
 
     public @Nullable UserLogin getLastLogin(int userId) {
@@ -184,13 +185,14 @@ public record UserService(
         if (user == null)
             throw new UserException("User not found for ID: " + userId);
 
-        UserStats stats = statsProvider.findByUserId(userId);
-        if (stats == null)
+        Optional<UserStats> statsOpt = statsProvider.findByUserId(userId);
+        if (statsOpt.isEmpty())
             throw new UserStatsException("Stats not found for user ID: " + userId);
+        UserStats stats = statsOpt.get();
 
         // Permanent block => breaks the streak (and keeps the DB state clean)
         if (isPermanentlyBlocked.test(user.mojangId())) {
-            if (statsProvider.update(userId, stats.playTime(), 0, null, stats.lastSeenAt()) == null)
+            if (statsProvider.update(userId, stats.playTime(), 0, null, stats.lastSeenAt()).isEmpty())
                 throw new UserStatsException("Failed to update stats for user ID: " + userId);
             return;
         }
@@ -201,7 +203,7 @@ public record UserService(
 
         // Never counted before => start with 1
         if (lastDay == null) {
-            if (statsProvider.update(userId, stats.playTime(), 1, today, stats.lastSeenAt()) == null)
+            if (statsProvider.update(userId, stats.playTime(), 1, today, stats.lastSeenAt()).isEmpty())
                 throw new UserStatsException("Failed to update stats for user ID: " + userId);
             return;
         }
@@ -212,7 +214,7 @@ public record UserService(
         // Normal next day => +1
         if (lastDay.plusDays(1).equals(today)) {
             dailyStreak++;
-            if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()) == null)
+            if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()).isEmpty())
                 throw new UserStatsException("Failed to update stats for user ID: " + userId);
             return;
         }
@@ -228,7 +230,7 @@ public record UserService(
             dailyStreak = 1;
         }
 
-        if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()) == null)
+        if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()).isEmpty())
             throw new UserStatsException("Failed to update stats for user ID: " + userId);
     }
 

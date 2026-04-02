@@ -14,12 +14,10 @@ import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.user.stats.UserStats;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -170,17 +168,6 @@ public final class ResultSetUtil {
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             return new ClanPermission(clanId, groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<UserStats> userStats() {
-        return resultSet -> {
-            int userId = resultSet.getInt("id");
-            int playTime = resultSet.getInt("play_time");
-            int dailyStreak = resultSet.getInt("daily_streak");
-            LocalDate lastDay = resultSet.getObject("daily_streak_last_day", LocalDate.class);
-            LocalDateTime lastSeen = resultSet.getObject("last_seen_at", LocalDateTime.class);
-            return new UserStats(userId, playTime, dailyStreak, lastDay, lastSeen);
         };
     }
 

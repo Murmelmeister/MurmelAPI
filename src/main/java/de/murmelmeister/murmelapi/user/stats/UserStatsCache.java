@@ -6,20 +6,18 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.Optional;
 
-public class UserStatsCache implements MurmelCache {
+final class UserStatsCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserStatsCache.class);
 
     @Language("MariaDB")
@@ -55,11 +53,11 @@ public class UserStatsCache implements MurmelCache {
 
         if (RefreshType.SINGLE_USER_STAT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof UserStats userStats)
+            if (key instanceof StatsKey userStats)
                 remove(userStats);
             else if (key instanceof String json) {
                 try {
-                    final UserStats userStats = gson.fromJson(json, UserStats.class);
+                    final StatsKey userStats = gson.fromJson(json, StatsKey.class);
 
                     if (userStats == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -82,22 +80,24 @@ public class UserStatsCache implements MurmelCache {
 
     private @NotNull Optional<UserStats> loadById(int userId) {
         String sql = SELECT_BY_USER_ID.formatted(tableName);
-        UserStats userStats = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userStats(),
+        UserStats userStats = CacheUtil.loadSingle(database, sql, fetchLimit, UserStatsRowMapper::resultSet,
                 stmt -> stmt.setInt(1, userId));
 
         return Optional.ofNullable(userStats);
     }
 
-    public @Nullable UserStats getById(int userId) {
-        Optional<UserStats> optStats = cacheById.get(userId);
-        return optStats != null && optStats.isPresent() ? optStats.orElse(null) : null;
+    public @NotNull Optional<UserStats> getById(int userId) {
+        return cacheById.get(userId);
     }
 
-    public void remove(@NotNull UserStats userStats) {
+    public void remove(@NotNull StatsKey userStats) {
         cacheById.invalidate(userStats.userId());
     }
 
     public void clear() {
         cacheById.invalidateAll();
+    }
+
+    record StatsKey(int userId) {
     }
 }
