@@ -47,7 +47,6 @@ import de.murmelmeister.murmelapi.user.UserService;
 import de.murmelmeister.murmelapi.user.color.UserPrefixColorProvider;
 import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
 import de.murmelmeister.murmelapi.user.inventory.UserInventoryProvider;
-import de.murmelmeister.murmelapi.user.inventory.UserInventoryProviderImpl;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
 import de.murmelmeister.murmelapi.user.login.UserLoginProviderImpl;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
@@ -189,7 +188,7 @@ public final class MurmelAPI {
         this.prefixColorProvider = PrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPrefixColorProvider = UserPrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.inventoryTypeProvider = InventoryTypeProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.userInventoryProvider = new UserInventoryProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.userInventoryProvider = UserInventoryProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.maintenanceProvider = new MaintenanceProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.maintenanceWhitelistProvider = new MaintenanceWhitelistProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
     }

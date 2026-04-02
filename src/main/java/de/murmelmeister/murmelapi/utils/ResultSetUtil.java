@@ -14,7 +14,6 @@ import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.user.User;
-import de.murmelmeister.murmelapi.user.inventory.UserInventory;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.stats.UserStats;
@@ -212,15 +211,6 @@ public final class ResultSetUtil {
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             return new ClanPermission(clanId, groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<UserInventory> userInventory() {
-        return resultSet -> {
-            int userId = resultSet.getInt("user_id");
-            int inventoryId = resultSet.getInt("inventory_id");
-            String value = resultSet.getString("inventory_value");
-            return new UserInventory(userId, inventoryId, value);
         };
     }
 

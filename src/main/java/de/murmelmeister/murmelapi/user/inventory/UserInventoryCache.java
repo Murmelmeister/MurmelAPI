@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class UserInventoryCache implements MurmelCache {
+final class UserInventoryCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserInventoryCache.class);
 
     @Language("MariaDB")
@@ -91,12 +89,12 @@ public class UserInventoryCache implements MurmelCache {
 
     private @NotNull List<UserInventory> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.userInventory());
+        return CacheUtil.loadList(database, sql, fetchLimit, UserInventoryRowMapper::resultSet);
     }
 
     private @NotNull Optional<UserInventory> loadById(InventoryKey key) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        UserInventory userInventory = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.userInventory(), stmt -> {
+        UserInventory userInventory = CacheUtil.loadSingle(database, sql, fetchLimit, UserInventoryRowMapper::resultSet, stmt -> {
             stmt.setInt(1, key.userId());
             stmt.setInt(2, key.inventoryId());
         });
@@ -104,9 +102,8 @@ public class UserInventoryCache implements MurmelCache {
         return Optional.ofNullable(userInventory);
     }
 
-    public @Nullable UserInventory get(int userId, int inventoryId) {
-        Optional<UserInventory> optInv = cacheByKey.get(new InventoryKey(userId, inventoryId));
-        return optInv != null && optInv.isPresent() ? optInv.orElse(null) : null;
+    public @NotNull Optional<UserInventory> get(int userId, int inventoryId) {
+        return cacheByKey.get(new InventoryKey(userId, inventoryId));
     }
 
     public @NotNull @Unmodifiable List<UserInventory> getAll() {
