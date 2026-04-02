@@ -40,7 +40,6 @@ import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProviderImpl
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProviderImpl;
 import de.murmelmeister.murmelapi.settings.SettingsProvider;
-import de.murmelmeister.murmelapi.settings.SettingsProviderImpl;
 import de.murmelmeister.murmelapi.settings.SettingsService;
 import de.murmelmeister.murmelapi.user.UserProvider;
 import de.murmelmeister.murmelapi.user.UserProviderImpl;
@@ -160,7 +159,7 @@ public final class MurmelAPI {
 
         this.refreshProvider = RefreshProvider.of();
 
-        this.settingsProvider = new SettingsProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.settingsProvider = SettingsProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.settingsService = new SettingsService(settingsProvider);
         this.languageProvider = LanguageTypeProvider.of(database, gson, refreshProvider, cacheCapacity);
         this.messageProvider = MessageProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);

@@ -5,41 +5,19 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.setting.SettingsException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
-public final class SettingsProviderImpl implements SettingsProvider {
+final class SettingsProviderImpl implements SettingsProvider {
     private static final String TABLE_NAME = "settings";
-
-    @Language("MariaDB")
-    private static final String CREATE_SQL = """
-            INSERT INTO %s (tag_id, value_json)
-            VALUES (?, ?)
-            RETURNING tag_id, value_json, updated_at
-            """.formatted(TABLE_NAME);
-
-    @Language("MariaDB")
-    private static final String DELETE_SQL = "DELETE FROM %s WHERE tag_id = ?".formatted(TABLE_NAME);
-
-    @Language("MariaDB")
-    private static final String UPDATE_SQL = """
-            UPDATE %s
-            SET value_json = ?
-            WHERE tag_id = ?
-            """.formatted(TABLE_NAME);
-
-    @Language("MariaDB")
-    private static final String UPDATE_SELECT_SQL = "SELECT updated_at FROM %s WHERE tag_id = ?".formatted(TABLE_NAME);
 
     @Language("MariaDB")
     private static final String UPSERT_SQL = """
@@ -48,6 +26,10 @@ public final class SettingsProviderImpl implements SettingsProvider {
             ON DUPLICATE KEY UPDATE value_json = VALUES(value_json)
             RETURNING tag_id, value_json, updated_at
             """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE tag_id = ?".formatted(TABLE_NAME);
+
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -67,7 +49,7 @@ public final class SettingsProviderImpl implements SettingsProvider {
     }
 
     @Override
-    public @Nullable Settings findById(@Nullable String tag) {
+    public @NotNull Optional<Settings> findById(@NotNull String tag) {
         return cache.get(tag);
     }
 
@@ -77,7 +59,7 @@ public final class SettingsProviderImpl implements SettingsProvider {
     }
 
     @Override
-    public @Nullable Settings create(@NotNull String tagId, @NotNull String json) {
+    public @NotNull Optional<Settings> upsert(@NotNull String tagId, @NotNull String json) {
         Objects.requireNonNull(tagId, "tagId cannot be null");
         Objects.requireNonNull(json, "json cannot be null");
         if (json.isBlank()) throw new IllegalArgumentException("json cannot be blank");
@@ -87,18 +69,22 @@ public final class SettingsProviderImpl implements SettingsProvider {
         if (normalizedTagId == null || normalizedTagId.isBlank())
             throw new IllegalArgumentException("tagId cannot be blank");
 
-        Settings settings = MurmelExceptionWrapper.dbWrap(
-                "Failed to create Settings (tagId=" + tagId + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.settings(), stmt -> {
-                    stmt.setString(1, normalizedTagId);
+        Optional<Settings> existingOpt = cache.get(tagId);
+        if (existingOpt.isPresent() && Objects.equals(json, existingOpt.get().json()))
+            return existingOpt;
+
+        Settings saved = MurmelExceptionWrapper.dbWrap(
+                "Failed to upsert Settings (tagId=" + tagId + ")",
+                () -> database.query(UPSERT_SQL, null, SettingsRowMapper::resultSet, stmt -> {
+                    stmt.setString(1, tagId);
                     stmt.setString(2, json);
                 }),
                 SettingsException::new
         );
 
-        if (settings == null) return null;
-        refreshProvider.fireSingle(single, settings);
-        return settings;
+        if (saved == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new SettingsCache.TagKey(saved.tagId()));
+        return Optional.of(saved);
     }
 
     @Override
@@ -111,8 +97,9 @@ public final class SettingsProviderImpl implements SettingsProvider {
         if (normalizedTagId == null || normalizedTagId.isBlank())
             throw new IllegalArgumentException("tagId cannot be blank");
 
-        Settings existing = cache.get(tagId);
-        if (existing == null) return 0;
+        Optional<Settings> existingOpt = cache.get(tagId);
+        if (existingOpt.isEmpty()) return 0;
+        Settings existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete Settings (tagId=" + tagId + ")",
@@ -121,80 +108,7 @@ public final class SettingsProviderImpl implements SettingsProvider {
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing);
+        refreshProvider.fireSingle(single, new SettingsCache.TagKey(existing.tagId()));
         return row;
-    }
-
-    @Override
-    public @Nullable Settings update(@NotNull String tagId, @NotNull String json) {
-        Objects.requireNonNull(tagId, "tagId cannot be null");
-        Objects.requireNonNull(json, "json cannot be null");
-        if (json.isBlank()) throw new IllegalArgumentException("json cannot be blank");
-        if (tagId.length() > 100) throw new IllegalArgumentException("tagId cannot be longer than 100 characters");
-
-        String normalizedTagId = StringUtil.normalize(tagId);
-        if (normalizedTagId == null || normalizedTagId.isBlank())
-            throw new IllegalArgumentException("tagId cannot be blank");
-
-        Settings existing = cache.get(normalizedTagId);
-        if (existing == null) return null;
-
-        if (Objects.equals(json, existing.json()))
-            return existing;
-
-        int row = MurmelExceptionWrapper.dbWrap(
-                "Failed to update Settings (tagId=" + tagId + ")",
-                () -> database.update(UPDATE_SQL, stmt -> {
-                    stmt.setString(1, json);
-                    stmt.setString(2, normalizedTagId);
-                }),
-                SettingsException::new
-        );
-        if (row != 1) return null;
-
-        LocalDateTime updatedAt = MurmelExceptionWrapper.dbWrap(
-                "Failed to select updated_at for Settings (tagId=" + tagId + ")",
-                () -> database.query(UPDATE_SELECT_SQL, null,
-                        resultSet -> resultSet.getTimestamp("updated_at").toLocalDateTime(),
-                        stmt -> stmt.setString(1, normalizedTagId)),
-                SettingsException::new
-        );
-        if (updatedAt == null) return null;
-
-        Settings settings = Settings.builder(existing)
-                .json(json)
-                .updatedAt(updatedAt)
-                .build();
-        refreshProvider.fireSingle(single, settings);
-        return settings;
-    }
-
-    @Override
-    public @Nullable Settings upsert(@NotNull String tagId, @NotNull String json) {
-        Objects.requireNonNull(tagId, "tagId cannot be null");
-        Objects.requireNonNull(json, "json cannot be null");
-        if (json.isBlank()) throw new IllegalArgumentException("json cannot be blank");
-        if (tagId.length() > 100) throw new IllegalArgumentException("tagId cannot be longer than 100 characters");
-
-        String normalizedTagId = StringUtil.normalize(tagId);
-        if (normalizedTagId == null || normalizedTagId.isBlank())
-            throw new IllegalArgumentException("tagId cannot be blank");
-
-        Settings existing = cache.get(tagId);
-        if (existing != null && Objects.equals(json, existing.json()))
-            return existing;
-
-        Settings saved = MurmelExceptionWrapper.dbWrap(
-                "Failed to upsert Settings (tagId=" + tagId + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.settings(), stmt -> {
-                    stmt.setString(1, tagId);
-                    stmt.setString(2, json);
-                }),
-                SettingsException::new
-        );
-
-        if (saved == null) return null;
-        refreshProvider.fireSingle(single, saved);
-        return saved;
     }
 }

@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class SettingsCache implements MurmelCache {
+final class SettingsCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(SettingsCache.class);
 
     @Language("MariaDB")
@@ -64,11 +62,11 @@ public class SettingsCache implements MurmelCache {
 
         if (RefreshType.SINGLE_SETTING.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof Settings settings)
+            if (key instanceof TagKey settings)
                 remove(settings);
             else if (key instanceof String json) {
                 try {
-                    final Settings settings = gson.fromJson(json, Settings.class);
+                    final TagKey settings = gson.fromJson(json, TagKey.class);
 
                     if (settings == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -91,21 +89,19 @@ public class SettingsCache implements MurmelCache {
 
     private @NotNull List<Settings> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.settings());
+        return CacheUtil.loadList(database, sql, fetchLimit, SettingsRowMapper::resultSet);
     }
 
     private @NotNull Optional<Settings> loadSingleFromDatabase(String tagId) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        Settings settings = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.settings(),
+        Settings settings = CacheUtil.loadSingle(database, sql, fetchLimit, SettingsRowMapper::resultSet,
                 stmt -> stmt.setString(1, tagId));
 
         return Optional.ofNullable(settings);
     }
 
-    public @Nullable Settings get(@Nullable String tagId) {
-        if (tagId == null) return null;
-        Optional<Settings> optSettings = cache.get(tagId);
-        return optSettings != null && optSettings.isPresent() ? optSettings.orElse(null) : null;
+    public @NotNull Optional<Settings> get(@NotNull String tagId) {
+        return cache.get(tagId);
     }
 
     public @NotNull @Unmodifiable List<Settings> getAll() {
@@ -115,7 +111,7 @@ public class SettingsCache implements MurmelCache {
         return List.copyOf(settings);
     }
 
-    public void remove(@NotNull Settings settings) {
+    public void remove(@NotNull TagKey settings) {
         cache.invalidate(settings.tagId());
         listCache.invalidate(ALL_KEY);
     }
@@ -123,5 +119,8 @@ public class SettingsCache implements MurmelCache {
     public void clear() {
         cache.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record TagKey(@NotNull String tagId) {
     }
 }

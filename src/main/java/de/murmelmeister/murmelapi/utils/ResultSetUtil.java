@@ -13,7 +13,6 @@ import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
-import de.murmelmeister.murmelapi.settings.Settings;
 import de.murmelmeister.murmelapi.user.User;
 import de.murmelmeister.murmelapi.user.color.UserPrefixColor;
 import de.murmelmeister.murmelapi.user.excuse.UserExcuse;
@@ -30,15 +29,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public final class ResultSetUtil {
-    public static @NotNull ResultSetProcessor<Settings> settings() {
-        return resultSet -> {
-            String tagId = resultSet.getString("tag_id");
-            String json = resultSet.getString("value_json");
-            LocalDateTime updatedAt = resultSet.getTimestamp("updated_at").toLocalDateTime();
-            return new Settings(tagId, json, updatedAt);
-        };
-    }
-
     public static @NotNull ResultSetProcessor<User> user() {
         return resultSet -> {
             int id = resultSet.getInt("id");

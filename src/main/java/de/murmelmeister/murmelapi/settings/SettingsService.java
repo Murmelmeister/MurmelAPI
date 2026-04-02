@@ -7,6 +7,8 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
+
 public final class SettingsService {
     private static final Logger LOGGER = LoggerFactory.getLogger(SettingsService.class);
     private final SettingsProvider provider;
@@ -18,8 +20,9 @@ public final class SettingsService {
     }
 
     public <T> T get(@NotNull String tagId, @NotNull Class<T> type, @Nullable T defaultValue) {
-        Settings settings = provider.findById(tagId);
-        if (settings == null) return defaultValue;
+        Optional<Settings> settingsOpt = provider.findById(tagId);
+        if (settingsOpt.isEmpty()) return defaultValue;
+        Settings settings = settingsOpt.get();
 
         try {
             return gson.fromJson(settings.json(), type);
@@ -37,7 +40,7 @@ public final class SettingsService {
         return get(settings.tagId(), type);
     }
 
-    public <T> Settings set(@NotNull String tagId, @NotNull T value) {
+    public <T> @NotNull Optional<Settings> set(@NotNull String tagId, @NotNull T value) {
         String json = gson.toJson(value);
         return provider.upsert(tagId, json);
     }
