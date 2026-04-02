@@ -4,8 +4,6 @@ import de.murmelmeister.library.database.ResultSetProcessor;
 import de.murmelmeister.murmelapi.clan.Clan;
 import de.murmelmeister.murmelapi.clan.group.ClanGroup;
 import de.murmelmeister.murmelapi.clan.member.ClanMember;
-import de.murmelmeister.murmelapi.clan.parent.ClanParent;
-import de.murmelmeister.murmelapi.clan.permission.ClanPermission;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -122,34 +120,6 @@ public final class ResultSetUtil {
             LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
             Integer changedBy = resultSet.getObject("changed_by", Integer.class);
             return new ClanGroup(clanId, groupId, groupName, priority, isDefault, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<ClanParent> clanParent() {
-        return resultSet -> {
-            UUID clanId = UUID.fromString(resultSet.getString("clan_id"));
-            UUID groupId = UUID.fromString(resultSet.getString("group_id"));
-            int parentId = resultSet.getInt("parent_id");
-            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            return new ClanParent(clanId, groupId, parentId, expiresAt, createdBy, createdAt, changedBy, changedAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<ClanPermission> clanPermission() {
-        return resultSet -> {
-            UUID clanId = UUID.fromString(resultSet.getString("clan_id"));
-            UUID groupId = UUID.fromString(resultSet.getString("group_id"));
-            String permission = resultSet.getString("permission");
-            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            return new ClanPermission(clanId, groupId, permission, expiresAt, createdBy, createdAt, changedBy, changedAt);
         };
     }
 }

@@ -10,10 +10,6 @@ import de.murmelmeister.murmelapi.clan.group.ClanGroupProvider;
 import de.murmelmeister.murmelapi.clan.group.ClanGroupProviderImpl;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProvider;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProviderImpl;
-import de.murmelmeister.murmelapi.clan.parent.ClanParentProvider;
-import de.murmelmeister.murmelapi.clan.parent.ClanParentProviderImpl;
-import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProvider;
-import de.murmelmeister.murmelapi.clan.permission.ClanPermissionProviderImpl;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
@@ -117,8 +113,6 @@ public final class MurmelAPI {
     private final ClanProvider clanProvider;
     private final ClanMemberProvider clanMemberProvider;
     private final ClanGroupProvider clanGroupProvider;
-    private final ClanParentProvider clanParentProvider;
-    private final ClanPermissionProvider clanPermissionProvider;
 
     private final PrefixColorProvider prefixColorProvider;
     private final UserPrefixColorProvider userPrefixColorProvider;
@@ -177,8 +171,6 @@ public final class MurmelAPI {
         this.clanProvider = new ClanProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanMemberProvider = new ClanMemberProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanGroupProvider = new ClanGroupProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.clanParentProvider = new ClanParentProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.clanPermissionProvider = new ClanPermissionProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.prefixColorProvider = PrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userPrefixColorProvider = UserPrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.inventoryTypeProvider = InventoryTypeProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -394,14 +386,6 @@ public final class MurmelAPI {
 
     public ClanGroupProvider getClanGroupProvider() {
         return clanGroupProvider;
-    }
-
-    public ClanParentProvider getClanParentProvider() {
-        return clanParentProvider;
-    }
-
-    public ClanPermissionProvider getClanPermissionProvider() {
-        return clanPermissionProvider;
     }
 
     public PrefixColorProvider getPrefixColorProvider() {
