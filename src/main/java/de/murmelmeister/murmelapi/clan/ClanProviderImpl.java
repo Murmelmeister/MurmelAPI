@@ -5,49 +5,22 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.library.utils.StringUtil;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.clan.ClanException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
-public final class ClanProviderImpl implements ClanProvider {
+final class ClanProviderImpl implements ClanProvider {
     private static final String TABLE_NAME = "clans";
-
-    @Language("MariaDB")
-    private static final String CREATE_SQL = """
-            INSERT INTO %s (id, name, tag, sign, description, owner_id, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            RETURNING id, name, tag, sign, description, owner_id, created_by, created_at, changed_by, changed_at
-            """.formatted(TABLE_NAME);
-
-    @Language("MariaDB")
-    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
-
-    @Language("MariaDB")
-    private static final String UPDATE_SQL = """
-            UPDATE %s SET
-                name = ?,
-                tag = ?,
-                sign = ?,
-                description = ?,
-                owner_id = ?,
-                changed_by = ?
-            WHERE id = ?
-            """.formatted(TABLE_NAME);
-
-    @Language("MariaDB")
-    private static final String UPDATE_SELECT_SQL = "SELECT changed_at FROM %s WHERE id = ?".formatted(TABLE_NAME);
 
     @Language("MariaDB")
     private static final String UPSERT_SQL = """
@@ -62,6 +35,9 @@ public final class ClanProviderImpl implements ClanProvider {
                         changed_by = ?
                     RETURNING id, name, tag, sign, description, owner_id, created_by, created_at, changed_by, changed_at
             """.formatted(TABLE_NAME);
+
+    @Language("MariaDB")
+    private static final String DELETE_SQL = "DELETE FROM %s WHERE id = ?".formatted(TABLE_NAME);
 
     private final Database database;
     private final RefreshProvider refreshProvider;
@@ -81,17 +57,17 @@ public final class ClanProviderImpl implements ClanProvider {
     }
 
     @Override
-    public @Nullable Clan findById(@Nullable UUID id) {
+    public @NotNull Optional<Clan> findById(@NotNull UUID id) {
         return cache.getById(id);
     }
 
     @Override
-    public @Nullable Clan findByName(@Nullable String name) {
+    public @NotNull Optional<Clan> findByName(@NotNull String name) {
         return cache.getByName(name);
     }
 
     @Override
-    public @Nullable Clan findByOwner(int ownerId) {
+    public @NotNull Optional<Clan> findByOwner(int ownerId) {
         return cache.getByOwner(ownerId);
     }
 
@@ -101,122 +77,7 @@ public final class ClanProviderImpl implements ClanProvider {
     }
 
     @Override
-    public @Nullable Clan create(@NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int createdBy) {
-        Objects.requireNonNull(name, "name cannot be null");
-        Objects.requireNonNull(tag, "tag cannot be null");
-        Objects.requireNonNull(sign, "sign cannot be null");
-        Objects.requireNonNull(description, "description cannot be null");
-        if (ownerId < 1) throw new IllegalArgumentException("ownerId must be >= 1");
-        if (tag.length() > 25) throw new IllegalArgumentException("tag must be <= 25 characters");
-        if (sign.length() > 25) throw new IllegalArgumentException("sign must be <= 25 characters");
-        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
-        String normalizedName = StringUtil.normalize(name);
-        if (normalizedName == null || normalizedName.isBlank())
-            throw new IllegalArgumentException("name cannot be blank");
-        if (normalizedName.length() > 100) throw new IllegalArgumentException("name must be <= 100 characters");
-
-        UUID id = UUID.randomUUID();
-        Clan clan = MurmelExceptionWrapper.dbWrap(
-                "Failed to create Clan (name=" + normalizedName + ")",
-                () -> database.query(CREATE_SQL, null, ResultSetUtil.clan(), stmt -> {
-                    stmt.setString(1, id.toString());
-                    stmt.setString(2, normalizedName);
-                    stmt.setString(3, tag);
-                    stmt.setString(4, sign);
-                    stmt.setString(5, description);
-                    stmt.setInt(6, ownerId);
-                    stmt.setInt(7, createdBy);
-                }),
-                ClanException::new
-        );
-
-        if (clan == null) return null;
-        refreshProvider.fireSingle(single, clan);
-        return clan;
-    }
-
-    @Override
-    public int delete(@NotNull UUID id) {
-        Objects.requireNonNull(id, "id cannot be null");
-
-        Clan existing = cache.getById(id);
-        if (existing == null) return 0;
-
-        int row = MurmelExceptionWrapper.dbWrap(
-                "Failed to delete Clan (id=" + id + ")",
-                () -> database.update(DELETE_SQL, stmt -> stmt.setString(1, id.toString())),
-                ClanException::new
-        );
-
-        if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing);
-        return row;
-    }
-
-    @Override
-    public @Nullable Clan update(@NotNull UUID id, @NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int changedBy) {
-        Objects.requireNonNull(name, "name cannot be null");
-        Objects.requireNonNull(tag, "tag cannot be null");
-        Objects.requireNonNull(sign, "sign cannot be null");
-        Objects.requireNonNull(description, "description cannot be null");
-        if (ownerId < 1) throw new IllegalArgumentException("ownerId must be >= 1");
-        if (tag.length() > 25) throw new IllegalArgumentException("tag must be <= 25 characters");
-        if (sign.length() > 25) throw new IllegalArgumentException("sign must be <= 25 characters");
-        if (changedBy < CONSOLE_USER_ID) throw new IllegalArgumentException("changedBy must be >= " + CONSOLE_USER_ID);
-        String normalizedName = StringUtil.normalize(name);
-        if (normalizedName == null || normalizedName.isBlank())
-            throw new IllegalArgumentException("name cannot be blank");
-        if (normalizedName.length() > 100) throw new IllegalArgumentException("name must be <= 100 characters");
-
-        Clan existing = cache.getById(id);
-        if (existing == null) return null;
-
-        if (Objects.equals(normalizedName, existing.name())
-                && Objects.equals(tag, existing.tag())
-                && Objects.equals(sign, existing.sign())
-                && Objects.equals(description, existing.description())
-                && ownerId == existing.ownerId())
-            return existing;
-
-        int row = MurmelExceptionWrapper.dbWrap(
-                "Failed to update Clan (id=" + id + ")",
-                () -> database.update(UPDATE_SQL, stmt -> {
-                    stmt.setString(1, normalizedName);
-                    stmt.setString(2, tag);
-                    stmt.setString(3, sign);
-                    stmt.setString(4, description);
-                    stmt.setInt(5, ownerId);
-                    stmt.setInt(6, changedBy);
-                    stmt.setString(7, id.toString());
-                }),
-                ClanException::new
-        );
-        if (row != 1) return null;
-
-        LocalDateTime changedAt = MurmelExceptionWrapper.dbWrap(
-                "Failed to get changed_at for Clan (id=" + id + ")",
-                () -> database.query(UPDATE_SELECT_SQL, null,
-                        resultSet -> resultSet.getTimestamp("changed_at").toLocalDateTime(),
-                        stmt -> stmt.setString(1, id.toString())),
-                ClanException::new
-        );
-        if (changedAt == null) return null;
-
-        Clan clan = Clan.builder(existing)
-                .name(normalizedName)
-                .tag(tag)
-                .sign(sign)
-                .description(description)
-                .ownerId(ownerId)
-                .changedBy(changedBy)
-                .changedAt(changedAt)
-                .build();
-        refreshProvider.fireSingle(single, clan);
-        return clan;
-    }
-
-    @Override
-    public @Nullable Clan upsert(@NotNull UUID id, @NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int executorId) {
+    public @NotNull Optional<Clan> upsert(@NotNull UUID id, @NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int executorId) {
         Objects.requireNonNull(name, "name cannot be null");
         Objects.requireNonNull(tag, "tag cannot be null");
         Objects.requireNonNull(sign, "sign cannot be null");
@@ -231,18 +92,20 @@ public final class ClanProviderImpl implements ClanProvider {
             throw new IllegalArgumentException("name cannot be blank");
         if (normalizedName.length() > 100) throw new IllegalArgumentException("name must be <= 100 characters");
 
-        Clan existing = cache.getById(id);
-        if (existing != null
-                && Objects.equals(normalizedName, existing.name())
-                && Objects.equals(tag, existing.tag())
-                && Objects.equals(sign, existing.sign())
-                && Objects.equals(description, existing.description())
-                && ownerId == existing.ownerId())
-            return existing;
+        Optional<Clan> existingOpt = cache.getById(id);
+        if (existingOpt.isPresent()) {
+            Clan existing = existingOpt.get();
+            if (Objects.equals(normalizedName, existing.name())
+                    && Objects.equals(tag, existing.tag())
+                    && Objects.equals(sign, existing.sign())
+                    && Objects.equals(description, existing.description())
+                    && ownerId == existing.ownerId())
+                return existingOpt;
+        }
 
         Clan saved = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert Clan (id=" + id + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.clan(), stmt -> {
+                () -> database.query(UPSERT_SQL, null, ClanRowMapper::resultSet, stmt -> {
                     stmt.setString(1, id.toString());
                     stmt.setString(2, normalizedName);
                     stmt.setString(3, tag);
@@ -255,8 +118,27 @@ public final class ClanProviderImpl implements ClanProvider {
                 ClanException::new
         );
 
-        if (saved == null) return null;
-        refreshProvider.fireSingle(single, saved);
-        return saved;
+        if (saved == null) return Optional.empty();
+        refreshProvider.fireSingle(single, new ClanCache.ClanKey(saved.id(), saved.name(), saved.ownerId()));
+        return Optional.of(saved);
+    }
+
+    @Override
+    public int delete(@NotNull UUID id) {
+        Objects.requireNonNull(id, "id cannot be null");
+
+        Optional<Clan> existingOpt = cache.getById(id);
+        if (existingOpt.isEmpty()) return 0;
+        Clan existing = existingOpt.get();
+
+        int row = MurmelExceptionWrapper.dbWrap(
+                "Failed to delete Clan (id=" + id + ")",
+                () -> database.update(DELETE_SQL, stmt -> stmt.setString(1, id.toString())),
+                ClanException::new
+        );
+
+        if (row != 1) return 0;
+        refreshProvider.fireSingle(single, new ClanCache.ClanKey(existing.id(), existing.name(), existing.ownerId()));
+        return row;
     }
 }

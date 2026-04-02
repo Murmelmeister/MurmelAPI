@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.zaxxer.hikari.HikariConfig;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.clan.ClanProvider;
-import de.murmelmeister.murmelapi.clan.ClanProviderImpl;
 import de.murmelmeister.murmelapi.clan.group.ClanGroupProvider;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProvider;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
@@ -166,7 +165,7 @@ public final class MurmelAPI {
         this.punishmentService = new PunishmentService(punishReasonProvider, punishAuditProvider, punishIpProvider, punishUserProvider);
         this.userService = new UserService(userProvider, userStatsProvider, userLoginProvider, userSessionProvider,
                 userExcuseProvider, punishUserProvider, punishAuditProvider);
-        this.clanProvider = new ClanProviderImpl(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.clanProvider = ClanProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanMemberProvider = ClanMemberProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanGroupProvider = ClanGroupProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.prefixColorProvider = PrefixColorProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);

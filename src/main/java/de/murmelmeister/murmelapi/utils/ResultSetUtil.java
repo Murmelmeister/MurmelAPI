@@ -1,7 +1,6 @@
 package de.murmelmeister.murmelapi.utils;
 
 import de.murmelmeister.library.database.ResultSetProcessor;
-import de.murmelmeister.murmelapi.clan.Clan;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
@@ -77,22 +76,6 @@ public final class ResultSetUtil {
             UUID auditId = UUID.fromString(resultSet.getString("audit_id"));
             LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
             return new PunishmentUser(mojangId, typeId, auditId, expiresAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<Clan> clan() {
-        return resultSet -> {
-            UUID id = UUID.fromString(resultSet.getString("id"));
-            String clanName = resultSet.getString("name");
-            String tag = resultSet.getString("tag");
-            String sign = resultSet.getString("sign");
-            String description = resultSet.getString("description");
-            int ownerId = resultSet.getInt("owner_id");
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new Clan(id, clanName, tag, sign, description, ownerId, createdBy, createdAt, changedBy, changedAt);
         };
     }
 }

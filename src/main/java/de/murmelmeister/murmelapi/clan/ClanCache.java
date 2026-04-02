@@ -6,13 +6,11 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class ClanCache implements MurmelCache {
+final class ClanCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClanCache.class);
 
     @Language("MariaDB")
@@ -73,11 +71,11 @@ public class ClanCache implements MurmelCache {
 
         if (RefreshType.SINGLE_CLAN.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof Clan clan)
+            if (key instanceof ClanKey clan)
                 remove(clan);
             else if (key instanceof String json) {
                 try {
-                    final Clan clan = gson.fromJson(json, Clan.class);
+                    final ClanKey clan = gson.fromJson(json, ClanKey.class);
 
                     if (clan == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -100,13 +98,13 @@ public class ClanCache implements MurmelCache {
 
     private @NotNull List<Clan> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.clan());
+        return CacheUtil.loadList(database, sql, fetchLimit, ClanRowMapper::resultSet);
     }
 
     private @NotNull Optional<Clan> loadById(UUID uuid) {
         if (uuid == null) return Optional.empty();
         String sql = SELECT_BY_ID.formatted(tableName);
-        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(),
+        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ClanRowMapper::resultSet,
                 stmt -> stmt.setObject(1, uuid));
 
         return Optional.ofNullable(clan);
@@ -114,7 +112,7 @@ public class ClanCache implements MurmelCache {
 
     private @NotNull Optional<Clan> loadByName(String name) {
         String sql = SELECT_BY_NAME.formatted(tableName);
-        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(),
+        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ClanRowMapper::resultSet,
                 stmt -> stmt.setString(1, name));
 
         return Optional.ofNullable(clan);
@@ -122,27 +120,22 @@ public class ClanCache implements MurmelCache {
 
     private @NotNull Optional<Clan> loadByOwner(int ownerId) {
         String sql = SELECT_BY_OWNER.formatted(tableName);
-        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.clan(),
+        Clan clan = CacheUtil.loadSingle(database, sql, fetchLimit, ClanRowMapper::resultSet,
                 stmt -> stmt.setInt(1, ownerId));
 
         return Optional.ofNullable(clan);
     }
 
-    public @Nullable Clan getById(@Nullable UUID uuid) {
-        if (uuid == null) return null;
-        Optional<Clan> optClan = cacheById.get(uuid);
-        return optClan != null && optClan.isPresent() ? optClan.orElse(null) : null;
+    public @NotNull Optional<Clan> getById(@NotNull UUID uuid) {
+        return cacheById.get(uuid);
     }
 
-    public @Nullable Clan getByName(@Nullable String name) {
-        if (name == null) return null;
-        Optional<Clan> optClan = cacheByName.get(name);
-        return optClan != null && optClan.isPresent() ? optClan.orElse(null) : null;
+    public @NotNull Optional<Clan> getByName(@NotNull String name) {
+        return cacheByName.get(name);
     }
 
-    public @Nullable Clan getByOwner(int ownerId) {
-        Optional<Clan> optClan = cacheByOwner.get(ownerId);
-        return optClan != null && optClan.isPresent() ? optClan.orElse(null) : null;
+    public @NotNull Optional<Clan> getByOwner(int ownerId) {
+        return cacheByOwner.get(ownerId);
     }
 
     public @NotNull @Unmodifiable List<Clan> getAll() {
@@ -152,7 +145,7 @@ public class ClanCache implements MurmelCache {
         return clans;
     }
 
-    public void remove(@NotNull Clan clan) {
+    public void remove(@NotNull ClanKey clan) {
         cacheById.invalidate(clan.id());
         cacheByName.invalidate(clan.name());
         cacheByOwner.invalidate(clan.ownerId());
@@ -164,5 +157,8 @@ public class ClanCache implements MurmelCache {
         cacheByName.invalidateAll();
         cacheByOwner.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record ClanKey(@NotNull UUID id, @NotNull String name, int ownerId) {
     }
 }
