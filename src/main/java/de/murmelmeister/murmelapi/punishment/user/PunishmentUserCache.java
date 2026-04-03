@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -17,9 +16,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
-public class PunishmentUserCache implements MurmelCache {
+final class PunishmentUserCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(PunishmentUserCache.class);
 
     @Language("MariaDB")
@@ -86,7 +88,7 @@ public class PunishmentUserCache implements MurmelCache {
 
     private @NotNull Optional<PunishmentUser> loadByKey(PunishKey key) {
         String sql = SELECT_BY_KEY.formatted(tableName);
-        PunishmentUser punishmentUser = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentUser(),
+        PunishmentUser punishmentUser = CacheUtil.loadSingle(database, sql, fetchLimit, PunishmentUserRowMapper::resultSet,
                 stmt -> {
                     stmt.setString(1, key.mojangId().toString());
                     stmt.setInt(2, key.typeId());
@@ -97,7 +99,7 @@ public class PunishmentUserCache implements MurmelCache {
 
     private @NotNull List<PunishmentUser> loadByType(int typeId) {
         String sql = SELECT_BY_TYPE_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentUser(),
+        return CacheUtil.loadList(database, sql, fetchLimit, PunishmentUserRowMapper::resultSet,
                 stmt -> stmt.setInt(1, typeId));
     }
 
@@ -122,6 +124,6 @@ public class PunishmentUserCache implements MurmelCache {
         cacheByType.invalidateAll();
     }
 
-    public record PunishKey(@NotNull UUID mojangId, int typeId) {
+    record PunishKey(@NotNull UUID mojangId, int typeId) {
     }
 }

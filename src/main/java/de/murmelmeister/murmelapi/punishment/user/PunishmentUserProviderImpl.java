@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentUserException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -20,7 +19,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class PunishmentUserProviderImpl implements PunishmentUserProvider {
+final class PunishmentUserProviderImpl implements PunishmentUserProvider {
     private static final String TABLE_NAME = "punishment_user";
 
     @Language("MariaDB")
@@ -74,7 +73,8 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
     public @NotNull Optional<PunishmentUser> upsert(@NotNull UUID mojangId, int typeId, @NotNull UUID auditId, @Nullable Long durationSecs) {
         Objects.requireNonNull(mojangId, "mojangId cannot be null");
         Objects.requireNonNull(auditId, "auditId cannot be null");
-        if (durationSecs != null && durationSecs < 0) throw new IllegalArgumentException("durationSecs must be null or >= 0");
+        if (durationSecs != null && durationSecs < 0)
+            throw new IllegalArgumentException("durationSecs must be null or >= 0");
 
         LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
         Optional<PunishmentUser> optExisting = cache.getByKey(mojangId, typeId);
@@ -86,7 +86,7 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
 
         PunishmentUser punish = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert PunishmentUser (mojangId=" + mojangId + ", typeId=" + typeId + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.punishmentUser(), stmt -> {
+                () -> database.query(UPSERT_SQL, null, PunishmentUserRowMapper::resultSet, stmt -> {
                     stmt.setString(1, mojangId.toString());
                     stmt.setInt(2, typeId);
                     stmt.setString(3, auditId.toString());
@@ -96,13 +96,17 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
         );
 
         if (punish == null) return Optional.empty();
-        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(mojangId, typeId));
+        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(punish.mojangId(), punish.typeId()));
         return Optional.of(punish);
     }
 
     @Override
     public int delete(@NotNull UUID mojangId, int typeId) {
         Objects.requireNonNull(mojangId, "mojangId cannot be null");
+
+        Optional<PunishmentUser> existingOpt = cache.getByKey(mojangId, typeId);
+        if (existingOpt.isEmpty()) return 0;
+        PunishmentUser existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete PunishmentUser (mojangId=" + mojangId + ", typeId=" + typeId + ")",
@@ -114,7 +118,7 @@ public final class PunishmentUserProviderImpl implements PunishmentUserProvider 
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(mojangId, typeId));
+        refreshProvider.fireSingle(single, new PunishmentUserCache.PunishKey(existing.mojangId(), existing.typeId()));
         return row;
     }
 
