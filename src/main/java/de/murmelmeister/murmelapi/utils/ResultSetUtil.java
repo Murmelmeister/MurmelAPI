@@ -3,7 +3,6 @@ package de.murmelmeister.murmelapi.utils;
 import de.murmelmeister.library.database.ResultSetProcessor;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
-import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import org.jetbrains.annotations.NotNull;
 
@@ -34,22 +33,6 @@ public final class ResultSetUtil {
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
             return new PunishmentAudit(id, action, mojangId, inetAddress, reasonId, reasonTypeId, reasonText,
                     reasonDuration, reasonAutoFlagIp, createdBy, createdAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<PunishmentReason> punishmentReason() {
-        return resultSet -> {
-            int id = resultSet.getInt("id");
-            int typeId = resultSet.getInt("type_id");
-            String reasonText = resultSet.getString("reason_text");
-            Long durationSecs = resultSet.getObject("duration_secs", Long.class);
-            boolean autoFlagIp = resultSet.getBoolean("auto_flag_ip");
-            int createdBy = resultSet.getInt("created_by");
-            LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
-            Integer changedBy = resultSet.getObject("changed_by", Integer.class);
-            LocalDateTime changedAt = resultSet.getObject("changed_at", LocalDateTime.class);
-            return new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp,
-                    createdBy, createdAt, changedBy, changedAt);
         };
     }
 

@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentReasonException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -20,7 +19,7 @@ import java.util.Optional;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
-public final class PunishmentReasonProviderImpl implements PunishmentReasonProvider {
+final class PunishmentReasonProviderImpl implements PunishmentReasonProvider {
     private static final String TABLE_NAME = "punishment_reasons";
 
     @Language("MariaDB")
@@ -95,7 +94,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
 
         PunishmentReason saved = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert PunishmentReason (id=" + id + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.punishmentReason(), stmt -> {
+                () -> database.query(UPSERT_SQL, null, PunishmentReasonRowMapper::resultSet, stmt -> {
                     stmt.setInt(1, id);
                     stmt.setInt(2, typeId);
                     stmt.setString(3, reasonText);
@@ -108,7 +107,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
         );
 
         if (saved == null) return Optional.empty();
-        refreshProvider.fireSingle(single, saved);
+        refreshProvider.fireSingle(single, new PunishmentReasonCache.ReasonKey(saved.id(), saved.typeId()));
         return Optional.of(saved);
     }
 
@@ -128,8 +127,9 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
     public int delete(int id) {
         if (id < 1) throw new IllegalArgumentException("id must be >= 1");
 
-        Optional<PunishmentReason> existing = cache.getById(id);
-        if (existing.isEmpty()) return 0;
+        Optional<PunishmentReason> existingOpt = cache.getById(id);
+        if (existingOpt.isEmpty()) return 0;
+        PunishmentReason existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete PunishmentReason (id=" + id + ")",
@@ -138,7 +138,7 @@ public final class PunishmentReasonProviderImpl implements PunishmentReasonProvi
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, existing.get());
+        refreshProvider.fireSingle(single, new PunishmentReasonCache.ReasonKey(existing.id(), existing.typeId()));
         return row;
     }
 }

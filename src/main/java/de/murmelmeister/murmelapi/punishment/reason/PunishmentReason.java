@@ -4,96 +4,50 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
+import java.util.function.Consumer;
 
-import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+public interface PunishmentReason {
+    int id();
 
-/**
- * @param durationSecs Duration in seconds, null for permanent reasons
- */
-public record PunishmentReason(
-        int id,
-        int typeId,
-        @NotNull String reasonText,
-        @Nullable Long durationSecs,
-        boolean autoFlagIp,
-        int createdBy,
-        @NotNull LocalDateTime createdAt,
-        @Nullable Integer changedBy,
-        @Nullable LocalDateTime changedAt
-) {
-    public PunishmentReason {
-        Objects.requireNonNull(reasonText, "reasonText must not be null");
-        Objects.requireNonNull(createdAt, "createdAt must not be null");
-        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
-        if (changedBy != null && changedBy < CONSOLE_USER_ID)
-            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
+    int typeId();
+
+    @NotNull String reasonText();
+
+    @Nullable Long durationSecs();
+
+    boolean autoFlagIp();
+
+    int createdBy();
+
+    @NotNull LocalDateTime createdAt();
+
+    @Nullable Integer changedBy();
+
+    @Nullable LocalDateTime changedAt();
+
+    boolean isPermanent();
+
+    @NotNull Builder builder();
+
+    @NotNull PunishmentReason with(@NotNull Consumer<Builder> consumer);
+
+    static @NotNull PunishmentReason of(int id, int typeId, @NotNull String reasonText, @Nullable Long durationSecs, boolean autoFlagIp, int createdBy, @NotNull LocalDateTime createdAt) {
+        return new PunishmentReasonImpl(id, typeId, reasonText, durationSecs, autoFlagIp, createdBy, createdAt, null, null);
     }
 
-    public boolean isPermanent() {
-        return durationSecs == null;
-    }
+    interface Builder {
+        @NotNull Builder typeId(int typeId);
 
-    public static @NotNull Builder builder(@NotNull PunishmentReason punishmentReason) {
-        return new Builder(punishmentReason);
-    }
+        @NotNull Builder reasonText(@NotNull String reasonText);
 
-    public static class Builder {
-        private final int id;
-        private final int createdBy;
-        private final LocalDateTime createdAt;
+        @NotNull Builder durationSecs(@Nullable Long durationSecs);
 
-        private int typeId;
-        private String reasonText;
-        private Long durationSecs;
-        private boolean autoFlagIp;
-        private Integer changedBy;
-        private LocalDateTime changedAt;
+        @NotNull Builder autoFlagIp(boolean autoFlagIp);
 
-        private Builder(@NotNull PunishmentReason punishmentReason) {
-            this.id = punishmentReason.id();
-            this.typeId = punishmentReason.typeId();
-            this.reasonText = punishmentReason.reasonText();
-            this.durationSecs = punishmentReason.durationSecs();
-            this.autoFlagIp = punishmentReason.autoFlagIp();
-            this.createdBy = punishmentReason.createdBy();
-            this.createdAt = punishmentReason.createdAt();
-            this.changedBy = punishmentReason.changedBy();
-            this.changedAt = punishmentReason.changedAt();
-        }
+        @NotNull Builder changedBy(@Nullable Integer changedBy);
 
-        public Builder typeId(int typeId) {
-            this.typeId = typeId;
-            return this;
-        }
+        @NotNull Builder changedAt(@Nullable LocalDateTime changedAt);
 
-        public Builder reasonText(@NotNull String reasonText) {
-            this.reasonText = reasonText;
-            return this;
-        }
-
-        public Builder durationSecs(@Nullable Long durationSecs) {
-            this.durationSecs = durationSecs;
-            return this;
-        }
-
-        public Builder autoFlagIp(boolean autoFlagIp) {
-            this.autoFlagIp = autoFlagIp;
-            return this;
-        }
-
-        public Builder changedBy(@Nullable Integer changedBy) {
-            this.changedBy = changedBy;
-            return this;
-        }
-
-        public Builder changedAt(@Nullable LocalDateTime changedAt) {
-            this.changedAt = changedAt;
-            return this;
-        }
-
-        public @NotNull PunishmentReason build() {
-            return new PunishmentReason(id, typeId, reasonText, durationSecs, autoFlagIp, createdBy, createdAt, changedBy, changedAt);
-        }
+        @NotNull PunishmentReason build();
     }
 }

@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -21,7 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class PunishmentReasonCache implements MurmelCache {
+final class PunishmentReasonCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(PunishmentReasonCache.class);
 
     @Language("MariaDB")
@@ -67,11 +66,11 @@ public class PunishmentReasonCache implements MurmelCache {
 
         if (RefreshType.SINGLE_PUNISHMENT_REASON.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof PunishmentReason reason)
+            if (key instanceof ReasonKey reason)
                 remove(reason);
             else if (key instanceof String json) {
                 try {
-                    final PunishmentReason reason = gson.fromJson(json, PunishmentReason.class);
+                    final ReasonKey reason = gson.fromJson(json, ReasonKey.class);
 
                     if (reason == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -94,18 +93,18 @@ public class PunishmentReasonCache implements MurmelCache {
 
     private @NotNull List<PunishmentReason> loadAllFromDatabase() {
         String sql = SELECT_ALL.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentReason());
+        return CacheUtil.loadList(database, sql, fetchLimit, PunishmentReasonRowMapper::resultSet);
     }
 
     private @NotNull List<PunishmentReason> loadByType(int typeId) {
         String sql = SELECT_BY_TYPE_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentReason(),
+        return CacheUtil.loadList(database, sql, fetchLimit, PunishmentReasonRowMapper::resultSet,
                 stmt -> stmt.setInt(1, typeId));
     }
 
     private @NotNull Optional<PunishmentReason> loadById(int reasonId) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        PunishmentReason punishmentReason = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentReason(),
+        PunishmentReason punishmentReason = CacheUtil.loadSingle(database, sql, fetchLimit, PunishmentReasonRowMapper::resultSet,
                 stmt -> stmt.setInt(1, reasonId));
 
         return Optional.ofNullable(punishmentReason);
@@ -129,7 +128,7 @@ public class PunishmentReasonCache implements MurmelCache {
         return List.copyOf(reasons);
     }
 
-    public void remove(@NotNull PunishmentReason reason) {
+    public void remove(@NotNull ReasonKey reason) {
         cacheById.invalidate(reason.id());
         cacheByType.invalidate(reason.typeId());
         listCache.invalidate(ALL_KEY);
@@ -139,5 +138,8 @@ public class PunishmentReasonCache implements MurmelCache {
         cacheById.invalidateAll();
         cacheByType.invalidateAll();
         listCache.invalidateAll();
+    }
+
+    record ReasonKey(int id, int typeId) {
     }
 }
