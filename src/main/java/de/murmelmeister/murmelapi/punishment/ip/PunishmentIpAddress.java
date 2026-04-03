@@ -5,58 +5,35 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 
-public record PunishmentIpAddress(
-        @NotNull InetAddress inetAddress,
-        int typeId,
-        @NotNull UUID auditId,
-        @Nullable LocalDateTime expiresAt
-) {
-    public PunishmentIpAddress {
-        Objects.requireNonNull(inetAddress, "inetAddress must not be null");
-        Objects.requireNonNull(auditId, "auditId must not be null");
+public interface PunishmentIpAddress {
+    @NotNull InetAddress inetAddress();
+
+    int typeId();
+
+    @NotNull UUID auditId();
+
+    @Nullable LocalDateTime expiresAt();
+
+    boolean isExpired();
+
+    boolean isPermanent();
+
+    @NotNull Builder builder();
+
+    @NotNull PunishmentIpAddress with(@NotNull Consumer<Builder> consumer);
+
+    static @NotNull PunishmentIpAddress of(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID auditId, @Nullable LocalDateTime expiresAt) {
+        return new PunishmentIpAddressImpl(inetAddress, typeId, auditId, expiresAt);
     }
 
-    public boolean isExpired() {
-        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
-    }
+    interface Builder {
+        @NotNull Builder auditId(@NotNull UUID auditId);
 
-    public boolean isPermanent() {
-        return expiresAt == null;
-    }
+        @NotNull Builder expiresAt(@Nullable LocalDateTime expiresAt);
 
-    public static @NotNull Builder builder(@NotNull PunishmentIpAddress currentIp) {
-        return new Builder(currentIp);
-    }
-
-    public static class Builder {
-        private final InetAddress inetAddress;
-        private final int typeId;
-
-        private UUID auditId;
-        private LocalDateTime expiresAt;
-
-        private Builder(@NotNull PunishmentIpAddress currentIp) {
-            this.inetAddress = currentIp.inetAddress();
-            this.typeId = currentIp.typeId();
-            this.auditId = currentIp.auditId();
-            this.expiresAt = currentIp.expiresAt();
-        }
-
-        public Builder auditId(@NotNull UUID auditId) {
-            this.auditId = auditId;
-            return this;
-        }
-
-        public Builder expiresAt(@Nullable LocalDateTime expiresAt) {
-            this.expiresAt = expiresAt;
-            return this;
-        }
-
-        public @NotNull PunishmentIpAddress build() {
-            return new PunishmentIpAddress(inetAddress, typeId, auditId, expiresAt);
-        }
+        @NotNull PunishmentIpAddress build();
     }
 }

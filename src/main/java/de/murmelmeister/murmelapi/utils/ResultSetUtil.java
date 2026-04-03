@@ -2,7 +2,6 @@ package de.murmelmeister.murmelapi.utils;
 
 import de.murmelmeister.library.database.ResultSetProcessor;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
-import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddress;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import org.jetbrains.annotations.NotNull;
 
@@ -33,22 +32,6 @@ public final class ResultSetUtil {
             LocalDateTime createdAt = resultSet.getTimestamp("created_at").toLocalDateTime();
             return new PunishmentAudit(id, action, mojangId, inetAddress, reasonId, reasonTypeId, reasonText,
                     reasonDuration, reasonAutoFlagIp, createdBy, createdAt);
-        };
-    }
-
-    public static @NotNull ResultSetProcessor<PunishmentIpAddress> punishmentIpAddress() {
-        return resultSet -> {
-            String ipAddress = resultSet.getString("ip_address");
-            InetAddress inetAddress;
-            try {
-                inetAddress = InetAddress.getByName(ipAddress);
-            } catch (UnknownHostException e) {
-                throw new RuntimeException(e);
-            }
-            int typeId = resultSet.getInt("type_id");
-            UUID auditId = UUID.fromString(resultSet.getString("audit_id"));
-            LocalDateTime expiresAt = resultSet.getObject("expires_at", LocalDateTime.class);
-            return new PunishmentIpAddress(inetAddress, typeId, auditId, expiresAt);
         };
     }
 

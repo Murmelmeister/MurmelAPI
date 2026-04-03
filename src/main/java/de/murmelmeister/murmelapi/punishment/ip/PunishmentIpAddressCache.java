@@ -6,7 +6,6 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
@@ -22,7 +21,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public class PunishmentIpAddressCache implements MurmelCache {
+final class PunishmentIpAddressCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(PunishmentIpAddressCache.class);
 
     @Language("MariaDB")
@@ -89,7 +88,7 @@ public class PunishmentIpAddressCache implements MurmelCache {
 
     private @NotNull Optional<PunishmentIpAddress> loadByKey(PunishKey key) {
         String sql = SELECT_BY_KEY.formatted(tableName);
-        PunishmentIpAddress punishmentIpAddress = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentIpAddress(),
+        PunishmentIpAddress punishmentIpAddress = CacheUtil.loadSingle(database, sql, fetchLimit, PunishmentIpAddressRowMapper::resultSet,
                 stmt -> {
                     stmt.setString(1, key.inetAddress().getHostAddress());
                     stmt.setInt(2, key.typeId());
@@ -100,7 +99,7 @@ public class PunishmentIpAddressCache implements MurmelCache {
 
     private @NotNull List<PunishmentIpAddress> loadByType(int typeId) {
         String sql = SELECT_BY_TYPE_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentIpAddress(),
+        return CacheUtil.loadList(database, sql, fetchLimit, PunishmentIpAddressRowMapper::resultSet,
                 stmt -> stmt.setInt(1, typeId));
     }
 
@@ -125,6 +124,6 @@ public class PunishmentIpAddressCache implements MurmelCache {
         cacheByType.invalidateAll();
     }
 
-    public record PunishKey(@NotNull InetAddress inetAddress, int typeId) {
+    record PunishKey(@NotNull InetAddress inetAddress, int typeId) {
     }
 }

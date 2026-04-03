@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentIpAddressException;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -22,7 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddressProvider {
+final class PunishmentIpAddressProviderImpl implements PunishmentIpAddressProvider {
     public static final String TABLE_NAME = "punishment_ip_address";
 
     @Language("MariaDB")
@@ -76,7 +75,8 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
     public @NotNull Optional<PunishmentIpAddress> upsert(@NotNull InetAddress inetAddress, int typeId, @NotNull UUID auditId, @Nullable Long durationSecs) {
         Objects.requireNonNull(inetAddress, "inetAddress must not be null");
         Objects.requireNonNull(auditId, "auditId must not be null");
-        if (durationSecs != null && durationSecs < 0) throw new IllegalArgumentException("durationSecs must be null or >= 0");
+        if (durationSecs != null && durationSecs < 0)
+            throw new IllegalArgumentException("durationSecs must be null or >= 0");
 
         LocalDateTime expiresAt = durationSecs != null ? LocalDateTime.now().plusSeconds(durationSecs) : null;
         Optional<PunishmentIpAddress> optExisting = cache.getByKey(inetAddress, typeId);
@@ -88,7 +88,7 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
 
         PunishmentIpAddress punish = MurmelExceptionWrapper.dbWrap(
                 "Failed to upsert PunishmentIpAddress (inetAddress=" + inetAddress.getHostAddress() + ", typeId=" + typeId + ")",
-                () -> database.query(UPSERT_SQL, null, ResultSetUtil.punishmentIpAddress(), stmt -> {
+                () -> database.query(UPSERT_SQL, null, PunishmentIpAddressRowMapper::resultSet, stmt -> {
                     stmt.setString(1, inetAddress.getHostAddress());
                     stmt.setInt(2, typeId);
                     stmt.setString(3, auditId.toString());
@@ -98,13 +98,17 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
         );
 
         if (punish == null) return Optional.empty();
-        refreshProvider.fireSingle(single, new PunishmentIpAddressCache.PunishKey(inetAddress, typeId));
+        refreshProvider.fireSingle(single, new PunishmentIpAddressCache.PunishKey(punish.inetAddress(), punish.typeId()));
         return Optional.of(punish);
     }
 
     @Override
     public int delete(@NotNull InetAddress inetAddress, int typeId) {
         Objects.requireNonNull(inetAddress, "inetAddress cannot be null");
+
+        Optional<PunishmentIpAddress> existingOpt = cache.getByKey(inetAddress, typeId);
+        if (existingOpt.isEmpty()) return 0;
+        PunishmentIpAddress existing = existingOpt.get();
 
         int row = MurmelExceptionWrapper.dbWrap(
                 "Failed to delete PunishmentIpAddress (inetAddress=" + inetAddress.getHostAddress() + ", typeId=" + typeId + ")",
@@ -116,7 +120,7 @@ public final class PunishmentIpAddressProviderImpl implements PunishmentIpAddres
         );
 
         if (row != 1) return 0;
-        refreshProvider.fireSingle(single, new PunishmentIpAddressCache.PunishKey(inetAddress, typeId));
+        refreshProvider.fireSingle(single, new PunishmentIpAddressCache.PunishKey(existing.inetAddress(), existing.typeId()));
         return row;
     }
 
