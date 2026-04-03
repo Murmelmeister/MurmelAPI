@@ -5,7 +5,6 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.MurmelExceptionWrapper;
 import de.murmelmeister.murmelapi.exceptions.punishment.PunishmentAuditException;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReason;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
@@ -23,7 +22,7 @@ import java.util.UUID;
 
 import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 
-public final class PunishmentAuditProviderImpl implements PunishmentAuditProvider {
+final class PunishmentAuditProviderImpl implements PunishmentAuditProvider {
     private static final String TABLE_NAME = "punishment_audit";
 
     @Language("MariaDB")
@@ -85,7 +84,7 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
         UUID id = UUID.randomUUID();
         PunishmentAudit audit = MurmelExceptionWrapper.dbWrap(
                 "Failed to create or modify PunishmentAudit (logId=" + id + ")",
-                () -> database.query(SQL, null, ResultSetUtil.punishmentAudit(), stmt -> {
+                () -> database.query(SQL, null, PunishmentAuditRowMapper::resultSet, stmt -> {
                     stmt.setString(1, id.toString());
                     stmt.setString(2, action.name());
                     stmt.setString(3, mojangId == null ? null : mojangId.toString());
@@ -106,21 +105,23 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
     @Override
     public @NotNull Optional<PunishmentAudit> create(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int executorId) {
         PunishmentAudit.Action action = PunishmentAudit.Action.CREATED;
-        Optional<PunishmentAudit> audit = createLog(action, mojangId, inetAddress, reason, executorId);
+        Optional<PunishmentAudit> auditOpt = createLog(action, mojangId, inetAddress, reason, executorId);
 
-        if (audit.isEmpty()) return Optional.empty();
-        refreshProvider.fireSingle(single, audit.get());
-        return audit;
+        if (auditOpt.isEmpty()) return Optional.empty();
+        PunishmentAudit audit = auditOpt.get();
+        refreshProvider.fireSingle(single, new PunishmentAuditCache.AuditKey(audit.id(), audit.mojangId(), audit.inetAddress()));
+        return auditOpt;
     }
 
     @Override
     public @NotNull Optional<PunishmentAudit> modify(@Nullable UUID mojangId, @Nullable InetAddress inetAddress, @NotNull PunishmentReason reason, int executorId) {
         PunishmentAudit.Action action = PunishmentAudit.Action.MODIFIED;
-        Optional<PunishmentAudit> audit = createLog(action, mojangId, inetAddress, reason, executorId);
+        Optional<PunishmentAudit> auditOpt = createLog(action, mojangId, inetAddress, reason, executorId);
 
-        if (audit.isEmpty()) return Optional.empty();
-        refreshProvider.fireSingle(single, audit.get());
-        return audit;
+        if (auditOpt.isEmpty()) return Optional.empty();
+        PunishmentAudit audit = auditOpt.get();
+        refreshProvider.fireSingle(single, new PunishmentAuditCache.AuditKey(audit.id(), audit.mojangId(), audit.inetAddress()));
+        return auditOpt;
     }
 
     @Override
@@ -134,7 +135,7 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
 
         PunishmentAudit newAudit = MurmelExceptionWrapper.dbWrap(
                 "Failed to revoke PunishmentAudit (id=" + id + ")",
-                () -> database.query(SQL, null, ResultSetUtil.punishmentAudit(), stmt -> {
+                () -> database.query(SQL, null, PunishmentAuditRowMapper::resultSet, stmt -> {
                     stmt.setString(1, id.toString());
                     stmt.setString(2, action.name());
                     stmt.setString(3, mojangId == null ? null : mojangId.toString());
@@ -150,7 +151,7 @@ public final class PunishmentAuditProviderImpl implements PunishmentAuditProvide
         );
 
         if (newAudit == null) return Optional.empty();
-        refreshProvider.fireSingle(single, newAudit);
+        refreshProvider.fireSingle(single, new PunishmentAuditCache.AuditKey(newAudit.id(), newAudit.mojangId(), newAudit.inetAddress()));
         return Optional.of(newAudit);
     }
 }

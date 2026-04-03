@@ -6,12 +6,12 @@ import com.google.gson.JsonSyntaxException;
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.CacheUtil;
 import de.murmelmeister.murmelapi.utils.MurmelCache;
-import de.murmelmeister.murmelapi.utils.ResultSetUtil;
 import de.murmelmeister.murmelapi.utils.update.RefreshEvent;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class PunishmentAuditCache implements MurmelCache {
+final class PunishmentAuditCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(PunishmentAuditCache.class);
 
     @Language("MariaDB")
@@ -67,11 +67,11 @@ public class PunishmentAuditCache implements MurmelCache {
 
         if (RefreshType.SINGLE_PUNISHMENT_AUDIT.getName().equalsIgnoreCase(cacheName)) {
             Object key = event.key();
-            if (key instanceof PunishmentAudit audit)
+            if (key instanceof AuditKey audit)
                 remove(audit);
             else if (key instanceof String json) {
                 try {
-                    final PunishmentAudit audit = gson.fromJson(json, PunishmentAudit.class);
+                    final AuditKey audit = gson.fromJson(json, AuditKey.class);
 
                     if (audit == null) {
                         LOGGER.warn("Failed to parse JSON for single to null: {}", json);
@@ -94,7 +94,7 @@ public class PunishmentAuditCache implements MurmelCache {
 
     private @NotNull Optional<PunishmentAudit> loadById(UUID id) {
         String sql = SELECT_BY_ID.formatted(tableName);
-        PunishmentAudit punishmentAudit = CacheUtil.loadSingle(database, sql, fetchLimit, ResultSetUtil.punishmentAudit(),
+        PunishmentAudit punishmentAudit = CacheUtil.loadSingle(database, sql, fetchLimit, PunishmentAuditRowMapper::resultSet,
                 stmt -> stmt.setString(1, id.toString()));
 
         return Optional.ofNullable(punishmentAudit);
@@ -102,13 +102,13 @@ public class PunishmentAuditCache implements MurmelCache {
 
     private @NotNull List<PunishmentAudit> loadByMojangId(UUID mojangId) {
         String sql = SELECT_BY_MOJANG_ID.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentAudit(),
+        return CacheUtil.loadList(database, sql, fetchLimit, PunishmentAuditRowMapper::resultSet,
                 stmt -> stmt.setString(1, mojangId.toString()));
     }
 
     private @NotNull List<PunishmentAudit> loadByIpAddress(InetAddress inetAddress) {
         String sql = SELECT_BY_IP_ADDRESS.formatted(tableName);
-        return CacheUtil.loadList(database, sql, fetchLimit, ResultSetUtil.punishmentAudit(),
+        return CacheUtil.loadList(database, sql, fetchLimit, PunishmentAuditRowMapper::resultSet,
                 stmt -> stmt.setString(1, inetAddress.getHostAddress()));
     }
 
@@ -130,7 +130,7 @@ public class PunishmentAuditCache implements MurmelCache {
         return List.copyOf(logs);
     }
 
-    public void remove(@NotNull PunishmentAudit audit) {
+    public void remove(@NotNull AuditKey audit) {
         cacheById.invalidate(audit.id());
         if (audit.mojangId() != null) cacheByMojangId.invalidate(audit.mojangId());
         if (audit.inetAddress() != null) cacheByIpAddress.invalidate(audit.inetAddress());
@@ -140,5 +140,8 @@ public class PunishmentAuditCache implements MurmelCache {
         cacheById.invalidateAll();
         cacheByMojangId.invalidateAll();
         cacheByIpAddress.invalidateAll();
+    }
+
+    record AuditKey(@NotNull UUID id, @Nullable UUID mojangId, @Nullable InetAddress inetAddress) {
     }
 }

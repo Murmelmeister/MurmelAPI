@@ -1,0 +1,50 @@
+package de.murmelmeister.murmelapi.punishment.audit;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.net.InetAddress;
+import java.time.LocalDateTime;
+import java.util.Objects;
+import java.util.UUID;
+
+import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
+
+record PunishmentAuditImpl(
+        @NotNull UUID id,
+        @NotNull PunishmentAudit.Action action,
+        @Nullable UUID mojangId,
+        @Nullable InetAddress inetAddress,
+        @Nullable Integer reasonId,
+        @Nullable Integer reasonTypeId,
+        @NotNull String reasonText,
+        @Nullable Long reasonDuration,
+        boolean reasonAutoFlagIp,
+        @Nullable Integer createdBy,
+        @NotNull LocalDateTime createdAt
+) implements PunishmentAudit {
+
+    public PunishmentAuditImpl {
+        Objects.requireNonNull(id, "logId cannot be null");
+        Objects.requireNonNull(action, "action cannot be null");
+        Objects.requireNonNull(reasonText, "reasonText cannot be null");
+        Objects.requireNonNull(createdAt, "createdAt cannot be null");
+        if (createdBy != null && createdBy < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+    }
+
+    public @Nullable LocalDateTime expiresAt() {
+        if (reasonDuration == null)
+            return null; // Permanent punishments have no expiration
+        return createdAt.plusSeconds(reasonDuration);
+    }
+
+    public boolean isExpired() {
+        LocalDateTime expiresAt = expiresAt();
+        return expiresAt != null && expiresAt.isBefore(LocalDateTime.now());
+    }
+
+    public boolean isPermanent() {
+        return reasonDuration == null;
+    }
+}
