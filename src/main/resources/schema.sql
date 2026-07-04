@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS user_login (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE INDEX IF NOT EXISTS idx_user_id ON user_login (user_id);
 CREATE INDEX IF NOT EXISTS idx_ip_address ON user_login (ip_address);
+CREATE INDEX IF NOT EXISTS idx_user_login_user_time_range ON user_login (user_id, login_time, logout_time);
 
 CREATE TABLE IF NOT EXISTS user_session (
     id UUID PRIMARY KEY,
@@ -416,8 +417,8 @@ CREATE TABLE IF NOT EXISTS user_excuses (
     id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
 
-    start_at DATETIME NOT NULL,
-    end_at DATETIME NOT NULL,
+    start_date DATE NOT NULL,
+    extra_days INT NOT NULL DEFAULT 0,
 
     reason VARCHAR(255) NULL,
 
@@ -427,11 +428,11 @@ CREATE TABLE IF NOT EXISTS user_excuses (
     changed_by INT NULL,
 
     PRIMARY KEY (id),
-    CONSTRAINT chk_uew_range CHECK (end_at > start_at),
+    CONSTRAINT chk_ue_extra_days CHECK (extra_days >= 0),
 
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (created_by) REFERENCES users(id),
     FOREIGN KEY (changed_by) REFERENCES users(id),
-    INDEX idx_uew_user_time (user_id, start_at, end_at),
-    INDEX idx_uew_time (start_at, end_at)
+    INDEX idx_ue_user_start (user_id, start_date),
+    INDEX idx_ue_start (start_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
