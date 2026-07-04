@@ -65,6 +65,12 @@ public final class CacheUtil {
         return database.query(binding.sql(), null, resultSet, processor);
     }
 
+    public static <V> V loadCallSingle(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet, ParameterProcessor args) {
+        LimitBinding binding = prepareLimit(sql, limit);
+        ParameterProcessor processor = ParameterProcessor.of(args).andThen(binding.processor());
+        return database.queryCallable(binding.sql(), null, resultSet, processor);
+    }
+
     public static <V> V loadSingle(Database database, String sql, Long limit, ResultSetProcessor<V> resultSet) {
         LimitBinding binding = prepareLimit(sql, limit);
         return database.query(binding.sql(), null, resultSet, binding.processor());
