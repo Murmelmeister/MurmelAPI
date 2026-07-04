@@ -21,21 +21,19 @@ final class UserStatsCache implements MurmelCache {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserStatsCache.class);
 
     @Language("MariaDB")
-    private static final String SELECT_BY_USER_ID = "SELECT * FROM %s WHERE id = ?";
+    private static final String CALL_USER_STATS = "{CALL get_user_live_stats(?)}";
 
     private final Database database;
     private final Gson gson;
     private final RefreshProvider refreshProvider;
-    private final String tableName;
     private final Long fetchLimit;
 
     private final LoadingCache<@NotNull Integer, Optional<UserStats>> cacheById;
 
-    public UserStatsCache(Database database, Gson gson, RefreshProvider refreshProvider, String tableName, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
+    public UserStatsCache(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
         this.database = database;
         this.gson = gson;
         this.refreshProvider = refreshProvider;
-        this.tableName = tableName;
         this.fetchLimit = fetchLimit;
         this.cacheById = CacheUtil.buildCacheRefresh(this::loadById, cacheCapacity, refreshInterval);
         this.refreshProvider.register(this);
@@ -79,8 +77,7 @@ final class UserStatsCache implements MurmelCache {
     }
 
     private @NotNull Optional<UserStats> loadById(int userId) {
-        String sql = SELECT_BY_USER_ID.formatted(tableName);
-        UserStats userStats = CacheUtil.loadSingle(database, sql, fetchLimit, UserStatsRowMapper::resultSet,
+        UserStats userStats = CacheUtil.loadCallSingle(database, CALL_USER_STATS, fetchLimit, UserStatsRowMapper::resultSet,
                 stmt -> stmt.setInt(1, userId));
 
         return Optional.ofNullable(userStats);
