@@ -2,32 +2,23 @@ package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
 import de.murmelmeister.murmelapi.exceptions.user.UserSessionException;
-import de.murmelmeister.murmelapi.exceptions.user.UserStatsException;
-import de.murmelmeister.murmelapi.punishment.audit.PunishmentAudit;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAuditProvider;
-import de.murmelmeister.murmelapi.punishment.type.PunishmentType;
-import de.murmelmeister.murmelapi.punishment.user.PunishmentUser;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
 import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
 import de.murmelmeister.murmelapi.user.login.UserLogin;
 import de.murmelmeister.murmelapi.user.login.UserLoginProvider;
 import de.murmelmeister.murmelapi.user.session.UserSession;
 import de.murmelmeister.murmelapi.user.session.UserSessionProvider;
-import de.murmelmeister.murmelapi.user.stats.UserStats;
 import de.murmelmeister.murmelapi.user.stats.UserStatsProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 public record UserService(
         @NotNull UserProvider userProvider,
@@ -76,7 +67,7 @@ public record UserService(
         }
     }
 
-    public void loginStreak(int userId) {
+    /*public void loginStreak(int userId) {
         if (userId < 1)
             throw new IllegalArgumentException("userId must be >= 1");
         loginStreak(
@@ -98,7 +89,7 @@ public record UserService(
                 this::isExcusedOnDay,
                 this::isPermanentlyBlocked
         );
-    }
+    }*/
 
     public @NotNull User join(@NotNull UUID uuid, @NotNull String username) {
         Objects.requireNonNull(uuid, "uuid must not be null");
@@ -115,13 +106,13 @@ public record UserService(
         }
         User user = userOpt.get();
 
-        Optional<UserStats> statsOpt = statsProvider.findByUserId(user.id());
+        /*Optional<UserStats> statsOpt = statsProvider.findByUserId(user.id());
         if (statsOpt.isEmpty()) {
             statsOpt = statsProvider.create(user.id());
             if (statsOpt.isEmpty())
                 throw new UserStatsException("Failed to create stats for user with ID: " + user.id());
         }
-        UserStats stats = statsOpt.get();
+        UserStats stats = statsOpt.get();*/
 
         String currentUsername = user.username();
         if (!currentUsername.equals(username))
@@ -131,14 +122,14 @@ public record UserService(
         if (firstJoin == null)
             userProvider.update(user.id(), user.username(), LocalDateTime.now(), user.debugUser(), user.debugEnabled(), user.languageId());
 
-        if (stats.dailyStreakLastDay() == null) {
+        /*if (stats.dailyStreakLastDay() == null) {
             UserLogin userLogin = getLastLogin(user.id());
             LocalDateTime lastLogin = userLogin == null ? null : userLogin.loginTime();
             LocalDate lastSeen = lastLogin != null ? lastLogin.toLocalDate() : LocalDate.now();
 
             if (statsProvider.update(user.id(), stats.playTime(), stats.dailyStreak(), lastSeen, stats.lastSeenAt()).isEmpty())
                 throw new UserStatsException("Failed to update stats for user with ID: " + user.id());
-        }
+        }*/
 
         Optional<User> updated = userProvider.findById(user.id());
         if (updated.isEmpty())
@@ -172,7 +163,7 @@ public record UserService(
      *                             (maintenance/outage/excuse/temporary ban)
      * @param isPermanentlyBlocked true if the user is permanently banned (then reset)
      */
-    public void loginStreak(int userId,
+    /*public void loginStreak(int userId,
                             ZoneId zoneId,
                             BiPredicate<Integer, LocalDate> isForgivenDay,
                             Predicate<UUID> isPermanentlyBlocked) {
@@ -235,13 +226,13 @@ public record UserService(
 
         if (statsProvider.update(userId, stats.playTime(), dailyStreak, today, stats.lastSeenAt()).isEmpty())
             throw new UserStatsException("Failed to update stats for user ID: " + userId);
-    }
+    }*/
 
     /**
      * Called e.g., by a scheduler (while the user is online) to handle midnight transitions.
      * This method is intentionally only a wrapper around loginStreak(...), so logic is maintained in one place.
      */
-    public void checkLoginStreakWhileOnline(int userId,
+    /*public void checkLoginStreakWhileOnline(int userId,
                                             @NotNull UserStats stats,
                                             ZoneId zoneId,
                                             BiPredicate<Integer, LocalDate> isForgivenDay,
@@ -288,5 +279,5 @@ public record UserService(
 
         PunishmentAudit punishmentAudit = punishAuditProvider.findAudit(punishUser.auditId()).orElse(null);
         return punishmentAudit != null && punishmentAudit.isPermanent();
-    }
+    }*/
 }
