@@ -45,8 +45,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -54,6 +54,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -79,7 +81,7 @@ public final class MurmelAPI {
     private final SettingsProvider settingsProvider;
     private final SettingsService settingsService;
 
-    private final LanguageTypeProvider languageProvider;
+    private final LanguageTypeProvider languageTypeProvider;
     private final MessageProvider messageProvider;
     private final MessageService messageService;
 
@@ -139,9 +141,9 @@ public final class MurmelAPI {
 
         this.settingsProvider = SettingsProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.settingsService = new SettingsService(settingsProvider);
-        this.languageProvider = LanguageTypeProvider.of(database, gson, refreshProvider, cacheCapacity);
+        this.languageTypeProvider = LanguageTypeProvider.of(database, gson, refreshProvider, cacheCapacity);
         this.messageProvider = MessageProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
-        this.messageService = new MessageService(languageProvider, messageProvider);
+        this.messageService = new MessageService(languageTypeProvider, messageProvider);
         this.userProvider = UserProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userStatsProvider = UserStatsProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.userLoginProvider = UserLoginProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -210,18 +212,85 @@ public final class MurmelAPI {
     public void setupTables() {
         runSqlScript("schema.sql");
         runSqlScript("data.sql");
+        runSqlScript("procedure/userLiveStats.sql");
     }
 
     private void runSqlScript(String script) {
         try (InputStream in = MurmelAPI.class.getClassLoader().getResourceAsStream(script)) {
-            if (in == null) throw new IllegalStateException("Missing schema.sql");
-            try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+            if (in == null) throw new IllegalStateException("Missing sql script: " + script);
+
+            String sql = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            if (sql.lines().map(String::trim).anyMatch(line ->
+                    line.regionMatches(true, 0, "DELIMITER ", 0, "DELIMITER".length()))) {
+                List<String> statements = parseSqlStatements(sql);
+                for (String sqlStatement : statements)
+                    database.update(sqlStatement);
+                return;
+            }
+
+            try (Reader reader = new StringReader(sql)) {
                 database.runSqlScript(reader);
             }
         } catch (IOException e) {
             LOGGER.error("Failed to load sql script {}", script, e);
-            throw new RuntimeException("Failed to run schema.sql", e);
+            throw new RuntimeException("Failed to run sql script: " + script, e);
         }
+    }
+
+    private @NotNull List<String> parseSqlStatements(@NotNull String sql) {
+        List<String> statements = new ArrayList<>();
+
+        String delimiter = ";";
+        StringBuilder currentStatement = new StringBuilder();
+
+        for (String line : sql.split("\\R", -1)) {
+            String trimmedLine = line.trim();
+            if (trimmedLine.isEmpty() || trimmedLine.startsWith("--")) continue;
+
+            if (trimmedLine.regionMatches(true, 0, "DELIMITER", 0, "DELIMITER".length())) {
+                String newDelimiter = trimmedLine.substring("DELIMITER".length()).trim();
+
+                if (newDelimiter.isEmpty())
+                    throw new IllegalArgumentException("Invalid DELIMITER command: " + line);
+
+                delimiter = newDelimiter;
+                continue;
+            }
+
+            currentStatement.append(line).append('\n');
+            int delimiterIndex = indexOfDelimiterAtStatementEnd(currentStatement, delimiter);
+
+            if (delimiterIndex >= 0) {
+                String statement = currentStatement.substring(0, delimiterIndex).trim();
+
+                if (!statement.isEmpty())
+                    statements.add(statement);
+
+                currentStatement.setLength(0);
+            }
+        }
+
+        String rest = currentStatement.toString().trim();
+        if (!rest.isEmpty())
+            statements.add(rest);
+
+        return statements;
+    }
+
+    private int indexOfDelimiterAtStatementEnd(@NotNull StringBuilder statement, @NotNull String delimiter) {
+        String value = statement.toString();
+        int end = value.length();
+
+        while (end > 0 && Character.isWhitespace(value.charAt(end - 1)))
+            end--;
+
+        int start = end - delimiter.length();
+        if (start < 0) return -1;
+
+        if (value.startsWith(delimiter, start))
+            return start;
+
+        return -1;
     }
 
     public void loadMessages() {
@@ -262,7 +331,7 @@ public final class MurmelAPI {
     }
 
     public @NotNull DecimalFormat getDecimalFormat(int languageId, @NotNull String pattern) {
-        LanguageType language = getLanguageProvider().findById(languageId)
+        LanguageType language = getLanguageTypeProvider().findById(languageId)
                 .orElseThrow(() -> new IllegalArgumentException("No language for id " + languageId + " found!"));
         Locale locale = Locale.of(language.code());
         DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(locale);
@@ -293,8 +362,8 @@ public final class MurmelAPI {
         return settingsService;
     }
 
-    public LanguageTypeProvider getLanguageProvider() {
-        return languageProvider;
+    public LanguageTypeProvider getLanguageTypeProvider() {
+        return languageTypeProvider;
     }
 
     public MessageProvider getMessageProvider() {
