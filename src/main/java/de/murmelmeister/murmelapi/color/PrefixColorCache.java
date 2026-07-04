@@ -97,7 +97,7 @@ final class PrefixColorCache implements MurmelCache {
         PrefixColor prefixColor = CacheUtil.loadSingle(database, sql, fetchLimit, PrefixColorRowMapper::resultSet,
                 stmt -> stmt.setString(1, id));
 
-        return Optional.of(prefixColor);
+        return Optional.ofNullable(prefixColor);
     }
 
     public @NotNull Optional<PrefixColor> getById(@NotNull String id) {
