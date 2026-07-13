@@ -2,7 +2,6 @@ package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
-import de.murmelmeister.murmelapi.exceptions.user.UserLoginException;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAuditProvider;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
 import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
@@ -72,7 +71,7 @@ public record UserService(
     private void endSession(@NotNull UserSession session) {
         int userId = session.userId();
         if (loginProvider.endSession(userId).isEmpty())
-            throw new UserLoginException("Failed to end session for user ID: " + userId);
+            return;
         sessionProvider.refreshSingle(session.id(), userId);
     }
 
