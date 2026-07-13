@@ -19,6 +19,8 @@ import java.util.UUID;
 public interface UserLoginProvider {
     void refreshCache();
 
+    void refreshSingle(@NotNull UUID id, int userId, @NotNull InetAddress inetAddress);
+
     @NotNull Optional<UserLogin> findById(@NotNull UUID id);
 
     @NotNull
@@ -33,11 +35,14 @@ public interface UserLoginProvider {
     @Unmodifiable
     List<UserLogin> findAll();
 
-    @NotNull Optional<UserLogin> create(@NotNull UUID sessionId, int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion);
+    @NotNull Optional<UserLogin> create(int userId, @NotNull LocalDateTime loginTime, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion);
 
     @NotNull Optional<UserLogin> create(@NotNull UserSession session);
 
-    int delete(@NotNull UUID sessionId);
+    @ApiStatus.Internal
+    @NotNull Optional<UserLogin> endSession(int userId);
+
+    int delete(@NotNull UUID id);
 
     @ApiStatus.Internal
     static @NotNull UserLoginProvider of(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {

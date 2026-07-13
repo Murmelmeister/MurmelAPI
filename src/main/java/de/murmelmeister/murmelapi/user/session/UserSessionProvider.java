@@ -17,6 +17,8 @@ import java.util.UUID;
 public interface UserSessionProvider {
     void refreshCache();
 
+    void refreshSingle(@NotNull UUID sessionId, int userId);
+
     @NotNull Optional<UserSession> findById(@NotNull UUID sessionId);
 
     @NotNull Optional<UserSession> findByUserId(int userId);

@@ -161,7 +161,7 @@ public final class MurmelAPI {
         this.punishIpProvider = PunishmentIpAddressProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishUserProvider = PunishmentUserProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishmentService = new PunishmentService(punishReasonProvider, punishAuditProvider, punishIpProvider, punishUserProvider);
-        this.userService = new UserService(userProvider, userStatsProvider, userLoginProvider, userSessionProvider,
+        this.userService = new UserService(database, userProvider, userStatsProvider, userLoginProvider, userSessionProvider,
                 userExcuseProvider, punishUserProvider, punishAuditProvider);
         this.clanProvider = ClanProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanMemberProvider = ClanMemberProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -213,6 +213,7 @@ public final class MurmelAPI {
         runSqlScript("schema.sql");
         runSqlScript("data.sql");
         runSqlScript("procedure/userLiveStats.sql");
+        runSqlScript("procedure/userSession.sql");
     }
 
     private void runSqlScript(String script) {

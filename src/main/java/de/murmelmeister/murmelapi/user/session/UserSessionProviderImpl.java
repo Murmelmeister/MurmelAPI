@@ -49,6 +49,12 @@ final class UserSessionProviderImpl implements UserSessionProvider {
     }
 
     @Override
+    public void refreshSingle(@NotNull UUID sessionId, int userId) {
+        Objects.requireNonNull(sessionId, "sessionId cannot be null");
+        refreshProvider.fireSingle(single, new UserSessionCache.SessionKey(sessionId, userId));
+    }
+
+    @Override
     public @NotNull Optional<UserSession> findById(@NotNull UUID sessionId) {
         return cache.getById(sessionId);
     }
