@@ -13,13 +13,23 @@ public interface RefreshProvider extends AutoCloseable {
 
     <K> void fireSingle(@NotNull String cacheName, @Nullable K key);
 
+    <K> void fireSingle(@NotNull String cacheName, @Nullable K key, @NotNull RefreshOrigin origin);
+
     <K> void fireSingle(@NotNull RefreshType type, @Nullable K key);
+
+    <K> void fireSingle(@NotNull RefreshType type, @Nullable K key, @NotNull RefreshOrigin origin);
 
     void fireCache(@NotNull String cacheName);
 
+    void fireCache(@NotNull String cacheName, @NotNull RefreshOrigin origin);
+
     void fireCache(@NotNull RefreshType type);
 
+    void fireCache(@NotNull RefreshType type, @NotNull RefreshOrigin origin);
+
     void fireAll();
+
+    void fireAll(@NotNull RefreshOrigin origin);
 
     @ApiStatus.Internal
     static @NotNull RefreshProvider of() {

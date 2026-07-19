@@ -52,27 +52,52 @@ final class RefreshProviderImpl implements RefreshProvider {
 
     @Override
     public <K> void fireSingle(@NotNull String cacheName, @Nullable K key) {
-        fire(new RefreshEventImpl<>(cacheName, key));
+        fire(new RefreshEventImpl<>(cacheName, key, RefreshOrigin.LOCAL));
+    }
+
+    @Override
+    public <K> void fireSingle(@NotNull String cacheName, @org.jspecify.annotations.Nullable K key, @NotNull RefreshOrigin origin) {
+        fire(new RefreshEventImpl<>(cacheName, key, origin));
     }
 
     @Override
     public <K> void fireSingle(@NotNull RefreshType type, @Nullable K key) {
-        fire(new RefreshEventImpl<>(type, key));
+        fire(new RefreshEventImpl<>(type, key, RefreshOrigin.LOCAL));
+    }
+
+    @Override
+    public <K> void fireSingle(@NotNull RefreshType type, @org.jspecify.annotations.Nullable K key, @NotNull RefreshOrigin origin) {
+        fire(new RefreshEventImpl<>(type, key, origin));
     }
 
     @Override
     public void fireCache(@NotNull String cacheName) {
-        fire(new RefreshEventImpl<>(cacheName, null));
+        fire(new RefreshEventImpl<>(cacheName, null, RefreshOrigin.LOCAL));
+    }
+
+    @Override
+    public void fireCache(@NotNull String cacheName, @NotNull RefreshOrigin origin) {
+        fire(new RefreshEventImpl<>(cacheName, null, origin));
     }
 
     @Override
     public void fireCache(@NotNull RefreshType type) {
-        fire(new RefreshEventImpl<>(type, null));
+        fire(new RefreshEventImpl<>(type, null, RefreshOrigin.LOCAL));
+    }
+
+    @Override
+    public void fireCache(@NotNull RefreshType type, @NotNull RefreshOrigin origin) {
+        fire(new RefreshEventImpl<>(type, null, origin));
     }
 
     @Override
     public void fireAll() {
-        fire(new RefreshEventImpl<>(RefreshType.ALL, null));
+        fire(new RefreshEventImpl<>(RefreshType.ALL, null, RefreshOrigin.LOCAL));
+    }
+
+    @Override
+    public void fireAll(@NotNull RefreshOrigin origin) {
+        fire(new RefreshEventImpl<>(RefreshType.ALL, null, origin));
     }
 
     @Override

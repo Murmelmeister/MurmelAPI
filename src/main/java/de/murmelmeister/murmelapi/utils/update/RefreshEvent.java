@@ -7,4 +7,6 @@ public interface RefreshEvent<K> {
     @NotNull String type();
 
     @Nullable K key();
+
+    @NotNull RefreshOrigin origin();
 }
