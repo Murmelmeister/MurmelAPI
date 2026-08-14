@@ -67,6 +67,20 @@
             <id>byteminer-repo</id>
             <url>https://maven.byteminer.net/</url>
         </repository>
+        <repository>
+            <id>byteminer</id>
+            <name>ByteMiner Maven Repository</name>
+            <url>https://maven.byteminer.net/</url>
+
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
     </repositories>
 
     <dependencies>
