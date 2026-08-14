@@ -7,11 +7,60 @@
     <groupId>de.murmelmeister.murmelapi</groupId>
     <artifactId>MurmelAPI</artifactId>
     <version>0.0.6-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>MurmelAPI</name>
+    <description>A general-purpose Java API for Minecraft server projects.</description>
+    <url>https://github.com/Murmelmeister/MurmelAPI</url>
+
+    <licenses>
+        <license>
+            <name>GNU General Public License v3.0</name>
+            <url>https://www.gnu.org/licenses/gpl-3.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <id>Murmelmeister</id>
+            <name>Murmelmeister</name>
+            <email>49274952+Murmelmeister@users.noreply.github.com</email>
+            <url>https://github.com/Murmelmeister</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/Murmelmeister/MurmelAPI.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/Murmelmeister/MurmelAPI.git</developerConnection>
+        <url>https://github.com/Murmelmeister/MurmelAPI</url>
+        <tag>HEAD</tag>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub Issues</system>
+        <url>https://github.com/Murmelmeister/MurmelAPI/issues</url>
+    </issueManagement>
 
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
+
+    <distributionManagement>
+        <repository>
+            <id>byteminer</id>
+            <name>ByteMiner Maven Repository</name>
+            <url>scp://maven.byteminer.net/home/webbit/maven</url>
+        </repository>
+
+        <snapshotRepository>
+            <id>byteminer</id>
+            <name>ByteMiner Maven Repository</name>
+            <url>scp://maven.byteminer.net/home/webbit/maven</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <repositories>
         <repository>
@@ -63,56 +112,49 @@
     </dependencies>
 
     <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh</artifactId>
+                <version>3.5.3</version>
+            </extension>
+        </extensions>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.15.0</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.7.1</version>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.4.0</version>
                 <executions>
                     <execution>
-                        <phase>package</phase>
+                        <id>attach-sources</id>
                         <goals>
-                            <goal>single</goal>
+                            <goal>jar-no-fork</goal>
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <finalName>${project.artifactId}</finalName>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.12.0</version>
+                <configuration>
+                    <show>public</show>
+                    <doclint>none</doclint>
+                </configuration>
                 <executions>
                     <execution>
-                        <phase>package</phase>
                         <id>attach-javadocs</id>
                         <goals>
                             <goal>jar</goal>
                         </goals>
-                        <configuration>
-                            <show>private</show>
-                            <doclint>none</doclint>
-                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -123,15 +165,5 @@
             </plugin>
         </plugins>
     </build>
-
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.12.0</version>
-            </plugin>
-        </plugins>
-    </reporting>
 
 </project>
