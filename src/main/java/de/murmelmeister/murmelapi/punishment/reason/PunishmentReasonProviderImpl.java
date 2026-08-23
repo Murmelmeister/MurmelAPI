@@ -25,7 +25,7 @@ final class PunishmentReasonProviderImpl implements PunishmentReasonProvider {
     @Language("MariaDB")
     private static final String UPSERT_SQL = """
             INSERT INTO %s (id, type_id, reason_text, duration_secs, auto_flag_ip, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
                 type_id = VALUES(type_id),
                 reason_text = VALUES(reason_text),
