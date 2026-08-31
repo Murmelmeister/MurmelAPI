@@ -74,12 +74,12 @@ final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public @NotNull Optional<Message> upsert(@NotNull String tagId, int languageId, @NotNull String message) {
-        Objects.requireNonNull(tagId, "tagId cannot be null");
-        Objects.requireNonNull(message, "message cannot be null");
+        Objects.requireNonNull(tagId, "tagId must not be null");
+        Objects.requireNonNull(message, "message must not be null");
         String normalizedTagId = StringUtil.normalize(tagId);
         if (normalizedTagId == null || normalizedTagId.isBlank())
-            throw new IllegalArgumentException("tagId cannot be blank");
-        if (message.isBlank()) throw new IllegalArgumentException("message cannot be blank");
+            throw new IllegalArgumentException("tagId must not be blank");
+        if (message.isBlank()) throw new IllegalArgumentException("message must not be blank");
 
         Optional<Message> existingOpt = cache.getByTag(tagId, languageId);
         if (existingOpt.isPresent()) {
@@ -105,10 +105,10 @@ final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public int delete(@NotNull String tagId, int languageId) {
-        Objects.requireNonNull(tagId, "tagId cannot be null");
+        Objects.requireNonNull(tagId, "tagId must not be null");
         String normalizedTagId = StringUtil.normalize(tagId);
         if (normalizedTagId == null || normalizedTagId.isBlank())
-            throw new IllegalArgumentException("tagId cannot be blank");
+            throw new IllegalArgumentException("tagId must not be blank");
 
         Optional<Message> existingOpt = cache.getByTag(tagId, languageId);
         if (existingOpt.isEmpty()) return 0;
@@ -146,18 +146,23 @@ final class MessageProviderImpl implements MessageProvider {
 
     @Override
     public int @NotNull [] upsertAll(@NotNull Collection<Message> messages) {
-        Objects.requireNonNull(messages, "messages cannot be null");
+        Objects.requireNonNull(messages, "messages must not be null");
         if (messages.isEmpty())
-            throw new IllegalArgumentException("Missing messages");
+            throw new IllegalArgumentException("messages must not be empty");
 
-        int[] result = database.updateBatch(UPSERT_ALL_SQL, stmt -> {
-            for (Message message : messages) {
-                stmt.setString(1, message.tagId());
-                stmt.setInt(2, message.languageId());
-                stmt.setString(3, message.message());
-                stmt.addBatch();
-            }
-        });
+        int[] result = MurmelExceptionWrapper.dbWrap(
+                "Failed to upsert all Messages",
+                () -> database.updateBatch(UPSERT_ALL_SQL, stmt -> {
+                    for (Message message : messages) {
+                        if (message == null) continue;
+                        stmt.setString(1, message.tagId());
+                        stmt.setInt(2, message.languageId());
+                        stmt.setString(3, message.message());
+                        stmt.addBatch();
+                    }
+                }),
+                MessageException::new
+        );
 
         if (result == null || result.length == 0)
             return new int[0];
