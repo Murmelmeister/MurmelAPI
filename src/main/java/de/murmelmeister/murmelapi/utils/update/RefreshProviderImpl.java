@@ -5,25 +5,12 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 final class RefreshProviderImpl implements RefreshProvider {
     private static final Logger LOGGER = LoggerFactory.getLogger(RefreshProviderImpl.class);
 
     private final CopyOnWriteArrayList<RefreshListener> listeners = new CopyOnWriteArrayList<>();
-
-    private final Set<RefreshEvent<?>> recentEvent = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    private final ScheduledExecutorService debouncer;
-
-    public RefreshProviderImpl() {
-        this.debouncer = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread thread = new Thread(r, "RefreshDebouncer");
-            thread.setDaemon(true);
-            return thread;
-        });
-    }
 
     @Override
     public void register(@NotNull RefreshListener cache) {
@@ -37,10 +24,6 @@ final class RefreshProviderImpl implements RefreshProvider {
 
     @Override
     public <K> void fire(@NotNull RefreshEvent<K> event) {
-        if (!recentEvent.add(event)) return; // Prevent duplicate events
-        if (!debouncer.isShutdown())
-            debouncer.schedule(() -> recentEvent.remove(event), 100, TimeUnit.MILLISECONDS);
-
         for (RefreshListener listener : listeners) {
             try {
                 listener.onRefresh(event);
@@ -113,18 +96,5 @@ final class RefreshProviderImpl implements RefreshProvider {
         }
 
         listeners.clear();
-        recentEvent.clear();
-        debouncer.shutdown();
-
-        try {
-            if (!debouncer.awaitTermination(250, TimeUnit.MILLISECONDS)) {
-                debouncer.shutdownNow();
-
-                if (!debouncer.awaitTermination(250, TimeUnit.MILLISECONDS))
-                    LOGGER.warn("Debouncer did not terminate in time");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
     }
 }
