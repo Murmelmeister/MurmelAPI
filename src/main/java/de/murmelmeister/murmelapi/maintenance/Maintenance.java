@@ -31,7 +31,7 @@ public interface Maintenance {
 
     @NotNull Maintenance with(@NotNull Consumer<Builder> consumer);
 
-    default boolean isExpired() {
+    default boolean isEnded() {
         return endAt().isBefore(LocalDateTime.now());
     }
 

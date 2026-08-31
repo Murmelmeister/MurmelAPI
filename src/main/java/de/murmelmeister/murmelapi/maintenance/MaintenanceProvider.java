@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public interface MaintenanceProvider {
     void refreshCache();
@@ -22,9 +23,11 @@ public interface MaintenanceProvider {
     @Unmodifiable
     List<Maintenance> findAll();
 
-    @NotNull Optional<Maintenance> create(@Nullable String title, @Nullable String reason, @NotNull MaintenanceType status, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, int createdBy);
+    @NotNull Optional<Maintenance> findActive();
 
-    @NotNull Optional<Maintenance> update(int id, @Nullable String title, @Nullable String reason, @NotNull MaintenanceType status, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, int changedBy);
+    @NotNull Optional<Maintenance> create(int createdBy, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, @Nullable String title, @Nullable String reason);
+
+    @NotNull Optional<Maintenance> update(int id, int changedBy, @NotNull Consumer<Maintenance.Builder> updater);
 
     @ApiStatus.Internal
     static @NotNull MaintenanceProvider of(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {

@@ -28,14 +28,15 @@ record MaintenanceImpl(
         Objects.requireNonNull(endAt, "endAt must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
         if (title != null && title.length() > 64)
-            throw new IllegalArgumentException("title cannot be longer than 64 characters");
+            throw new IllegalArgumentException("title must not be longer than 64 characters");
         if (reason != null && reason.length() > 255)
-            throw new IllegalArgumentException("reason cannot be longer than 255 characters");
-        if (startAt.isAfter(endAt))
+            throw new IllegalArgumentException("reason must not be longer than 255 characters");
+        if (!startAt.isBefore(endAt))
             throw new IllegalArgumentException("startAt must be before endAt");
-        if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
+        if (createdBy < CONSOLE_USER_ID)
+            throw new IllegalArgumentException("createdBy must be greater then or equal to " + CONSOLE_USER_ID);
         if (changedBy != null && changedBy < CONSOLE_USER_ID)
-            throw new IllegalArgumentException("changedBy must be null or >= " + CONSOLE_USER_ID);
+            throw new IllegalArgumentException("changedBy must be null or greater then or equal to " + CONSOLE_USER_ID);
     }
 
     public @NotNull Maintenance.Builder builder() {
