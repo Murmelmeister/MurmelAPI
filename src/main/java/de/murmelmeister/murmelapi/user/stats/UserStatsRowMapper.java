@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 final class UserStatsRowMapper {
     static UserStats resultSet(@NotNull ResultSet resultSet) throws SQLException {
         int userId = resultSet.getInt("user_id");
-        int playTime = resultSet.getInt("play_time");
+        long playTime = resultSet.getLong("play_time");
         int dailyStreak = resultSet.getInt("login_streak");
         LocalDateTime lastSeen = resultSet.getObject("last_seen_at", LocalDateTime.class);
         boolean online = resultSet.getBoolean("online");

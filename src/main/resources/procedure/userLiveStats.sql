@@ -4,7 +4,7 @@ CREATE PROCEDURE IF NOT EXISTS get_user_live_stats(
     IN p_user_id INT
 )
 BEGIN
-WITH RECURSIVE
+WITH
     active_ranges AS (
         SELECT
     DATE(ul.login_time) AS start_day,
@@ -24,25 +24,13 @@ WHERE us.user_id = p_user_id
   AND us.login_time < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
     ),
 
-    active_days_recursive AS (
-SELECT
-    start_day AS streak_day,
-    end_day
-FROM active_ranges
-WHERE start_day <= end_day
-
-UNION ALL
-
-SELECT
-    DATE_ADD(streak_day, INTERVAL 1 DAY),
-    end_day
-FROM active_days_recursive
-WHERE streak_day < end_day
-    ),
-
     active_days AS (
-SELECT DISTINCT streak_day
-FROM active_days_recursive
+SELECT DISTINCT
+    DATE_ADD(ar.start_day, INTERVAL seq.seq DAY) AS streak_day
+FROM active_ranges ar
+    JOIN seq_0_to_100000 seq
+ON ar.start_day <= ar.end_day
+AND seq.seq <= DATEDIFF(ar.end_day, ar.start_day)
     ),
 
     excuse_ranges AS (
@@ -58,32 +46,55 @@ WHERE ue.user_id = p_user_id
   AND ue.extra_days >= 0
     ),
 
-    excuse_days_recursive AS (
-SELECT
-    start_day AS streak_day,
-    end_day
-FROM excuse_ranges
-WHERE start_day <= end_day
-
-UNION ALL
-
-SELECT
-    DATE_ADD(streak_day, INTERVAL 1 DAY),
-    end_day
-FROM excuse_days_recursive
-WHERE streak_day < end_day
-    ),
-
     excuse_days AS (
-SELECT DISTINCT streak_day
-FROM excuse_days_recursive
+SELECT DISTINCT
+    DATE_ADD(er.start_day, INTERVAL seq.seq DAY) AS streak_day
+FROM excuse_ranges er
+    JOIN seq_0_to_100000 seq
+ON er.start_day <= er.end_day
+AND seq.seq <= DATEDIFF(er.end_day, er.start_day)
     ),
 
-    effective_excuse_days AS (
-SELECT ed.streak_day
-FROM excuse_days ed
+    maintenance_ranges AS (
+SELECT
+    DATE(m.start_at) AS start_day,
+    LEAST(
+    CASE
+    WHEN TIME(m.end_at) = '00:00:00'
+    THEN DATE_SUB(DATE(m.end_at), INTERVAL 1 DAY)
+    ELSE DATE(m.end_at)
+    END,
+    CURDATE()
+    ) AS end_day
+FROM maintenances m
+WHERE m.status <> 'CANCELED'
+  AND m.start_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+    ),
+
+    maintenance_days AS (
+SELECT DISTINCT
+    DATE_ADD(mr.start_day, INTERVAL seq.seq DAY) AS streak_day
+FROM maintenance_ranges mr
+    JOIN seq_0_to_100000 seq
+ON mr.start_day <= mr.end_day
+AND seq.seq <= DATEDIFF(mr.end_day, mr.start_day)
+    ),
+
+    protected_days AS (
+SELECT streak_day
+FROM excuse_days
+
+UNION
+
+SELECT streak_day
+FROM maintenance_days
+    ),
+
+    effective_protected_days AS (
+SELECT pd.streak_day
+FROM protected_days pd
     LEFT JOIN active_days ad
-ON ad.streak_day = ed.streak_day
+ON ad.streak_day = pd.streak_day
 WHERE ad.streak_day IS NULL
     ),
 
@@ -98,7 +109,7 @@ UNION ALL
 SELECT
     streak_day,
     0 AS is_active
-FROM effective_excuse_days
+FROM effective_protected_days
     ),
 
     numbered_days AS (

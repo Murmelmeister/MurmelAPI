@@ -35,20 +35,6 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_mojang_id ON users (mojang_id);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
 
-CREATE TABLE IF NOT EXISTS user_stats (
-    id INT PRIMARY KEY,
-
-    play_time INT NOT NULL DEFAULT 0,
-    daily_streak INT NOT NULL DEFAULT 0,
-    daily_streak_last_day DATE NULL,
-    last_seen_at DATETIME NULL,
-
-    FOREIGN KEY (id) REFERENCES users(id),
-
-    INDEX idx_user_stats_last_seen_at (last_seen_at),
-    INDEX idx_user_stats_streak_day (daily_streak_last_day)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS user_login (
     id UUID NOT NULL PRIMARY KEY,
     user_id INT NOT NULL,

@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 record UserStatsImpl(
         int userId,
-        int playTime,
+        long playTime,
         int dailyStreak,
         @Nullable LocalDateTime lastSeenAt,
         boolean isOnline

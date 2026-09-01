@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public interface UserStats {
     int userId();
 
-    int playTime();
+    long playTime();
 
     int dailyStreak();
 
@@ -18,7 +18,7 @@ public interface UserStats {
 
     long currentPlayTime();
 
-    static @NotNull UserStats of(int userId, int playTime, int dailyStreak, @Nullable LocalDateTime lastSeenAt, boolean isOnline) {
+    static @NotNull UserStats of(int userId, long playTime, int dailyStreak, @Nullable LocalDateTime lastSeenAt, boolean isOnline) {
         return new UserStatsImpl(userId, playTime, dailyStreak, lastSeenAt, isOnline);
     }
 }

@@ -44,6 +44,8 @@ final class UserStatsCache implements MurmelCache {
         String cacheName = event.type();
 
         if (RefreshType.USER_STATS.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.MAINTENANCES.getName().equalsIgnoreCase(cacheName)
+                || RefreshType.SINGLE_MAINTENANCE.getName().equalsIgnoreCase(cacheName)
                 || RefreshType.ALL.getName().equalsIgnoreCase(cacheName)) {
             clear();
             return;
