@@ -67,7 +67,7 @@ SELECT
     CURDATE()
     ) AS end_day
 FROM maintenances m
-WHERE m.status <> 'CANCELED'
+WHERE m.status <> 'CANCELLED'
   AND m.start_at < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
     ),
 
