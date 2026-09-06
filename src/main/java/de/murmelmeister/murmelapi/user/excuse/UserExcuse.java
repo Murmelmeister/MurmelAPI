@@ -3,6 +3,7 @@ package de.murmelmeister.murmelapi.user.excuse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.function.Consumer;
 
@@ -11,9 +12,9 @@ public interface UserExcuse {
 
     int userId();
 
-    @NotNull LocalDateTime startAt();
+    @NotNull LocalDate startDate();
 
-    @NotNull LocalDateTime endAt();
+    int extraDays();
 
     @Nullable String reason();
 
@@ -29,14 +30,14 @@ public interface UserExcuse {
 
     @NotNull UserExcuse with(@NotNull Consumer<Builder> consumer);
 
-    static @NotNull UserExcuse of(int id, int userId, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, @Nullable String reason, @NotNull LocalDateTime createdAt, int createdBy) {
-        return new UserExcuseImpl(id, userId, startAt, endAt, reason, createdAt, createdBy, null, null);
+    static @NotNull UserExcuse of(int id, int userId, @NotNull LocalDate startDate, int extraDays, @Nullable String reason, @NotNull LocalDateTime createdAt, int createdBy) {
+        return new UserExcuseImpl(id, userId, startDate, extraDays, reason, createdAt, createdBy, null, null);
     }
 
     interface Builder {
-        @NotNull Builder startAt(@NotNull LocalDateTime startAt);
+        @NotNull Builder startDate(@NotNull LocalDate startDate);
 
-        @NotNull Builder endAt(@NotNull LocalDateTime endAt);
+        @NotNull Builder extraDays(int extraDays);
 
         @NotNull Builder reason(@Nullable String reason);
 

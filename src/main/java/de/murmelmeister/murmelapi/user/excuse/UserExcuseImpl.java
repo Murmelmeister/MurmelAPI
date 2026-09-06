@@ -3,6 +3,7 @@ package de.murmelmeister.murmelapi.user.excuse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -12,8 +13,8 @@ import static de.murmelmeister.murmelapi.MurmelAPI.CONSOLE_USER_ID;
 record UserExcuseImpl(
         int id,
         int userId,
-        @NotNull LocalDateTime startAt,
-        @NotNull LocalDateTime endAt,
+        @NotNull LocalDate startDate,
+        int extraDays,
         @Nullable String reason,
         @NotNull LocalDateTime createdAt,
         int createdBy,
@@ -22,11 +23,10 @@ record UserExcuseImpl(
 ) implements UserExcuse {
 
     public UserExcuseImpl {
-        Objects.requireNonNull(startAt, "startAt must not be null");
-        Objects.requireNonNull(endAt, "endAt must not be null");
+        Objects.requireNonNull(startDate, "startDate must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
         if (userId < 1) throw new IllegalArgumentException("userId must be >= 1");
-        if (startAt.isAfter(endAt)) throw new IllegalArgumentException("startAt cannot be after endAt");
+        if (extraDays < 0) throw new IllegalArgumentException("extraDays must be >= 0");
         if (reason != null && reason.length() > 255)
             throw new IllegalArgumentException("reason cannot be longer than 255 characters");
         if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
@@ -50,8 +50,8 @@ record UserExcuseImpl(
         private final LocalDateTime createdAt;
         private final int createdBy;
 
-        private LocalDateTime startAt;
-        private LocalDateTime endAt;
+        private LocalDate startDate;
+        private int extraDays;
         private String reason;
         private LocalDateTime changedAt;
         private Integer changedBy;
@@ -59,8 +59,8 @@ record UserExcuseImpl(
         public Builder(@NotNull UserExcuse userExcuse) {
             this.id = userExcuse.id();
             this.userId = userExcuse.userId();
-            this.startAt = userExcuse.startAt();
-            this.endAt = userExcuse.endAt();
+            this.startDate = userExcuse.startDate();
+            this.extraDays = userExcuse.extraDays();
             this.reason = userExcuse.reason();
             this.createdAt = userExcuse.createdAt();
             this.createdBy = userExcuse.createdBy();
@@ -68,13 +68,13 @@ record UserExcuseImpl(
             this.changedBy = userExcuse.changedBy();
         }
 
-        public @NotNull UserExcuse.Builder startAt(@NotNull LocalDateTime startAt) {
-            this.startAt = startAt;
+        public @NotNull UserExcuse.Builder startDate(@NotNull LocalDate startDate) {
+            this.startDate = startDate;
             return this;
         }
 
-        public @NotNull UserExcuse.Builder endAt(@NotNull LocalDateTime endAt) {
-            this.endAt = endAt;
+        public @NotNull UserExcuse.Builder extraDays(int extraDays) {
+            this.extraDays = extraDays;
             return this;
         }
 
@@ -94,7 +94,7 @@ record UserExcuseImpl(
         }
 
         public @NotNull UserExcuse build() {
-            return new UserExcuseImpl(id, userId, startAt, endAt, reason, createdAt, createdBy, changedAt, changedBy);
+            return new UserExcuseImpl(id, userId, startDate, extraDays, reason, createdAt, createdBy, changedAt, changedBy);
         }
     }
 }

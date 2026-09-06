@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,9 +26,9 @@ public interface UserExcuseProvider {
     @Unmodifiable
     List<UserExcuse> findAll();
 
-    @NotNull Optional<UserExcuse> create(int userId, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, @Nullable String reason, int createdBy);
+    @NotNull Optional<UserExcuse> create(int userId, @NotNull LocalDate startDate, int extraDays, @Nullable String reason, int createdBy);
 
-    @NotNull Optional<UserExcuse> update(int id, @NotNull LocalDateTime startAt, @NotNull LocalDateTime endAt, @Nullable String reason, int changedBy);
+    @NotNull Optional<UserExcuse> update(int id, @NotNull LocalDate startDate, int extraDays, @Nullable String reason, int changedBy);
 
     @ApiStatus.Internal
     static @NotNull UserExcuseProvider of(Database database, Gson gson, RefreshProvider refreshProvider, Long fetchLimit, long cacheCapacity, Duration refreshInterval) {
