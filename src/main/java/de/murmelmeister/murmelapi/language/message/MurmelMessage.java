@@ -49,7 +49,10 @@ public enum MurmelMessage {
             of(1, "dd.MM.yyyy HH:mm:ss"),
             of(2, "dd.MM.yyyy HH:mm:ss")
     ),
-    ;
+    ONLY_DATE_FORMAT(
+            of(1, "dd.MM.yyyy"),
+            of(2, "dd.MM.yyyy")
+    );
     private static final MurmelMessage[] VALUES = values();
 
     private final Map<Integer, String> messages;

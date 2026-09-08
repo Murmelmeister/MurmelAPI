@@ -331,6 +331,11 @@ public final class MurmelAPI {
         return DateTimeFormatter.ofPattern(pattern);
     }
 
+    public @NotNull DateTimeFormatter getDateFormatter(int languageId) {
+        String pattern = messageService.getMessage(MurmelMessage.ONLY_DATE_FORMAT.getTag(), languageId);
+        return DateTimeFormatter.ofPattern(pattern);
+    }
+
     public @NotNull DecimalFormat getDecimalFormat(int languageId, @NotNull String pattern) {
         LanguageType language = getLanguageTypeProvider().findById(languageId)
                 .orElseThrow(() -> new IllegalArgumentException("No language for id " + languageId + " found!"));
