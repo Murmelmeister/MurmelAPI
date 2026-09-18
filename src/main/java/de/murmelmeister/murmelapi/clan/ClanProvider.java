@@ -5,6 +5,7 @@ import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
@@ -25,7 +26,7 @@ public interface ClanProvider {
     @Unmodifiable
     List<Clan> findAll();
 
-    @NotNull Optional<Clan> upsert(@NotNull UUID id, @NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int executorId);
+    @NotNull Optional<Clan> upsert(@NotNull UUID id, @NotNull String name, @Nullable String tag, @Nullable String sign, @Nullable String description, int ownerId, int executorId);
 
     int delete(@NotNull UUID id);
 

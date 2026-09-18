@@ -9,6 +9,7 @@ import de.murmelmeister.murmelapi.utils.update.RefreshProvider;
 import de.murmelmeister.murmelapi.utils.update.RefreshType;
 import org.intellij.lang.annotations.Language;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.time.Duration;
@@ -77,20 +78,17 @@ final class ClanProviderImpl implements ClanProvider {
     }
 
     @Override
-    public @NotNull Optional<Clan> upsert(@NotNull UUID id, @NotNull String name, @NotNull String tag, @NotNull String sign, @NotNull String description, int ownerId, int executorId) {
+    public @NotNull Optional<Clan> upsert(@NotNull UUID id, @NotNull String name, @Nullable String tag, @Nullable String sign, @Nullable String description, int ownerId, int executorId) {
         Objects.requireNonNull(name, "name cannot be null");
-        Objects.requireNonNull(tag, "tag cannot be null");
-        Objects.requireNonNull(sign, "sign cannot be null");
-        Objects.requireNonNull(description, "description cannot be null");
         if (ownerId < 1) throw new IllegalArgumentException("ownerId must be >= 1");
-        if (tag.length() > 25) throw new IllegalArgumentException("tag must be <= 25 characters");
-        if (sign.length() > 25) throw new IllegalArgumentException("sign must be <= 25 characters");
+        if (tag != null && tag.length() > 15) throw new IllegalArgumentException("tag must be <= 15 characters");
+        if (sign != null && sign.length() > 15) throw new IllegalArgumentException("sign must be <= 15 characters");
         if (executorId < CONSOLE_USER_ID)
             throw new IllegalArgumentException("executorId must be >= " + CONSOLE_USER_ID);
         String normalizedName = StringUtil.normalize(name);
         if (normalizedName == null || normalizedName.isBlank())
             throw new IllegalArgumentException("name cannot be blank");
-        if (normalizedName.length() > 100) throw new IllegalArgumentException("name must be <= 100 characters");
+        if (normalizedName.length() > 15) throw new IllegalArgumentException("name must be <= 15 characters");
 
         Optional<Clan> existingOpt = cache.getById(id);
         if (existingOpt.isPresent()) {

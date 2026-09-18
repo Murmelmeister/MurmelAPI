@@ -27,11 +27,11 @@ record ClanImpl(
         Objects.requireNonNull(id, "id must not be null");
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(createdAt, "createdAt must not be null");
-        if (name.length() > 100) throw new IllegalArgumentException("name cannot be longer than 100 characters");
-        if (tag != null && tag.length() > 25)
-            throw new IllegalArgumentException("tag cannot be longer than 25 characters");
-        if (sign != null && sign.length() > 25)
-            throw new IllegalArgumentException("sign cannot be longer than 25 characters");
+        if (name.length() > 15) throw new IllegalArgumentException("name cannot be longer than 15 characters");
+        if (tag != null && tag.length() > 15)
+            throw new IllegalArgumentException("tag cannot be longer than 15 characters");
+        if (sign != null && sign.length() > 15)
+            throw new IllegalArgumentException("sign cannot be longer than 15 characters");
         if (ownerId < CONSOLE_USER_ID) throw new IllegalArgumentException("ownerId must be >= " + CONSOLE_USER_ID);
         if (createdBy < CONSOLE_USER_ID) throw new IllegalArgumentException("createdBy must be >= " + CONSOLE_USER_ID);
         if (changedBy != null && changedBy < CONSOLE_USER_ID)

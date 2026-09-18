@@ -224,9 +224,9 @@ CREATE TABLE IF NOT EXISTS punishment_user (
 -- Clan data
 CREATE TABLE IF NOT EXISTS clans (
     id UUID NOT NULL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
-    tag VARCHAR(25) NULL UNIQUE,
-    sign VARCHAR(25) NULL UNIQUE,
+    name VARCHAR(15) NOT NULL UNIQUE,
+    tag VARCHAR(15) NULL UNIQUE,
+    sign VARCHAR(15) NULL UNIQUE,
     description TEXT NULL,
     owner_id INT NOT NULL UNIQUE,
     created_by INT NOT NULL,
