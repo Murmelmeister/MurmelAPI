@@ -24,12 +24,12 @@ final class ClanGroupProviderImpl implements ClanGroupProvider {
 
     @Language("MariaDB")
     private static final String UPSERT_SQL = """
-                    INSERT INTO %s (group_id, clan_id, group_name, priority, created_by)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO %s (group_id, clan_id, group_name, priority, is_default, created_by)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE
                         group_name = VALUES(group_name),
                         priority = VALUES(priority),
-                        default_group = VALUES(default_group),
+                        is_default = VALUES(is_default),
                         changed_by = ?
                     RETURNING group_id, clan_id, group_name, priority, is_default, created_by, created_at, changed_by, changed_at
             """.formatted(TABLE_NAME);
@@ -95,8 +95,9 @@ final class ClanGroupProviderImpl implements ClanGroupProvider {
                     stmt.setString(2, clanId.toString());
                     stmt.setString(3, normalizedGroupName);
                     stmt.setInt(4, priority);
-                    stmt.setInt(5, executorId);
+                    stmt.setBoolean(5, defaultGroup);
                     stmt.setInt(6, executorId);
+                    stmt.setInt(7, executorId);
                 }),
                 ClanGroupException::new
         );
