@@ -422,3 +422,71 @@ CREATE TABLE IF NOT EXISTS user_excuses (
     INDEX idx_ue_user_start (user_id, start_date),
     INDEX idx_ue_start (start_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_friendships (
+    user_one INT NOT NULL,
+    user_two INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+
+    PRIMARY KEY (user_one, user_two),
+    INDEX idx_friendships_reverse (user_two, user_one),
+
+    CONSTRAINT chk_friendships_self CHECK (user_one <> user_two),
+
+    FOREIGN KEY (user_one) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_two) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_friend_requests (
+    sender_id INT NOT NULL,
+    receiver_id INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+    expires_at DATETIME NOT NULL,
+
+    PRIMARY KEY (sender_id, receiver_id),
+    INDEX idx_friend_requests_reverse (receiver_id, sender_id),
+    INDEX idx_friend_requests_expiry (expires_at),
+
+    CONSTRAINT chk_friend_requests_self CHECK (sender_id <> receiver_id),
+    CONSTRAINT chk_friend_requests_expiry CHECK (expires_at > created_at),
+
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_friend_favorites (
+    owner_id INT NOT NULL,
+    friend_id INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+
+    PRIMARY KEY (owner_id, friend_id),
+
+    CONSTRAINT chk_friend_favorites_self CHECK (owner_id <> friend_id),
+
+    FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (friend_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_friend_settings (
+    user_id INT NOT NULL PRIMARY KEY,
+    allow_requests BOOLEAN NOT NULL DEFAULT TRUE,
+    show_server BOOLEAN NOT NULL DEFAULT TRUE,
+    allow_follow BOOLEAN NOT NULL DEFAULT FALSE,
+    login_notify BOOLEAN NOT NULL DEFAULT TRUE,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_blocks_list (
+    user_id INT NOT NULL,
+    blocked_id INT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
+
+    PRIMARY KEY (user_id, blocked_id),
+    INDEX idx_blocks_list_target (blocked_id, user_id),
+
+    CONSTRAINT chk_blocks_list_self CHECK (user_id <> blocked_id),
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

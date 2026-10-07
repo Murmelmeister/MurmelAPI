@@ -61,7 +61,12 @@ public enum RefreshType {
     SINGLE_USER_STAT("single_user_stat"),
     SINGLE_MAINTENANCE("single_maintenance"),
     SINGLE_MAINTENANCE_WHITELIST("single_maintenance_whitelist"),
-    SINGLE_USER_EXCUSE("single_user_excuse")
+    SINGLE_USER_EXCUSE("single_user_excuse"),
+    SINGLE_FRIEND_SHIP("single_friend_ship"),
+    SINGLE_FRIEND_REQUEST("single_friend_request"),
+    SINGLE_FRIEND_FAVORITE("single_friend_favorite"),
+    SINGLE_FRIEND_SETTING("single_friend_setting"),
+    SINGLE_USER_BLOCKED("single_user_blocked"),
     ;
     private static final RefreshType[] VALUES = values();
 

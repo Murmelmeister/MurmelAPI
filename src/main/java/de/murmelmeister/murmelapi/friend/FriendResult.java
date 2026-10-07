@@ -1,0 +1,19 @@
+package de.murmelmeister.murmelapi.friend;
+
+public enum FriendResult {
+    SUCCESS,
+    USER_NOT_FOUND,
+    SELF_TARGET,
+    ALREADY_FRIENDS,
+    NOT_FRIENDS,
+    BLOCKED,
+    REQUESTS_DISABLED,
+    REQUEST_ALREADY_EXISTS,
+    INCOMING_REQUEST_EXISTS,
+    REQUEST_NOT_FOUND,
+    REQUEST_EXPIRED,
+    ALREADY_FAVORITE,
+    NOT_FAVORITE,
+    ALREADY_BLOCKED,
+    NOT_BLOCKED
+}

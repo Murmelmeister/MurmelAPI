@@ -8,6 +8,8 @@ import de.murmelmeister.murmelapi.clan.ClanProvider;
 import de.murmelmeister.murmelapi.clan.group.ClanGroupProvider;
 import de.murmelmeister.murmelapi.clan.member.ClanMemberProvider;
 import de.murmelmeister.murmelapi.color.PrefixColorProvider;
+import de.murmelmeister.murmelapi.friend.FriendProvider;
+import de.murmelmeister.murmelapi.friend.FriendService;
 import de.murmelmeister.murmelapi.group.GroupProvider;
 import de.murmelmeister.murmelapi.group.color.GroupColorProvider;
 import de.murmelmeister.murmelapi.inventory.InventoryTypeProvider;
@@ -92,6 +94,9 @@ public final class MurmelAPI {
     private final UserExcuseProvider userExcuseProvider;
     private final UserService userService;
 
+    private final FriendProvider friendProvider;
+    private final FriendService friendService;
+
     private final GroupProvider groupProvider;
     private final GroupColorProvider groupColorProvider;
 
@@ -161,8 +166,10 @@ public final class MurmelAPI {
         this.punishIpProvider = PunishmentIpAddressProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishUserProvider = PunishmentUserProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.punishmentService = new PunishmentService(punishReasonProvider, punishAuditProvider, punishIpProvider, punishUserProvider);
+        this.friendProvider = FriendProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
+        this.friendService = FriendService.of(friendProvider, userProvider, userSessionProvider);
         this.userService = new UserService(database, userProvider, userStatsProvider, userLoginProvider, userSessionProvider,
-                userExcuseProvider, punishUserProvider, punishAuditProvider);
+                userExcuseProvider, punishUserProvider, punishAuditProvider, friendProvider);
         this.clanProvider = ClanProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanMemberProvider = ClanMemberProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
         this.clanGroupProvider = ClanGroupProvider.of(database, gson, refreshProvider, fetchLimit, cacheCapacity, refreshInterval);
@@ -402,6 +409,14 @@ public final class MurmelAPI {
 
     public UserService getUserService() {
         return userService;
+    }
+
+    public FriendProvider getFriendProvider() {
+        return friendProvider;
+    }
+
+    public FriendService getFriendService() {
+        return friendService;
     }
 
     public GroupProvider getGroupProvider() {

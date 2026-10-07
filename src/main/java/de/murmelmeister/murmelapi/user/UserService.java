@@ -2,6 +2,8 @@ package de.murmelmeister.murmelapi.user;
 
 import de.murmelmeister.library.database.Database;
 import de.murmelmeister.murmelapi.exceptions.user.UserException;
+import de.murmelmeister.murmelapi.exceptions.friend.FriendException;
+import de.murmelmeister.murmelapi.friend.FriendProvider;
 import de.murmelmeister.murmelapi.punishment.audit.PunishmentAuditProvider;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
 import de.murmelmeister.murmelapi.user.excuse.UserExcuseProvider;
@@ -27,7 +29,8 @@ public record UserService(
         @NotNull UserSessionProvider sessionProvider,
         @NotNull UserExcuseProvider userExcuseProvider,
         @NotNull PunishmentUserProvider punishUserProvider,
-        @NotNull PunishmentAuditProvider punishAuditProvider
+        @NotNull PunishmentAuditProvider punishAuditProvider,
+        @NotNull FriendProvider friendProvider
 ) {
     public UserService {
         Objects.requireNonNull(database, "database must not be null");
@@ -38,6 +41,7 @@ public record UserService(
         Objects.requireNonNull(userExcuseProvider, "userExcuseProvider must not be null");
         Objects.requireNonNull(punishUserProvider, "punishUserProvider must not be null");
         Objects.requireNonNull(punishAuditProvider, "punishAuditProvider must not be null");
+        Objects.requireNonNull(friendProvider, "friendProvider must not be null");
     }
 
     public void startSession(int userId, @NotNull InetAddress inetAddress, @Nullable String clientBrand, int protocolVersion) {
@@ -82,6 +86,10 @@ public record UserService(
         User user = userProvider.findByMojangId(uuid)
                 .orElseGet(() -> userProvider.create(uuid, username)
                         .orElseThrow(() -> new UserException("Failed to create user with UUID: " + uuid)));
+
+        if (friendProvider.findSettings(user.id()).isEmpty())
+            friendProvider.createSettings(user.id())
+                    .orElseThrow(() -> new FriendException("Failed to create friend settings for user " + user.id()));
 
         LocalDateTime firstLogin = user.firstLogin();
         LocalDateTime resolvedFirstLogin = firstLogin == null ? LocalDateTime.now() : firstLogin;
