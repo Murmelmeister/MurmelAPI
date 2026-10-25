@@ -28,6 +28,9 @@ import de.murmelmeister.murmelapi.punishment.audit.PunishmentAuditProvider;
 import de.murmelmeister.murmelapi.punishment.ip.PunishmentIpAddressProvider;
 import de.murmelmeister.murmelapi.punishment.reason.PunishmentReasonProvider;
 import de.murmelmeister.murmelapi.punishment.user.PunishmentUserProvider;
+import de.murmelmeister.murmelapi.redis.RedisConfig;
+import de.murmelmeister.murmelapi.redis.RedisRefreshBridge;
+import de.murmelmeister.murmelapi.redis.RefreshMessage;
 import de.murmelmeister.murmelapi.settings.SettingsProvider;
 import de.murmelmeister.murmelapi.settings.SettingsService;
 import de.murmelmeister.murmelapi.user.UserProvider;
@@ -60,6 +63,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.function.Consumer;
 
 /**
  * The MurmelAPI main class.
@@ -79,6 +83,7 @@ public final class MurmelAPI {
     private final Duration refreshInterval;
 
     private final RefreshProvider refreshProvider;
+    private RedisRefreshBridge redisBridge;
 
     private final SettingsProvider settingsProvider;
     private final SettingsService settingsService;
@@ -206,7 +211,35 @@ public final class MurmelAPI {
         database.connect(config);
     }
 
+    /**
+     * Start the network refresh transport after database initialization.
+     */
+    public synchronized void startRedis(RedisConfig config, Consumer<RefreshMessage> receiver) {
+        if (!config.enabled())
+            throw new IllegalArgumentException("Redis is required; set enabled=true in redis.properties.");
+        if (redisBridge != null) throw new IllegalStateException("Redis refresh transport is already started.");
+
+        RedisRefreshBridge bridge = new RedisRefreshBridge(config, refreshProvider, LOGGER, gson, receiver);
+        bridge.register();
+        redisBridge = bridge;
+    }
+
+    public void startRedis(RedisConfig config) {
+        startRedis(config, message -> {
+        });
+    }
+
+    /**
+     * Stop before closing cache listeners or disconnecting the database.
+     */
+    public synchronized void stopRedis() {
+        if (redisBridge == null) return;
+        redisBridge.close();
+        redisBridge = null;
+    }
+
     public void disconnect() {
+        stopRedis();
         try {
             refreshProvider.close();
         } catch (Exception e) {

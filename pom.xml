@@ -85,6 +85,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <version>7.8.0.RELEASE</version>
+        </dependency>
+        <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
             <version>3.2.3</version>
@@ -108,7 +113,7 @@
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
-            <version>3.5.7</version>
+            <version>3.5.9</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

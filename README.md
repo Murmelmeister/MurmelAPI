@@ -6,6 +6,7 @@ MurmelAPI is a general-purpose API designed for Minecraft servers. It is develop
 ## Minimum Requirements
 - Java 21
 - MariaDB 11.7
+- Redis 8.0.2
 
 ## License
 MurmelAPI is open-source software, licensed under GPL-3.0 license.
